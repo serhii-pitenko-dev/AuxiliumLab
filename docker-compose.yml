@@ -51,7 +51,7 @@ services:
       # Point at the rl-service container (service name resolves via Docker DNS)
       PolicyTrainerClient__ServerAddress: http://rl-service:50051
     volumes:
-      - sandbox-storage:/file-storage
+      - C:/FILE_STORAGE:/file-storage
     depends_on:
       rl-service:
         condition: service_healthy
@@ -85,4 +85,3 @@ services:
 volumes:
   rl-models:
   rl-checkpoints:
-  sandbox-storage:
