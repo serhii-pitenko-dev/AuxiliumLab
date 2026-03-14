@@ -32,16 +32,19 @@ The central rule: **inner rings cannot reference outer rings**.
 
 ```
 Startup
+├── Ai
+│   ├── Common
+│   ├── Infrastructure
+│   └── SharedBaseTypes
+├── AiTrainingOrchestrator
+│   ├── SharedBaseTypes
+│   └── Common
 ├── ApplicationServices
 │   ├── Domain
 │   ├── Common
 │   ├── SharedBaseTypes
 │   ├── Infrastructure
 │   └── AiTrainingOrchestrator
-├── Infrastructure
-│   ├── Domain
-│   ├── SharedBaseTypes
-│   └── Statistics
 ├── ConsolePresentation
 │   ├── ApplicationServices
 │   ├── Common
@@ -49,12 +52,13 @@ Startup
 ├── GrpcHost
 │   ├── Common
 │   └── SharedBaseTypes
-├── WebApi
-│   ├── ApplicationServices
-│   └── SharedBaseTypes
-└── AiTrainingOrchestrator
-    ├── SharedBaseTypes
-    └── Common
+├── Infrastructure
+│   ├── Domain
+│   ├── SharedBaseTypes
+│   └── Statistics
+└── WebApi
+    ├── ApplicationServices
+    └── SharedBaseTypes
 
 Domain
 └── SharedBaseTypes

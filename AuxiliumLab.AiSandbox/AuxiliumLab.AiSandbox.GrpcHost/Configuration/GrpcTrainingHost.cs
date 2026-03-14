@@ -53,8 +53,11 @@ public static class GrpcTrainingHost
         // ── Kestrel: REST on 5000 (HTTP/1), gRPC on 50062 (HTTP/2) ───────────
         builder.WebHost.ConfigureKestrel(opts =>
         {
-            opts.ListenLocalhost(5000, lo => lo.Protocols = HttpProtocols.Http1);
-            opts.ListenLocalhost(50062, lo => lo.Protocols = HttpProtocols.Http2);
+            // ListenAnyIP (0.0.0.0) is required for Docker container networking.
+            // ListenLocalhost binds to 127.0.0.1 only and would reject all
+            // container-to-container and host-to-container traffic.
+            opts.ListenAnyIP(5000, lo => lo.Protocols = HttpProtocols.Http1);
+            opts.ListenAnyIP(50062, lo => lo.Protocols = HttpProtocols.Http2);
         });
 
         // ── Build and map ─────────────────────────────────────────────────────

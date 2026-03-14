@@ -1,0 +1,88 @@
+# docker-compose.yml
+#
+# Three services:
+#   rl-service        — Python / Stable Baselines 3 policy trainer (gRPC :50051)
+#   aisandbox-startup — .NET 9 backend: REST :5000, gRPC gym :50062
+#   frontend          — Blazor WASM served via nginx :8080
+#
+# Quick start:
+#   docker compose build
+#   docker compose up
+#
+# The frontend must reach the backend API from the *browser*, so
+# AISANDBOX_BASE_URL must be the address visible on the user's machine
+# (http://localhost:5000 when running locally).
+
+services:
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # RL training service (Python)
+  # ─────────────────────────────────────────────────────────────────────────
+  rl-service:
+    build:
+      context: ./auxiliumlab-rl-service-baselines3
+    ports:
+      - "50051:50051"
+    environment:
+      GRPC_HOST: "0.0.0.0"
+      GRPC_PORT: "50051"
+    volumes:
+      - rl-models:/app/trained_models
+      - rl-checkpoints:/app/checkpoints
+    healthcheck:
+      test: ["CMD", "python", "healthcheck.py", "--host", "localhost", "--port", "50051"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # .NET backend  (REST + gRPC gym host)
+  # ─────────────────────────────────────────────────────────────────────────
+  aisandbox-startup:
+    build:
+      context: ./AuxiliumLab.AiSandbox
+    ports:
+      - "5000:5000"    # REST / Swagger / SignalR
+      - "50062:50062"  # gRPC gym endpoint (Python calls in here)
+    environment:
+      # Override the Windows default path from appsettings.json
+      FileSource__FileStorage__BasePath: /file-storage
+      # Point at the rl-service container (service name resolves via Docker DNS)
+      PolicyTrainerClient__ServerAddress: http://rl-service:50051
+    volumes:
+      - sandbox-storage:/file-storage
+    depends_on:
+      rl-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/5000"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Blazor WebAssembly frontend  (nginx static file server)
+  #
+  # IMPORTANT: AISANDBOX_BASE_URL is injected into wwwroot/appsettings.json
+  # at container start (see Frontend/entrypoint.sh).  Because Blazor WASM
+  # runs in the *browser*, this URL must be reachable from the user's machine,
+  # not from inside the Docker network.
+  # ─────────────────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./AuxiliumLab.AiSandbox/Frontend
+    ports:
+      - "8080:80"
+    environment:
+      AISANDBOX_BASE_URL: "http://localhost:5000"
+      MARKET_SIMULATION_BASE_URL: "http://localhost:6000"
+    depends_on:
+      aisandbox-startup:
+        condition: service_healthy
+
+volumes:
+  rl-models:
+  rl-checkpoints:
+  sandbox-storage:

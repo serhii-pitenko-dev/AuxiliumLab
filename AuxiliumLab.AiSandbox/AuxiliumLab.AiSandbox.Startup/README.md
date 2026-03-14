@@ -100,44 +100,12 @@ Each step has two fields:
 
 Steps are executed in the order they appear in the array. The `Training` step, if present, must appear before any `MassTrainedAISimulation` step so the model is ready.
 
-### Output — report location and file name
-
-The report is saved by `StatisticFileDataManager` into the **`STATISTICS`** sub-folder relative to the application's configured file-storage base path:
-
-```
-<FileStorage.BasePath>/STATISTICS/aggregation_<yyyy-MM-dd_HH-mm-ss>.csv
-```
-
-Example: `STATISTICS/aggregation_2026-03-01_14-30-00.csv`
-
-### Report format (CSV)
-
-The file is a **UTF-8 CSV** with commented section headers (`# …`). It is structured as follows:
-
-| Section | Content |
-|---|---|
-| **Header** | Report date; comma-separated list of all step names |
-| **Training Information** | Algorithm name, experiment ID and all hyperparameters (only present when a `Training` step ran) |
-| **Standard Runs Comparison** | One data row; columns are `MaxTurns \| AvgTurns \| Wins \| WinPct` repeated for every mass-run step |
-| **Incremental Sweep: \<property\>** | One section per swept property; rows = sweep-step values; same 4-column group per run type |
-| **Area Sweep** | Single-row summary of the area-parameter sweep (when available) |
-
-The `WinPct` column is `Wins / TotalRuns * 100` as a floating-point percentage (no `%` symbol).
+For output file location and CSV report structure, see [AuxiliumLab.Statistics/README.md](../AuxiliumLab.Statistics/README.md).
 
 ## REST API (Web mode)
 
 When `IsWebApiEnabled = true` a background `WebApiHost` starts on `http://localhost:5000`.  
-See [WebApi/README.md](../AuxiliumLab.AiSandbox.WebApi/README.md) for the full endpoint reference.
-
-Key endpoints available via the API in addition to the console/startup pipeline:
-
-| Route | Description |
-|---|---|
-| `POST /ai-sandbox/training/ppo` | Start PPO training with optional overrides |
-| `POST /ai-sandbox/simulation/run/mass` | Start a mass simulation batch |
-| `POST /ai-sandbox/aggregation/run` | Start a full aggregation pipeline |
-| `GET  /ai-sandbox/statistic/simulations` | Query completed simulation results |
-| `GET  /ai-sandbox/statistic/aggregations` | Query completed aggregation results |
+See [AuxiliumLab.AiSandbox.WebApi/README.md](../AuxiliumLab.AiSandbox.WebApi/README.md) for the full endpoint reference.
 
 ## `RegisterCoreServices`
 ```csharp

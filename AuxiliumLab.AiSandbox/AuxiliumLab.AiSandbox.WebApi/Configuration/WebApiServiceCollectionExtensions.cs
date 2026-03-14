@@ -48,7 +48,9 @@ public static class WebApiServiceCollectionExtensions
                         "http://localhost:5001",
                         "https://localhost:5001",
                         "http://localhost:7001",
-                        "https://localhost:7001")
+                        "https://localhost:7001",
+                        // Docker: frontend container is mapped to host port 8080
+                        "http://localhost:8080")
                       .AllowAnyHeader()
                       .AllowAnyMethod()
                       .AllowCredentials()));

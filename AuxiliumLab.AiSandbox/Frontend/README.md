@@ -1,54 +1,38 @@
 # Frontend
 
-This folder contains the Blazor WebAssembly frontend for AuxiliumLab AI Sandbox.
+Blazor WebAssembly frontend for AuxiliumLab AI Sandbox.
 
 ## Projects
 
-| Project | Description |
+| Project | Readme |
 |---|---|
-| `AuxiliumLab.Frontend` | Blazor WebAssembly (.NET 10) application |
-| `AuxiliumLab.AiSandbox.Frontend.UnitTests` | bUnit + MSTest unit tests |
+| `AuxiliumLab.Frontend` | [AuxiliumLab.Frontend/README.md](AuxiliumLab.Frontend/README.md) — SPA, feature pages, SignalR, MudBlazor |
+| `AuxiliumLab.AiSandbox.Frontend.UnitTests` | [AuxiliumLab.AiSandbox.Frontend.UnitTests/README.md](AuxiliumLab.AiSandbox.Frontend.UnitTests/README.md) — bUnit + MSTest |
 
-## Running the frontend
+## Running
 
 ```bash
 cd AuxiliumLab.Frontend
 dotnet run
 ```
 
-The app starts at `https://localhost:7001` (or `http://localhost:5001`) and connects to the backend at the URL configured in `wwwroot/appsettings.json`.
+The app starts at `https://localhost:7001` (or `http://localhost:5001`).  
+The backend REST API must be running on `http://localhost:5000` (configure in `AuxiliumLab.Frontend/wwwroot/appsettings.json`).
 
-## Configuration
+## Running with Docker
 
-Edit `wwwroot/appsettings.json` to set API endpoints:
+The entire stack (backend + frontend + Python RL service) can be started from the workspace root:
 
-```json
-{
-  "ApiSettings": {
-    "AiSandboxBaseUrl": "http://localhost:5000",
-    "MarketSimulationBaseUrl": "http://localhost:6000"
-  }
-}
+```powershell
+docker compose up -d
 ```
 
-## Architecture
+The frontend container is served by `StaticHost` (a minimal ASP.NET Core static file server) and is accessible at `http://localhost:8080`.  
+Set `AISANDBOX_BASE_URL` to override the backend URL at container start:
 
-Feature-based layout: each menu section has its own folder under `Features/`.
-
-```
-Features/
-  Training/         – PPO training form, training status table
-  Simulation/       – Mass run form, SVG visualization with SignalR, status table
-  AggregationRun/   – Aggregation step builder, status table
-  Statistics/       – Data clients for completed run summaries
-  DataManagement/   – ApexCharts visualizations for completed runs
-  Sandbox/          – Settings page
-Shared/             – Reusable Blazor components (SandboxSettingsForm, PageHeader)
-Services/           – INotificationService, IApiContextProvider, MenuService
-Http/               – ApiClientBase
-Configuration/      – ApiSettings
+```powershell
+$env:AISANDBOX_BASE_URL = "http://my-backend:5000"
+docker compose up -d
 ```
 
-## Default page
-
-The default route `/` redirects to `/data-management/visualization/aggregation-run`.
+See [`docker-compose.yml`](../../docker-compose.yml) and [`Dockerfile`](Dockerfile) at this folder level for details.

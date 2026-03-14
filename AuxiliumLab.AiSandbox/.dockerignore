@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+# Frontend has its own build context and Dockerfile
+Frontend/
+# Integration tests need the live Python service — not built inside the image
+AuxiliumLab.AiSandbox.IntegrationTests/
+# Docs and editor artefacts
+docs/
+**/*.user
+**/*.suo
+.vs/

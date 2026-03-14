@@ -20,9 +20,9 @@ Abstract base for all training configurations.
 | `PhysicalCores` | Number of physical CPU cores (auto-detected via `SystemInfo`) |
 | `AlgorithmType` | Abstract — overridden by each algorithm implementation |
 | `BuildExperimentId(settings)` | Creates a deterministic experiment ID: `{algo}_{params}_{date}` |
-| `GetModelSavePath(experimentId)` | Returns `E:/FILE_STORAGE/TRAINED_ALGORITHMS/{algo}/{experimentId}` |
+| `GetModelSavePath(experimentId)` | Returns `{FileStorage.BasePath}/TRAINED_ALGORITHMS/{algo}/{experimentId}` (base path from `appsettings.json → SandBox.FilesPath`) |
 
-> **To do:** `isSameMachine = false` is not yet implemented (would require remote core-count detection).
+> **Note:** Remote environment scaling (`isSameMachine = false`) is not yet implemented.
 
 ### `ITraining` / Concrete Implementations
 

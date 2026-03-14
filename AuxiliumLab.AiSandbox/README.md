@@ -42,16 +42,19 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full dependency graph.
 | `AuxiliumLab.AiSandbox.Domain` | Domain | Map, agents, game rules, vision |
 | `AuxiliumLab.AiSandbox.SharedBaseTypes` | Domain | Value objects, enums, message contracts |
 | `AuxiliumLab.AiSandbox.Common` | Domain/Cross-cutting | In-process pub/sub message broker |
+| `AuxiliumLab.AiSandbox.Ai` | Application | AI decision layer: `IAiActions`, `RandomActions`, `Sb3Actions`, observation builder |
 | `AuxiliumLab.AiSandbox.ApplicationServices` | Application | Use-cases, executors, runners, jobs, commands, queries, persistence mappers |
+| `AuxiliumLab.AiSandbox.AiTrainingOrchestrator` | Application | Training settings, gRPC client to Python |
 | `AuxiliumLab.AiSandbox.Infrastructure` | Infrastructure | File & in-memory data managers |
 | `AuxiliumLab.AiSandbox.Statistics` | Infrastructure | Batch run statistics, CSV export |
 | `AuxiliumLab.AiSandbox.ConsolePresentation` | Presentation | Real-time Spectre.Console terminal renderer |
-| `AuxiliumLab.AiSandbox.AiTrainingOrchestrator` | Application | Training settings, gRPC client to Python |
 | `AuxiliumLab.AiSandbox.GrpcHost` | Presentation | gRPC server exposing simulation as a gym |
 | `AuxiliumLab.AiSandbox.WebApi` | Presentation | ASP.NET Core REST API with Training, Simulation, Aggregation and Statistic endpoints |
 | `AuxiliumLab.AiSandbox.Startup` | Composition Root | DI wiring, entry point, menu |
+| `AuxiliumLab.Frontend` | Frontend | Blazor WebAssembly SPA (MudBlazor, SignalR, ApexCharts) |
 | `AuxiliumLab.AiSandbox.UnitTests` | Tests | MSTest unit test suite |
 | `AuxiliumLab.AiSandbox.IntegrationTests` | Tests | MSTest end-to-end integration tests (WebApplicationFactory + live gRPC) |
+| `AuxiliumLab.AiSandbox.Frontend.UnitTests` | Tests | bUnit + MSTest Blazor component unit tests |
 
 ## Build & Run
 
@@ -113,7 +116,7 @@ When `IsWebApiEnabled = true` (set in `appsettings.json`) an ASP.NET Core API st
 | File | Contents |
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Onion architecture, dependency graph, data flow |
-| [docs/DOMAIN.md](docs/DOMAIN.md) | Domain model reference |
-| [docs/APPLICATION_SERVICES.md](docs/APPLICATION_SERVICES.md) | Application layer execution logic |
-| [docs/CONSOLE_PRESENTATION.md](docs/CONSOLE_PRESENTATION.md) | Console rendering system |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guidelines |
+| [AuxiliumLab.AiSandbox.Domain/README.md](AuxiliumLab.AiSandbox.Domain/README.md) | Domain model reference |
+| [AuxiliumLab.AiSandbox.ApplicationServices/README.md](AuxiliumLab.AiSandbox.ApplicationServices/README.md) | Application layer execution logic |
+| [AuxiliumLab.AiSandbox.ConsolePresentation/README.md](AuxiliumLab.AiSandbox.ConsolePresentation/README.md) | Console rendering system |
+| [AuxiliumLab.AiSandbox.Ai/README.md](AuxiliumLab.AiSandbox.Ai/README.md) | AI decision layer: actions, observation encoding, reward scheme |

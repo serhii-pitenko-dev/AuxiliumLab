@@ -67,13 +67,13 @@ public class SingleRunnerTests
     public async Task RunSingleAsync_CallsRunAsyncOnPresentationExecutor()
     {
         var mockExecutor = new Mock<IExecutorForPresentation>();
-        mockExecutor.Setup(e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>()))
+        mockExecutor.Setup(e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>(), It.IsAny<CancellationToken>()))
                     .Returns(Task.CompletedTask);
 
         await new SingleRunner(_config).RunSingleAsync(mockExecutor.Object);
 
         mockExecutor.Verify(
-            e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>()),
+            e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>(), It.IsAny<CancellationToken>()),
             Times.Once,
             "RunSingleAsync must call RunAsync() exactly once on the presentation executor");
     }
@@ -86,14 +86,14 @@ public class SingleRunnerTests
     public async Task RunSingleAsync_DoesNotCallTestRunWithPreconditionsAsync()
     {
         var mockExecutor = new Mock<IExecutorForPresentation>(MockBehavior.Strict);
-        mockExecutor.Setup(e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>()))
+        mockExecutor.Setup(e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>(), It.IsAny<CancellationToken>()))
                     .Returns(Task.CompletedTask);
 
         await new SingleRunner(_config).RunSingleAsync(mockExecutor.Object);
 
         // MockBehavior.Strict will fail the test if TestRunWithPreconditionsAsync is called.
         mockExecutor.Verify(
-            e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>()),
+            e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -108,13 +108,13 @@ public class SingleRunnerTests
     public async Task RunSingleTrainedAsync_CallsRunAsyncOnStandardExecutor()
     {
         var mockExecutor = new Mock<IStandardExecutor>();
-        mockExecutor.Setup(e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>()))
+        mockExecutor.Setup(e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>(), It.IsAny<CancellationToken>()))
                     .Returns(Task.CompletedTask);
 
         await new SingleRunner(_config).RunSingleTrainedAsync(mockExecutor.Object);
 
         mockExecutor.Verify(
-            e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>()),
+            e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>(), It.IsAny<CancellationToken>()),
             Times.Once,
             "RunSingleTrainedAsync must call RunAsync() exactly once on the standard executor");
     }
@@ -138,7 +138,7 @@ public class SingleRunnerTests
         mockExecutor.Verify(e => e.TestRunWithPreconditionsAsync(), Times.Once,
             "RunTestPreconditionsAsync must delegate to TestRunWithPreconditionsAsync");
         mockExecutor.Verify(
-            e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>()),
+            e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>(), It.IsAny<CancellationToken>()),
             Times.Never,
             "RunAsync must NOT be called from RunTestPreconditionsAsync");
     }
@@ -166,25 +166,25 @@ public class SingleRunnerTests
     {
         // Console path — IExecutorForPresentation (shared broker, ConsoleRunner receives events)
         var consoleMock = new Mock<IExecutorForPresentation>();
-        consoleMock.Setup(e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>()))
+        consoleMock.Setup(e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>(), It.IsAny<CancellationToken>()))
                    .Returns(Task.CompletedTask);
 
         await new SingleRunner(_config).RunSingleAsync(consoleMock.Object);
 
         consoleMock.Verify(
-            e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>()),
+            e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>(), It.IsAny<CancellationToken>()),
             Times.Once,
             "Console path: IExecutorForPresentation.RunAsync() must be called once");
 
         // Non-console path — IStandardExecutor (private broker, no console rendering)
         var standardMock = new Mock<IStandardExecutor>();
-        standardMock.Setup(e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>()))
+        standardMock.Setup(e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>(), It.IsAny<CancellationToken>()))
                     .Returns(Task.CompletedTask);
 
         await new SingleRunner(_config).RunSingleTrainedAsync(standardMock.Object);
 
         standardMock.Verify(
-            e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>()),
+            e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>(), It.IsAny<CancellationToken>()),
             Times.Once,
             "Non-console path: IStandardExecutor.RunAsync() must be called once");
     }

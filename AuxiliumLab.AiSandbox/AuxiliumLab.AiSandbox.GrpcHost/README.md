@@ -57,8 +57,11 @@ dotnet build   # csproj includes <Protobuf> items that auto-generate stubs
 `appsettings.json` controls logging and Kestrel port.  
 Port can be changed in `GrpcHost/Configuration/GrpcTrainingHost.cs`:
 ```csharp
-options.ListenLocalhost(50062, o => o.Protocols = HttpProtocols.Http2);
+opts.ListenAnyIP(50062, lo => lo.Protocols = HttpProtocols.Http2);
 ```
+
+> **Note:** `ListenAnyIP` (binding to `0.0.0.0`) is required for Docker container networking.  
+> `ListenLocalhost` binds to `127.0.0.1` only and rejects container-to-container traffic.
 
 ## Integration with Startup
 `GrpcTrainingHost` (in `Startup`) builds a `WebApplication` with Kestrel configured for HTTP/2.  
@@ -94,8 +97,5 @@ GrpcHost/
 ## Next Steps
 - ✅ gRPC infrastructure is set up and connected to `IMessageBroker`.
 - ✅ `SimulationService` bridges Python gym calls to .NET training executors.
-- ⏭️ Wire real reward shaping from domain win/loss conditions.
-- ⏭️ Expand observation vector beyond basic `[x, y, enemies, turn]`.
-
-
-See [GRPC_SETUP.md](../GRPC_SETUP.md) for complete documentation.
+- ✅ Reward shaping is defined in `AuxiliumLab.AiSandbox.Ai` (`Sb3Actions`) and configured via `appsettings.json → TrainingSettings.Rewards`.
+- ✅ Observation vector encodes scalar agent features plus a full vision grid (`5 + gridSize²` floats).
