@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>AuxiliumLab.Frontend</RootNamespace>
+    <AssemblyName>AuxiliumLab.Frontend</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- MudBlazor UI component library -->
+    <PackageReference Include="MudBlazor" Version="7.17.0" />
+
+    <!-- ApexCharts for data visualization -->
+    <PackageReference Include="Blazor-ApexCharts" Version="1.10.0" />
+
+    <!-- SignalR client for real-time simulation visualization -->
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.4" />
+
+    <!-- HTTP client extensions -->
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+
+    <!-- Blazor WebAssembly runtime (SDK doesn't add it implicitly on all machines) -->
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- wwwroot JSON config files -->
+    <Content Update="wwwroot\appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Update="wwwroot\appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Update="wwwroot\menu-config.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,19 @@
+@page "/sandbox/settings"
+@inject IApiContextProvider ContextProvider
+
+<PageHeader Title="Sandbox Settings" />
+
+<MudCard Style="max-width:480px">
+    <MudCardContent>
+        <MudText Typo="Typo.subtitle2" Class="mb-3">API Endpoints</MudText>
+        <MudTextField Value="@ContextProvider.AiSandboxBaseUrl" Label="AI Sandbox Base URL"
+                      Variant="Variant.Outlined" ReadOnly="true" Class="mb-3" />
+        <MudTextField Value="@ContextProvider.MarketSimulationBaseUrl" Label="Market Simulation Base URL"
+                      Variant="Variant.Outlined" ReadOnly="true" />
+    </MudCardContent>
+    <MudCardActions>
+        <MudAlert Severity="Severity.Info" Dense="true">
+            Edit <code>wwwroot/appsettings.json</code> to change API endpoints.
+        </MudAlert>
+    </MudCardActions>
+</MudCard>

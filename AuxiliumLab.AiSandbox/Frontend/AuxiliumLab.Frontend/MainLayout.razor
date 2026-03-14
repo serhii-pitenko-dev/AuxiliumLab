@@ -1,0 +1,101 @@
+@inherits LayoutComponentBase
+@inject INotificationService Notifications
+@inject NavigationManager Nav
+
+<MudThemeProvider />
+<MudSnackbarProvider />
+<MudDialogProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1" Dense="true">
+        <MudText Typo="Typo.h6" Class="mr-6">AuxiliumLab AI Sandbox</MudText>
+
+        <!-- Sandbox -->
+        <MudMenu Label="Sandbox" EndIcon="@Icons.Material.Filled.ArrowDropDown" Color="Color.Inherit">
+            <MudMenuItem Href="/sandbox/settings">Settings</MudMenuItem>
+        </MudMenu>
+
+        <!-- Training -->
+        <MudMenu Label="Training" EndIcon="@Icons.Material.Filled.ArrowDropDown" Color="Color.Inherit">
+            <MudMenuItem Href="/training/ppo">PPO Training</MudMenuItem>
+            <MudMenuItem Href="/training/status">Training Status</MudMenuItem>
+        </MudMenu>
+
+        <!-- Simulation -->
+        <MudMenu Label="Simulation" EndIcon="@Icons.Material.Filled.ArrowDropDown" Color="Color.Inherit">
+            <MudMenuItem Href="/simulation/multiple-run">Multiple Run</MudMenuItem>
+            <MudMenuItem Href="/simulation/visualization">Visualization</MudMenuItem>
+            <MudMenuItem Href="/simulation/status">Simulation Status</MudMenuItem>
+        </MudMenu>
+
+        <!-- Aggregation Run -->
+        <MudMenu Label="Aggregation Run" EndIcon="@Icons.Material.Filled.ArrowDropDown" Color="Color.Inherit">
+            <MudMenuItem Href="/aggregation/run">Run</MudMenuItem>
+            <MudMenuItem Href="/aggregation/status">Aggregation Status</MudMenuItem>
+        </MudMenu>
+
+        <!-- Data Management -->
+        <MudMenu Label="Data Management" EndIcon="@Icons.Material.Filled.ArrowDropDown" Color="Color.Inherit">
+            <MudMenuItem Href="/data-management/visualization/aggregation-run">Aggregation Run Visualization</MudMenuItem>
+            <MudMenuItem Href="/data-management/visualization/multiple-run">Multiple Run Visualization</MudMenuItem>
+            <MudMenuItem Href="/data-management/visualization/training">Training Visualization</MudMenuItem>
+            <MudMenuItem Href="/data-management/raw">Raw Data</MudMenuItem>
+        </MudMenu>
+
+        <MudSpacer />
+
+        <!-- Notification Panel indicator -->
+        <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit"
+                       OnClick="@(() => _notifOpen = !_notifOpen)" />
+    </MudAppBar>
+
+    <!-- Notification drawer -->
+    <MudDrawer @bind-Open="_notifOpen" Anchor="Anchor.End" Elevation="1" Variant="DrawerVariant.Temporary" Width="360px">
+        <MudDrawerHeader>
+            <MudText Typo="Typo.h6">Notifications</MudText>
+            <MudSpacer />
+            <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="@(() => _notifOpen = false)" />
+        </MudDrawerHeader>
+        <MudList T="string">
+            @foreach (var msg in _messages)
+            {
+                <MudListItem>
+                    <MudText>@msg</MudText>
+                </MudListItem>
+            }
+            @if (_messages.Count == 0)
+            {
+                <MudListItem>
+                    <MudText Color="Color.Secondary">No notifications</MudText>
+                </MudListItem>
+            }
+        </MudList>
+    </MudDrawer>
+
+    <MudMainContent Class="pa-4">
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _notifOpen;
+    private readonly List<string> _messages = [];
+
+    protected override void OnInitialized()
+    {
+        Notifications.OnChange += HandleNotification;
+    }
+
+    private void HandleNotification(NotificationMessage msg)
+    {
+        _messages.Insert(0, $"[{msg.CreatedAt:HH:mm:ss}] {msg.Message}");
+        if (_messages.Count > 50)
+            _messages.RemoveAt(_messages.Count - 1);
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Notifications.OnChange -= HandleNotification;
+    }
+}

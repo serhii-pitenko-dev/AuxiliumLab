@@ -1,0 +1,291 @@
+@page "/simulation/visualization"
+@inject ISimulationApiClient SimulationApi
+@inject ISimulationHubClient HubClient
+@inject INotificationService Notifications
+@implements IAsyncDisposable
+
+<PageHeader Title="Simulation Visualization" />
+
+<MudGrid>
+    <!-- Left: config panel -->
+    <MudItem xs="12" md="3">
+        <MudCard Class="mb-3">
+            <MudCardContent>
+                <MudSelect @bind-Value="_cmd.Kind" Label="Kind" Variant="Variant.Outlined" Class="mb-2">
+                    <MudSelectItem Value="SimulationKind.RandomAI">Random AI</MudSelectItem>
+                    <MudSelectItem Value="SimulationKind.TrainedAI">Trained AI</MudSelectItem>
+                </MudSelect>
+
+                @if (_cmd.Kind == SimulationKind.TrainedAI)
+                {
+                    <MudSelect @bind-Value="_cmd.Algorithm" Label="Algorithm" Variant="Variant.Outlined" Class="mb-2">
+                        <MudSelectItem Value="ModelType.PPO">PPO</MudSelectItem>
+                        <MudSelectItem Value="ModelType.A2C">A2C</MudSelectItem>
+                        <MudSelectItem Value="ModelType.DQN">DQN</MudSelectItem>
+                    </MudSelect>
+                }
+
+                <SandboxSettingsForm Override="_override" OverrideChanged="OnOverrideChanged" />
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="StartAsync" Disabled="_running || _starting">
+                    @if (_starting) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" /> }
+                    Start
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Warning" OnClick="PauseResumeAsync" Disabled="!_running">
+                    @(_paused ? "Resume" : "Pause")
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="StopAsync" Disabled="!_running">
+                    Stop
+                </MudButton>
+            </MudCardActions>
+        </MudCard>
+
+        <!-- Turn info -->
+        @if (_currentTurn > 0)
+        {
+            <MudText Typo="Typo.caption">Turn: @_currentTurn / @_maxTurns</MudText>
+            <MudProgressLinear Value="@((double)_currentTurn / (_maxTurns > 0 ? _maxTurns : 1) * 100)"
+                               Color="Color.Primary" Class="mb-2" />
+        }
+
+        <!-- Agent list -->
+        @if (_agents.Count > 0)
+        {
+            <MudText Typo="Typo.subtitle2" Class="mb-1">Agents</MudText>
+            @foreach (var (id, a) in _agents)
+            {
+                <MudText Typo="Typo.caption">@a.Type @id[..Math.Min(6, id.Length)]: spd=@a.Speed stm=@a.Stamina/@a.MaxStamina</MudText>
+            }
+        }
+    </MudItem>
+
+    <!-- Middle: grid -->
+    <MudItem xs="12" md="6">
+        @if (_gridWidth > 0 && _gridHeight > 0)
+        {
+            <div style="overflow:auto">
+                <svg width="@(_gridWidth * CellSize)" height="@(_gridHeight * CellSize)"
+                     style="display:block;border:1px solid #ccc">
+                    @foreach (var cell in _cells.Values)
+                    {
+                        <rect x="@(cell.X * CellSize)" y="@(cell.Y * CellSize)"
+                              width="@CellSize" height="@CellSize"
+                              fill="@CellFill(cell.ObjectType)" stroke="#e0e0e0" stroke-width="0.5" />
+                    }
+                    @foreach (var (_, agent) in _agentPositions)
+                    {
+                        <circle cx="@(agent.X * CellSize + CellSize / 2)"
+                                cy="@(agent.Y * CellSize + CellSize / 2)"
+                                r="@(CellSize / 2 - 2)"
+                                fill="@AgentFill(agent.Type)" opacity="0.85" />
+                    }
+                </svg>
+            </div>
+        }
+        else
+        {
+            <MudText Color="Color.Secondary">Start a simulation to see the grid.</MudText>
+        }
+
+        @if (_outcome is not null)
+        {
+            <MudAlert Severity="@(_outcome == "Win" ? Severity.Success : Severity.Error)" Class="mt-2">
+                Simulation ended: @_outcome @(_reason is not null ? $"({_reason})" : "")
+            </MudAlert>
+        }
+    </MudItem>
+
+    <!-- Right: event log -->
+    <MudItem xs="12" md="3">
+        <MudText Typo="Typo.subtitle2" Class="mb-1">Event Log</MudText>
+        <div style="height:520px;overflow-y:auto;font-size:0.75rem;font-family:monospace;background:#f5f5f5;padding:8px;border-radius:4px">
+            @foreach (var log in _logs)
+            {
+                <div>@log</div>
+            }
+        </div>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private const int CellSize = 16;
+    private const int MaxLogs  = 200;
+
+    private readonly StartSingleSimulationCommand _cmd = new()
+    {
+        Kind      = SimulationKind.RandomAI,
+        Algorithm = ModelType.PPO
+    };
+
+    private SimulationSandboxOverrideDto _override = new();
+
+    private bool   _starting;
+    private bool   _running;
+    private bool   _paused;
+    private Guid   _jobId;
+    private int    _gridWidth;
+    private int    _gridHeight;
+    private int    _maxTurns;
+    private int    _currentTurn;
+    private string? _outcome;
+    private string? _reason;
+
+    private Dictionary<string, SimulationCellDto> _cells          = [];
+    private Dictionary<string, (int X, int Y, string Type)> _agentPositions = [];
+    private Dictionary<string, AgentSnapshotDto> _agents          = [];
+    private readonly List<string> _logs = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        HubClient.OnSimulationStarted  += HandleStarted;
+        HubClient.OnAgentMoved         += HandleAgentMoved;
+        HubClient.OnAgentToggled       += HandleAgentToggled;
+        HubClient.OnTurnCompleted      += HandleTurnCompleted;
+        HubClient.OnSimulationEnded    += HandleEnded;
+    }
+
+    private void OnOverrideChanged(SimulationSandboxOverrideDto dto)
+    {
+        _cmd.SandboxSettings = dto;
+    }
+
+    private async Task StartAsync()
+    {
+        _starting  = true;
+        _cells     = [];
+        _agentPositions = [];
+        _agents    = [];
+        _logs.Clear();
+        _outcome   = null;
+        _reason    = null;
+        _currentTurn = 0;
+
+        try
+        {
+            var result = await SimulationApi.StartSingleSimulationAsync(_cmd);
+            if (result is null) { AddLog("Failed to start simulation."); return; }
+
+            _jobId   = result.JobId;
+            _running = true;
+            _paused  = false;
+            AddLog($"Started job {_jobId}");
+
+            await HubClient.ConnectAsync(_jobId.ToString());
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Error: {ex.Message}");
+            Notifications.Notify($"Error starting simulation: {ex.Message}");
+        }
+        finally
+        {
+            _starting = false;
+        }
+    }
+
+    private async Task PauseResumeAsync()
+    {
+        if (_paused)
+        {
+            await SimulationApi.ResumeSimulationAsync(_jobId);
+            _paused = false;
+            AddLog("Resumed");
+        }
+        else
+        {
+            await SimulationApi.PauseSimulationAsync(_jobId);
+            _paused = true;
+            AddLog("Paused");
+        }
+    }
+
+    private async Task StopAsync()
+    {
+        await SimulationApi.StopSimulationAsync(_jobId);
+        _running = false;
+        AddLog("Stop requested");
+        Notifications.Notify("Simulation stop requested");
+    }
+
+    // ── Hub event handlers ────────────────────────────────────────────────────
+
+    private void HandleStarted(SimulationStartedDto e)
+    {
+        _gridWidth  = e.Width;
+        _gridHeight = e.Height;
+        _maxTurns   = e.MaxTurns;
+
+        _cells = e.Cells.ToDictionary(c => $"{c.X},{c.Y}");
+        AddLog($"Grid {e.Width}x{e.Height}, max turns={e.MaxTurns}");
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleAgentMoved(AgentMovedDto e)
+    {
+        _agentPositions[e.AgentId] = (e.ToX, e.ToY, e.AgentType);
+        _agents[e.AgentId] = e.Agent;
+        AddLog($"Turn {_currentTurn}: {e.AgentType} {e.AgentId[..Math.Min(6, e.AgentId.Length)]} → ({e.ToX},{e.ToY})");
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleAgentToggled(AgentToggledDto e)
+    {
+        AddLog($"{e.AgentType} {e.AgentId[..Math.Min(6, e.AgentId.Length)]} {e.Action} ({(e.IsActivated ? "on" : "off")})");
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleTurnCompleted(TurnCompletedDto e)
+    {
+        _currentTurn = e.TurnNumber;
+        foreach (var cell in e.UpdatedCells)
+            _cells[$"{cell.X},{cell.Y}"] = cell;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleEnded(SimulationEndedDto e)
+    {
+        _outcome = e.Outcome;
+        _reason  = e.Reason;
+        _running = false;
+        AddLog($"Ended: {e.Outcome} at turn {e.FinalTurn}");
+        Notifications.Notify($"Simulation ended: {e.Outcome}");
+        InvokeAsync(StateHasChanged);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private void AddLog(string msg)
+    {
+        _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {msg}");
+        if (_logs.Count > MaxLogs) _logs.RemoveAt(_logs.Count - 1);
+    }
+
+    private static string CellFill(string objectType) => objectType switch
+    {
+        "Wall"  => "#616161",
+        "Exit"  => "#43a047",
+        "Chest" => "#ffa726",
+        "Trap"  => "#ef5350",
+        _       => "#fafafa"
+    };
+
+    private static string AgentFill(string agentType) => agentType switch
+    {
+        "Hero"  => "#1e88e5",
+        "Enemy" => "#e53935",
+        _       => "#9c27b0"
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        HubClient.OnSimulationStarted  -= HandleStarted;
+        HubClient.OnAgentMoved         -= HandleAgentMoved;
+        HubClient.OnAgentToggled       -= HandleAgentToggled;
+        HubClient.OnTurnCompleted      -= HandleTurnCompleted;
+        HubClient.OnSimulationEnded    -= HandleEnded;
+
+        if (_jobId != default)
+            await HubClient.DisconnectAsync();
+    }
+}

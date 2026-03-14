@@ -1,0 +1,14 @@
+{
+  "AggregationSettings": {
+    "Steps": [
+      {
+        "Name": "Random AI",
+        "Mode": "MassRandomAISimulation"
+      },
+      {
+        "Name": "PPO - AI",
+        "Mode": "MassTrainedAISimulation"
+      }
+    ]
+  }
+}

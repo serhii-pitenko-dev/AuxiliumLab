@@ -1,0 +1,91 @@
+@page "/simulation/multiple-run"
+@inject ISimulationApiClient SimulationApi
+@inject INotificationService Notifications
+
+<PageHeader Title="Multiple Simulation Run" />
+
+<MudGrid>
+    <MudItem xs="12" md="5">
+        <MudCard Class="mb-4">
+            <MudCardContent>
+                <MudSelect @bind-Value="_cmd.Kind" Label="Simulation Kind" Variant="Variant.Outlined" Class="mb-3">
+                    <MudSelectItem Value="SimulationKind.RandomAI">Random AI</MudSelectItem>
+                    <MudSelectItem Value="SimulationKind.TrainedAI">Trained AI</MudSelectItem>
+                </MudSelect>
+
+                @if (_cmd.Kind == SimulationKind.TrainedAI)
+                {
+                    <MudSelect @bind-Value="_cmd.Algorithm" Label="Algorithm" Variant="Variant.Outlined" Class="mb-3">
+                        <MudSelectItem Value="ModelType.PPO">PPO</MudSelectItem>
+                        <MudSelectItem Value="ModelType.A2C">A2C</MudSelectItem>
+                        <MudSelectItem Value="ModelType.DQN">DQN</MudSelectItem>
+                    </MudSelect>
+                }
+
+                <MudNumericField @bind-Value="_cmd.SimulationCount" Label="Simulation Count"
+                                 Variant="Variant.Outlined" Min="1" Max="10000" Class="mb-3" />
+            </MudCardContent>
+        </MudCard>
+
+        <SandboxSettingsForm Override="_sandboxOverride" OverrideChanged="OnOverrideChanged" />
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_loading" OnClick="StartAsync" aria-label="Start Mass Simulation">
+            @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Start Mass Simulation
+        </MudButton>
+    </MudItem>
+
+    <MudItem xs="12" md="7">
+        @if (_started is not null)
+        {
+            <MudAlert Severity="Severity.Success" Class="mb-3">
+                Mass simulation started. Job ID: <strong>@_started.JobId</strong>
+            </MudAlert>
+        }
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
+        }
+    </MudItem>
+</MudGrid>
+
+@code {
+    private StartMassSimulationCommand _cmd = new()
+    {
+        Kind            = SimulationKind.RandomAI,
+        SimulationCount = 100,
+        Algorithm       = ModelType.PPO
+    };
+
+    private SimulationSandboxOverrideDto _sandboxOverride = new();
+    private bool _loading;
+    private SimulationJobStartedDto? _started;
+    private string? _error;
+
+    private void OnOverrideChanged(SimulationSandboxOverrideDto dto)
+    {
+        _sandboxOverride = dto;
+        _cmd.SandboxSettings = dto;
+    }
+
+    private async Task StartAsync()
+    {
+        _loading = true;
+        _error   = null;
+        _started = null;
+
+        try
+        {
+            _started = await SimulationApi.StartMassSimulationAsync(_cmd);
+            Notifications.Notify($"Mass simulation started: {_started?.JobId}");
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

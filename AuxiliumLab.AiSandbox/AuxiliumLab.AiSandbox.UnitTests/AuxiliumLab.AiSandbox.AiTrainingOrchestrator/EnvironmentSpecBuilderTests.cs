@@ -1,0 +1,169 @@
+using AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
+using AuxiliumLab.AiSandbox.Infrastructure.Configuration.Preconditions;
+using FluentAssertions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+namespace AuxiliumLab.AiSandbox.UnitTests.AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
+
+/// <summary>
+/// Tests for <see cref="EnvironmentSpecBuilder"/>.
+/// Validates the observation-dimension formula, feature-name generation,
+/// and the round-trip echo assertion.
+/// </summary>
+[TestClass]
+public class EnvironmentSpecBuilderTests
+{
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
+
+    private static SandBoxConfiguration MakeSettings(int sightRange) =>
+        new()
+        {
+            Hero = new HeroConfiguration
+            {
+                SightRange = new IncrementalRange { Current = sightRange, Min = 1, Max = 10, Step = 1 },
+                Speed      = new IncrementalRange { Current = 2, Min = 1, Max = 5,  Step = 1 },
+                Stamina    = new IncrementalRange { Current = 15, Min = 5, Max = 30, Step = 5 },
+            },
+            Enemy = new EnemyConfiguration
+            {
+                SightRange = new IncrementalRange { Current = 4, Min = 1, Max = 8, Step = 1 },
+                Speed      = new IncrementalRange { Current = 1, Min = 1, Max = 4, Step = 1 },
+                Stamina    = new IncrementalRange { Current = 2, Min = 1, Max = 10, Step = 2 },
+            },
+            MapSettings  = new MapConfiguration(),
+            MaxTurns     = new IncrementalRange { Current = 50, Min = 10, Max = 3000, Step = 20 },
+        };
+
+    // -----------------------------------------------------------------------
+    // ObservationDim formula
+    // -----------------------------------------------------------------------
+
+    [TestMethod]
+    [DataRow(2,   30)]   // 5 + 5^2  = 30
+    [DataRow(5,  126)]   // 5 + 11^2 = 126
+    [DataRow(10, 446)]   // 5 + 21^2 = 446
+    [DataRow(1,   14)]   // 5 + 3^2  = 14
+    public void Build_ObservationDim_MatchesFormula(int sightRange, int expectedObsDim)
+    {
+        var spec = EnvironmentSpecBuilder.Build(MakeSettings(sightRange), "exp_formula");
+
+        spec.ObservationDim.Should().Be(expectedObsDim,
+            $"obs_dim mismatch for sight_range={sightRange}");
+    }
+
+    // -----------------------------------------------------------------------
+    // ActionDim
+    // -----------------------------------------------------------------------
+
+    [TestMethod]
+    public void Build_ActionDim_IsAlwaysFive()
+    {
+        var spec = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_action");
+        spec.ActionDim.Should().Be(5);
+    }
+
+    // -----------------------------------------------------------------------
+    // SightRange echoed
+    // -----------------------------------------------------------------------
+
+    [TestMethod]
+    public void Build_SightRange_EchoesSettingsCurrent()
+    {
+        var spec = EnvironmentSpecBuilder.Build(MakeSettings(7), "exp_sr");
+        spec.SightRange.Should().Be(7);
+    }
+
+    // -----------------------------------------------------------------------
+    // Feature names
+    // -----------------------------------------------------------------------
+
+    [TestMethod]
+    public void Build_FeatureNames_CountMatchesObsDim()
+    {
+        var spec = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_names");
+        spec.ObservationFeatureNames.Should().HaveCount(spec.ObservationDim,
+            "Length of ObservationFeatureNames must equal ObservationDim.");
+    }
+
+    [TestMethod]
+    public void Build_FeatureNames_FirstFiveAreScalars()
+    {
+        var spec = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_scalars");
+        string[] expectedScalars = ["x", "y", "is_run", "stamina_frac", "speed"];
+
+        for (int i = 0; i < expectedScalars.Length; i++)
+            spec.ObservationFeatureNames[i].Should().Be(expectedScalars[i],
+                $"Feature name at index {i} is wrong.");
+    }
+
+    [TestMethod]
+    public void Build_FeatureNames_GridCellsFollowScalars()
+    {
+        int sightRange = 2;           // gridSize = 5
+        var spec = EnvironmentSpecBuilder.Build(MakeSettings(sightRange), "exp_grid");
+
+        // First grid cell at index 5 must be "grid_0_0"
+        spec.ObservationFeatureNames[5].Should().Be("grid_0_0");
+
+        // Last grid cell at index obsDim-1 must be "grid_4_4" for 5×5 grid
+        int gridSize = 2 * sightRange + 1;
+        string expectedLast = $"grid_{gridSize - 1}_{gridSize - 1}";
+        spec.ObservationFeatureNames[^1].Should().Be(expectedLast);
+    }
+
+    // -----------------------------------------------------------------------
+    // AssertEchoMatches — round-trip checks
+    // -----------------------------------------------------------------------
+
+    [TestMethod]
+    public void AssertEchoMatches_IdenticalSpecs_DoesNotThrow()
+    {
+        var sent = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_echo_ok");
+        // Build another identical spec as a fake "echo"
+        var echoed = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_echo_ok");
+
+        // Must not throw
+        EnvironmentSpecBuilder.AssertEchoMatches(sent, echoed, "exp_echo_ok");
+    }
+
+    [TestMethod]
+    public void AssertEchoMatches_MismatchedObsDim_Throws()
+    {
+        var sent = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_mismatch");
+        var echoed = EnvironmentSpecBuilder.Build(MakeSettings(4), "exp_mismatch"); // different sight_range → different obs_dim
+
+        FluentActions.Invoking(() => EnvironmentSpecBuilder.AssertEchoMatches(sent, echoed, "exp_mismatch"))
+            .Should().ThrowExactly<InvalidOperationException>()
+            .WithMessage("*echo mismatch*");
+    }
+
+    [TestMethod]
+    public void AssertEchoMatches_NullSentSpec_Throws()
+    {
+        var echoed = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp");
+        FluentActions.Invoking(() => EnvironmentSpecBuilder.AssertEchoMatches(null!, echoed, "exp"))
+            .Should().ThrowExactly<ArgumentNullException>();
+    }
+
+    // -----------------------------------------------------------------------
+    // Guard clauses
+    // -----------------------------------------------------------------------
+
+    [TestMethod]
+    public void Build_NullSettings_ThrowsArgumentNullException()
+    {
+        FluentActions.Invoking(() => EnvironmentSpecBuilder.Build(null!, "exp"))
+            .Should().ThrowExactly<ArgumentNullException>();
+    }
+
+    [TestMethod]
+    [DataRow("")]
+    [DataRow("   ")]
+    public void Build_EmptyOrWhiteSpaceExperimentId_ThrowsArgumentException(string experimentId)
+    {
+        FluentActions.Invoking(() => EnvironmentSpecBuilder.Build(MakeSettings(5), experimentId))
+            .Should().ThrowExactly<ArgumentException>();
+    }
+}

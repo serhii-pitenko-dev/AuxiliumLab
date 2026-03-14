@@ -1,0 +1,212 @@
+@page "/training/ppo"
+@inject ITrainingApiClient TrainingApi
+@inject INotificationService Notifications
+
+<PageHeader Title="PPO Training" />
+
+<MudGrid>
+    <MudItem xs="12" md="6">
+        <MudCard>
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.subtitle1">Hyperparameters</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudGrid>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="_cmd.Hyperparameters!.TotalTimesteps" Label="Total Timesteps"
+                                         Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="_cmd.Hyperparameters!.LearningRate" Label="Learning Rate"
+                                         Variant="Variant.Outlined" Step="0.0001" Format="G4" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="_cmd.Hyperparameters!.NSteps" Label="N Steps"
+                                         Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="_cmd.Hyperparameters!.BatchSize" Label="Batch Size"
+                                         Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="_cmd.Hyperparameters!.NEpochs" Label="N Epochs"
+                                         Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="_cmd.Hyperparameters!.Gamma" Label="Gamma"
+                                         Variant="Variant.Outlined" Step="0.01" Format="F3" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="_cmd.Hyperparameters!.GaeLambda" Label="GAE Lambda"
+                                         Variant="Variant.Outlined" Step="0.01" Format="F3" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="_cmd.Hyperparameters!.ClipRange" Label="Clip Range"
+                                         Variant="Variant.Outlined" Step="0.01" Format="F2" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="_cmd.Hyperparameters!.EntCoef" Label="Entropy Coeff"
+                                         Variant="Variant.Outlined" Step="0.001" Format="G4" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="_cmd.Hyperparameters!.NEnvs" Label="N Envs"
+                                         Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="_cmd.Hyperparameters!.Seed" Label="Seed"
+                                         Variant="Variant.Outlined" />
+                    </MudItem>
+                </MudGrid>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MudCard Class="mb-4">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.subtitle1">Reward Settings</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudGrid>
+                    <MudItem xs="12" sm="4">
+                        <MudNumericField @bind-Value="_cmd.RewardSettings!.StepPenalty" Label="Step Penalty"
+                                         Variant="Variant.Outlined" Step="0.001f" Format="G4" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudNumericField @bind-Value="_cmd.RewardSettings!.WinReward" Label="Win Reward"
+                                         Variant="Variant.Outlined" Step="0.1f" Format="F2" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudNumericField @bind-Value="_cmd.RewardSettings!.LossReward" Label="Loss Reward"
+                                         Variant="Variant.Outlined" Step="0.1f" Format="F2" />
+                    </MudItem>
+                </MudGrid>
+            </MudCardContent>
+        </MudCard>
+
+        <!-- Sandbox overrides -->
+        <MudCard Outlined="true">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.subtitle1">Sandbox Overrides <MudText Inline="true" Color="Color.Secondary">(optional)</MudText></MudText>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudIconButton Icon="@(_sandboxExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                   OnClick="@(() => _sandboxExpanded = !_sandboxExpanded)" />
+                </CardHeaderActions>
+            </MudCardHeader>
+            @if (_sandboxExpanded)
+            {
+                <MudCardContent>
+                    <MudGrid>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField @bind-Value="_cmd.SandboxSettings!.MaxTurns" Label="Max Turns" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField @bind-Value="_cmd.SandboxSettings!.MapWidth" Label="Map Width" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField @bind-Value="_cmd.SandboxSettings!.MapHeight" Label="Map Height" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField @bind-Value="_cmd.SandboxSettings!.BlocksPercent" Label="Blocks %" Variant="Variant.Outlined" Step="0.01" Format="F2" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField @bind-Value="_cmd.SandboxSettings!.EnemiesPercent" Label="Enemies %" Variant="Variant.Outlined" Step="0.01" Format="F2" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField @bind-Value="_cmd.SandboxSettings!.HeroSpeed" Label="Hero Speed" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField @bind-Value="_cmd.SandboxSettings!.HeroSightRange" Label="Hero Sight Range" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField @bind-Value="_cmd.SandboxSettings!.HeroStamina" Label="Hero Stamina" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField @bind-Value="_cmd.SandboxSettings!.EnemySpeed" Label="Enemy Speed" Variant="Variant.Outlined" />
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+            }
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+<MudButton Class="mt-4" Variant="Variant.Filled" Color="Color.Primary"
+           aria-label="Start Training"
+           Disabled="_loading" OnClick="StartTraining">
+    @if (_loading)
+    {
+        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+    }
+    Start PPO Training
+</MudButton>
+
+@if (_started is not null)
+{
+    <MudAlert Severity="Severity.Success" Class="mt-4">
+        Training started. Job ID: <strong>@_started.JobId</strong> | Experiment: <strong>@_started.ExperimentId</strong>
+    </MudAlert>
+}
+
+@if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
+}
+
+@code {
+    private StartPpoTrainingCommand _cmd = new()
+    {
+        Hyperparameters = new PpoHyperparametersDto
+        {
+            TotalTimesteps = 100_000,
+            LearningRate   = 0.0003,
+            NSteps         = 2048,
+            BatchSize      = 64,
+            NEpochs        = 10,
+            Gamma          = 0.99,
+            GaeLambda      = 0.95,
+            ClipRange      = 0.2,
+            EntCoef        = 0.0,
+            NEnvs          = 4
+        },
+        SandboxSettings = new TrainingSandboxSettingsDto(),
+        RewardSettings  = new RewardSettingsDto
+        {
+            StepPenalty = -0.001f,
+            WinReward   = 1.0f,
+            LossReward  = -1.0f
+        }
+    };
+
+    private bool _loading;
+    private bool _sandboxExpanded;
+    private TrainingJobStartedDto? _started;
+    private string? _error;
+
+    private async Task StartTraining()
+    {
+        _loading = true;
+        _error   = null;
+        _started = null;
+
+        try
+        {
+            _started = await TrainingApi.StartPpoTrainingAsync(_cmd);
+            Notifications.Notify($"Training started: {_started?.ExperimentId}");
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PublishTrimmed>false</PublishTrimmed>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+    <PublishAot>false</PublishAot>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Update="training-settings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="aggregation-settings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.10" />
+    <PackageReference Include="System.Management" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AuxiliumLab.AiSandbox.Ai\AuxiliumLab.AiSandbox.Ai.csproj" />
+    <ProjectReference Include="..\AuxiliumLab.AiSandbox.AiTrainingOrchestrator\AuxiliumLab.AiSandbox.AiTrainingOrchestrator.csproj" />
+    <ProjectReference Include="..\AuxiliumLab.AiSandbox.ApplicationServices\AuxiliumLab.AiSandbox.ApplicationServices.csproj" />
+    <ProjectReference Include="..\AuxiliumLab.AiSandbox.Common\AuxiliumLab.AiSandbox.Common.csproj" />
+    <ProjectReference Include="..\AuxiliumLab.AiSandbox.Domain\AuxiliumLab.AiSandbox.Domain.csproj" />
+    <ProjectReference Include="..\AuxiliumLab.AiSandbox.GrpcHost\AuxiliumLab.AiSandbox.GrpcHost.csproj" />
+    <ProjectReference Include="..\AuxiliumLab.AiSandbox.Infrastructure\AuxiliumLab.AiSandbox.Infrastructure.csproj" />
+    <ProjectReference Include="..\AuxiliumLab.Statistics\AuxiliumLab.AiSandbox.Statistics.csproj" />
+    <ProjectReference Include="..\AuxiliumLab.AiSandbox.WebApi\AuxiliumLab.AiSandbox.WebApi.csproj" />
+  </ItemGroup>
+
+</Project>

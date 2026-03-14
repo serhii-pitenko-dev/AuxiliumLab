@@ -1,0 +1,101 @@
+@* Reusable form for SimulationSandboxOverrideDto / sandbox parameters.
+   Bind via @bind-Value on the parent. *@
+
+<MudCard Outlined="true" Class="mb-4">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.subtitle1">Sandbox Overrides <MudText Inline="true" Color="Color.Secondary">(optional)</MudText></MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudIconButton Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                           OnClick="@(() => _expanded = !_expanded)" />
+        </CardHeaderActions>
+    </MudCardHeader>
+    @if (_expanded)
+    {
+        <MudCardContent>
+            <MudGrid>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField @bind-Value="MaxTurns" Label="Max Turns" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField @bind-Value="MapWidth" Label="Map Width" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField @bind-Value="MapHeight" Label="Map Height" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField @bind-Value="BlocksPercent" Label="Blocks %" Variant="Variant.Outlined" Step="0.01" Format="F2" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField @bind-Value="EnemiesPercent" Label="Enemies %" Variant="Variant.Outlined" Step="0.01" Format="F2" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField @bind-Value="HeroSpeed" Label="Hero Speed" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField @bind-Value="HeroSightRange" Label="Hero Sight Range" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField @bind-Value="HeroStamina" Label="Hero Stamina" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField @bind-Value="EnemySpeed" Label="Enemy Speed" Variant="Variant.Outlined" />
+                </MudItem>
+            </MudGrid>
+        </MudCardContent>
+    }
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired] public SimulationSandboxOverrideDto Override { get; set; } = new();
+    [Parameter] public EventCallback<SimulationSandboxOverrideDto> OverrideChanged { get; set; }
+
+    private bool _expanded;
+
+    private int? MaxTurns
+    {
+        get => Override.MaxTurns;
+        set { Override.MaxTurns = value; OverrideChanged.InvokeAsync(Override); }
+    }
+    private int? MapWidth
+    {
+        get => Override.MapWidth;
+        set { Override.MapWidth = value; OverrideChanged.InvokeAsync(Override); }
+    }
+    private int? MapHeight
+    {
+        get => Override.MapHeight;
+        set { Override.MapHeight = value; OverrideChanged.InvokeAsync(Override); }
+    }
+    private double? BlocksPercent
+    {
+        get => Override.BlocksPercent;
+        set { Override.BlocksPercent = value; OverrideChanged.InvokeAsync(Override); }
+    }
+    private double? EnemiesPercent
+    {
+        get => Override.EnemiesPercent;
+        set { Override.EnemiesPercent = value; OverrideChanged.InvokeAsync(Override); }
+    }
+    private int? HeroSpeed
+    {
+        get => Override.HeroSpeed;
+        set { Override.HeroSpeed = value; OverrideChanged.InvokeAsync(Override); }
+    }
+    private int? HeroSightRange
+    {
+        get => Override.HeroSightRange;
+        set { Override.HeroSightRange = value; OverrideChanged.InvokeAsync(Override); }
+    }
+    private int? HeroStamina
+    {
+        get => Override.HeroStamina;
+        set { Override.HeroStamina = value; OverrideChanged.InvokeAsync(Override); }
+    }
+    private int? EnemySpeed
+    {
+        get => Override.EnemySpeed;
+        set { Override.EnemySpeed = value; OverrideChanged.InvokeAsync(Override); }
+    }
+}

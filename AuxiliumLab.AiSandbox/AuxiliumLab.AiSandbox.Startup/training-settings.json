@@ -1,0 +1,63 @@
+{
+  "PolicyTrainerClient": {
+    "ServerAddress": "http://localhost:50051"
+  },
+  "TrainingSettings": {
+    "Rewards": {
+      "StepPenalty": -0.1,
+      "WinReward": 10.0,
+      "LossReward": -10.0
+    },
+    "Algorithms": [
+      {
+        "Algorithm": "PPO",
+        "Parameters": [
+          { "Name": "total_timesteps", "Value": "100000"   },
+          { "Name": "n_envs",          "Value": "4"      },
+          { "Name": "learning_rate",   "Value": "0.0003" },
+          { "Name": "n_steps",         "Value": "256"    },
+          { "Name": "batch_size",      "Value": "64"     },
+          { "Name": "n_epochs",        "Value": "5"      },
+          { "Name": "gamma",           "Value": "0.90"   },
+          { "Name": "gae_lambda",      "Value": "0.95"   },
+          { "Name": "clip_range",      "Value": "0.2"    },
+          { "Name": "ent_coef",        "Value": "0.1"    },
+          { "Name": "seed",            "Value": "42"     }
+        ]
+      },
+      {
+        "Algorithm": "A2C",
+        "Parameters": [
+          { "Name": "total_timesteps", "Value": "100000"   },
+          { "Name": "n_envs",          "Value": "4"      },
+          { "Name": "learning_rate",   "Value": "0.0007" },
+          { "Name": "n_steps",         "Value": "5"      },
+          { "Name": "gamma",           "Value": "0.99"   },
+          { "Name": "gae_lambda",      "Value": "1.0"    },
+          { "Name": "ent_coef",        "Value": "0.0"    },
+          { "Name": "vf_coef",         "Value": "0.5"    },
+          { "Name": "max_grad_norm",   "Value": "0.5"    },
+          { "Name": "seed",            "Value": "42"     }
+        ]
+      },
+      {
+        "Algorithm": "DQN",
+        "Parameters": [
+          { "Name": "total_timesteps",        "Value": "100000"   },
+          { "Name": "learning_rate",          "Value": "0.0001" },
+          { "Name": "buffer_size",            "Value": "10000"  },
+          { "Name": "learning_starts",        "Value": "1000"   },
+          { "Name": "batch_size",             "Value": "32"     },
+          { "Name": "tau",                    "Value": "1.0"    },
+          { "Name": "gamma",                  "Value": "0.99"   },
+          { "Name": "train_freq",             "Value": "4"      },
+          { "Name": "gradient_steps",         "Value": "1"      },
+          { "Name": "target_update_interval", "Value": "100"    },
+          { "Name": "exploration_fraction",   "Value": "0.1"    },
+          { "Name": "exploration_final_eps",  "Value": "0.05"   },
+          { "Name": "seed",                   "Value": "42"     }
+        ]
+      }
+    ]
+  }
+}

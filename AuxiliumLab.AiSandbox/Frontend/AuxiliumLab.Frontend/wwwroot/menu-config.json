@@ -1,0 +1,41 @@
+{
+  "sections": [
+    {
+      "label": "Sandbox",
+      "items": [
+        { "label": "Settings", "href": "/sandbox/settings" }
+      ]
+    },
+    {
+      "label": "Training",
+      "items": [
+        { "label": "PPO Training", "href": "/training/ppo" },
+        { "label": "Training Status", "href": "/training/status" }
+      ]
+    },
+    {
+      "label": "Simulation",
+      "items": [
+        { "label": "Multiple Run", "href": "/simulation/multiple-run" },
+        { "label": "Visualization", "href": "/simulation/visualization" },
+        { "label": "Simulation Status", "href": "/simulation/status" }
+      ]
+    },
+    {
+      "label": "Aggregation Run",
+      "items": [
+        { "label": "Run", "href": "/aggregation/run" },
+        { "label": "Aggregation Status", "href": "/aggregation/status" }
+      ]
+    },
+    {
+      "label": "Data Management",
+      "items": [
+        { "label": "Aggregation Run Visualization", "href": "/data-management/visualization/aggregation-run" },
+        { "label": "Multiple Run Visualization", "href": "/data-management/visualization/multiple-run" },
+        { "label": "Training Visualization", "href": "/data-management/visualization/training" },
+        { "label": "Raw Data", "href": "/data-management/raw" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AuxiliumLab AI Sandbox</title>
+    <base href="/" />
+
+    <!-- MudBlazor CSS -->
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+
+    <!-- Google Fonts for MudBlazor -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+</head>
+
+<body>
+    <div id="app">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+            <symbol id="icon-loading" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9" fill="none" stroke="#1e88e5" stroke-width="2"
+                        stroke-dasharray="56.5" stroke-dashoffset="0">
+                    <animateTransform attributeName="transform" type="rotate"
+                                      from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite" />
+                </circle>
+            </symbol>
+        </svg>
+        <div style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:Roboto,sans-serif;flex-direction:column;">
+            <svg width="48" height="48"><use href="#icon-loading" /></svg>
+            <p style="margin-top:16px;color:#555;">Loading AuxiliumLab AI Sandbox...</p>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">&#128473;</a>
+    </div>
+
+    <!-- MudBlazor JS -->
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+
+    <!-- ApexCharts JS (required by Blazor-ApexCharts) -->
+    <script src="_content/Blazor-ApexCharts/js/blazor-apexcharts.js"></script>
+
+    <!-- Blazor WASM loader -->
+    <script src="_framework/blazor.webassembly.js"></script>
+</body>
+
+</html>

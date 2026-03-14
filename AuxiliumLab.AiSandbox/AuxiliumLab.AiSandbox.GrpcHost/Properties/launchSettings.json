@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "AuxiliumLab.AiSandbox.GrpcHost": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:62134;http://localhost:62135"
+    }
+  }
+}

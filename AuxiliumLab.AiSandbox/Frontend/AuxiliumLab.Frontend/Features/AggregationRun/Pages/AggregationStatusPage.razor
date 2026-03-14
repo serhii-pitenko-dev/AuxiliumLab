@@ -1,0 +1,89 @@
+@page "/aggregation/status"
+@inject IAggregationApiClient AggregationApi
+@inject INotificationService Notifications
+@implements IDisposable
+
+<PageHeader Title="Aggregation Status" />
+
+<MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh"
+           OnClick="RefreshAsync" Disabled="_loading" Class="mb-4">
+    Refresh
+</MudButton>
+
+<MudTable Items="_jobs" Dense="true" Striped="true" Loading="_loading" LoadingProgressColor="Color.Primary">
+    <HeaderContent>
+        <MudTh>Job ID</MudTh>
+        <MudTh>State</MudTh>
+        <MudTh>Current Step</MudTh>
+        <MudTh>Steps</MudTh>
+        <MudTh>Started At</MudTh>
+        <MudTh>Completed At</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Job ID">
+            <MudText Style="font-family:monospace;font-size:0.8rem">@context.JobId.ToString()[..8]…</MudText>
+        </MudTd>
+        <MudTd DataLabel="State">
+            <MudChip T="string" Color="@StateColor(context.State)" Size="Size.Small">@context.State</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Current Step">@(context.CurrentStep ?? "—")</MudTd>
+        <MudTd DataLabel="Steps">
+            @context.CompletedSteps / @context.StepNames.Count
+            @if (context.StepNames.Count > 0)
+            {
+                <MudProgressLinear Value="@((double)context.CompletedSteps / context.StepNames.Count * 100)"
+                                   Color="Color.Primary" Style="height:4px;margin-top:2px" />
+            }
+        </MudTd>
+        <MudTd DataLabel="Started At">@context.StartedAt.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
+        <MudTd DataLabel="Completed At">@(context.CompletedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "—")</MudTd>
+        <MudTd DataLabel="Actions">
+            @if (context.State == AggregationJobState.Running)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.Stop" Color="Color.Error" Size="Size.Small"
+                               aria-label="Stop"
+                               OnClick="@(() => StopAsync(context.JobId))" />
+            }
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>No aggregation jobs found.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<AggregationJobStatusDto> _jobs = [];
+    private bool _loading;
+    private Timer? _timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAsync();
+        _timer = new Timer(_ => InvokeAsync(RefreshAsync), null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+    }
+
+    private async Task RefreshAsync()
+    {
+        _loading = true;
+        try { _jobs = await AggregationApi.GetAggregationStatusesAsync(); }
+        finally { _loading = false; StateHasChanged(); }
+    }
+
+    private async Task StopAsync(Guid jobId)
+    {
+        await AggregationApi.StopAggregationAsync(jobId);
+        Notifications.Notify($"Stop requested for aggregation job {jobId.ToString()[..8]}");
+        await RefreshAsync();
+    }
+
+    private MudBlazor.Color StateColor(AggregationJobState state) => state switch
+    {
+        AggregationJobState.Running   => MudBlazor.Color.Info,
+        AggregationJobState.Completed => MudBlazor.Color.Success,
+        AggregationJobState.Failed    => MudBlazor.Color.Error,
+        _                             => MudBlazor.Color.Default
+    };
+
+    public void Dispose() => _timer?.Dispose();
+}

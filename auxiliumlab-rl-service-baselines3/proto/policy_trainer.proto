@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package policy_trainer;
+
+// Service for training and inference with RL agents
+service PolicyTrainerService {
+  // Negotiate the environment spec before training.
+  // Must be called once per experiment_id before the corresponding StartTraining* call.
+  // Returns a hard error if the spec is inconsistent (e.g. obs_dim does not match the formula).
+  rpc NegotiateEnvironment(NegotiateEnvironmentRequest) returns (NegotiateEnvironmentResponse);
+
+  // Start training a PPO model
+  rpc StartTrainingPPO(TrainingRequest) returns (TrainingResponse);
+  
+  // Start training an A2C model
+  rpc StartTrainingA2C(TrainingRequest) returns (TrainingResponse);
+  
+  // Start training a DQN model
+  rpc StartTrainingDQN(TrainingRequest) returns (TrainingResponse);
+  
+  // Get training status and progress
+  rpc GetTrainingStatus(StatusRequest) returns (StatusResponse);
+  
+  // Perform inference with a trained model
+  rpc Act(ActRequest) returns (ActResponse);
+}
+
+// Fully describes the observation vector and action space for one training session.
+message EnvironmentSpec {
+  // Total number of floats in every observation vector.
+  // Formula: 5 scalar features + (2 * sight_range + 1)^2 vision-grid cells.
+  int32 observation_dim = 1;
+
+  // Number of discrete actions (0=up, 1=down, 2=left, 3=right, 4=toggle-run).
+  int32 action_dim = 2;
+
+  // Hero.SightRange.Current from appsettings.json.
+  int32 sight_range = 3;
+
+  // Human-readable names for each observation index, length must equal observation_dim.
+  repeated string observation_feature_names = 4;
+}
+
+// Sent by .NET before StartTraining* to establish the environment contract.
+message NegotiateEnvironmentRequest {
+  // Must match the experiment_id used in the subsequent StartTraining* call.
+  string experiment_id = 1;
+  EnvironmentSpec spec = 2;
+}
+
+// Python echoes the spec back so .NET can verify the round-trip.
+message NegotiateEnvironmentResponse {
+  // True when the spec was accepted and stored; false on any validation failure.
+  bool accepted = 1;
+  // Human-readable acceptance confirmation or rejection reason.
+  string message = 2;
+  // Echo of the received spec — .NET asserts this matches what it sent.
+  EnvironmentSpec echoed_spec = 3;
+}
+
+// Request message for starting training
+message TrainingRequest {
+  string experiment_id = 1;
+  int32 total_timesteps = 2;
+  int32 seed = 3;
+  map<string, string> hyperparameters = 4;  // Optional hyperparameters
+  string model_output_path = 5;
+}
+
+// Response message for training start
+message TrainingResponse {
+  TrainingStatus status = 1;
+  string message = 2;
+  string run_id = 3;
+}
+
+// Training status enum
+enum TrainingStatus {
+  STARTED = 0;
+  FAILED = 1;
+}
+
+// Request message for status check
+message StatusRequest {
+  string run_id = 1;
+}
+
+// Response message for status check
+message StatusResponse {
+  int32 timesteps_done = 1;
+  bool is_done = 2;
+  string last_checkpoint_path = 3;
+  string error_message = 4;
+}
+
+// Request message for action inference
+message ActRequest {
+  string run_id = 1;
+  repeated float observation = 2;
+}
+
+// Response message for action inference
+message ActResponse {
+  int32 action = 1;
+  bool success = 2;
+  string error_message = 3;
+}

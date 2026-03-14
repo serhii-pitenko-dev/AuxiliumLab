@@ -1,0 +1,122 @@
+@page "/aggregation/run"
+@inject IAggregationApiClient AggregationApi
+@inject INotificationService Notifications
+
+<PageHeader Title="Aggregation Run" />
+
+<MudGrid>
+    <MudItem xs="12" md="6">
+        <MudCard Class="mb-4">
+            <MudCardContent>
+                <MudNumericField @bind-Value="_cmd.StandardSimulationCount" Label="Standard Simulation Count"
+                                 Variant="Variant.Outlined" Min="1" Class="mb-3" />
+
+                <MudSelect @bind-Value="_cmd.Algorithm" Label="Algorithm" Variant="Variant.Outlined" Class="mb-3">
+                    <MudSelectItem Value='"PPO"'>PPO</MudSelectItem>
+                    <MudSelectItem Value='"A2C"'>A2C</MudSelectItem>
+                    <MudSelectItem Value='"DQN"'>DQN</MudSelectItem>
+                </MudSelect>
+
+                <MudSelect @bind-Value="_cmd.PolicyType" Label="Policy Type" Variant="Variant.Outlined" Class="mb-3">
+                    <MudSelectItem Value='"MLP"'>MLP</MudSelectItem>
+                    <MudSelectItem Value='"CNN"'>CNN</MudSelectItem>
+                </MudSelect>
+            </MudCardContent>
+        </MudCard>
+
+        <!-- Steps -->
+        <MudCard Class="mb-4">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.subtitle1">Steps</MudText>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudIconButton Icon="@Icons.Material.Filled.Add" OnClick="AddStep" />
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent>
+                @if (_cmd.Steps.Count == 0)
+                {
+                    <MudText Color="Color.Secondary">No steps configured. Click + to add.</MudText>
+                }
+                @for (int i = 0; i < _cmd.Steps.Count; i++)
+                {
+                    var idx = i;
+                    <MudGrid Class="mb-2" AlignItems="Center">
+                        <MudItem xs="5">
+                            <MudTextField @bind-Value="_cmd.Steps[idx].Name" Label="Step Name"
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="5">
+                            <MudTextField @bind-Value="_cmd.Steps[idx].Mode" Label="Mode"
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="2">
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                                           aria-label="Delete"
+                                           OnClick="@(() => RemoveStep(idx))" />
+                        </MudItem>
+                    </MudGrid>
+                }
+            </MudCardContent>
+        </MudCard>
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_loading || _cmd.Steps.Count == 0"
+                   OnClick="StartAsync">
+            @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Start Aggregation
+        </MudButton>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        @if (_started is not null)
+        {
+            <MudAlert Severity="Severity.Success" Class="mb-3">
+                Aggregation started. Job ID: <strong>@_started.JobId</strong>
+                <br />Steps: @string.Join(", ", _started.StepNames)
+            </MudAlert>
+        }
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
+        }
+    </MudItem>
+</MudGrid>
+
+@code {
+    private StartAggregationCommand _cmd = new()
+    {
+        StandardSimulationCount = 100,
+        Algorithm               = "PPO",
+        PolicyType              = "MLP",
+        Steps                   = [new AggregationStepDto { Name = "Step1", Mode = "Standard" }]
+    };
+
+    private bool _loading;
+    private AggregationJobStartedDto? _started;
+    private string? _error;
+
+    private void AddStep() => _cmd.Steps.Add(new AggregationStepDto());
+    private void RemoveStep(int idx) => _cmd.Steps.RemoveAt(idx);
+
+    private async Task StartAsync()
+    {
+        _loading = true;
+        _error   = null;
+        _started = null;
+
+        try
+        {
+            _started = await AggregationApi.StartAggregationAsync(_cmd);
+            Notifications.Notify($"Aggregation started: {_started?.JobId}");
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

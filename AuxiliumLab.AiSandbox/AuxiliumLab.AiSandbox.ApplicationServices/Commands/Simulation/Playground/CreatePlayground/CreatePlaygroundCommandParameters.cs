@@ -1,0 +1,7 @@
+﻿using AuxiliumLab.AiSandbox.Infrastructure.Configuration.Preconditions;
+
+namespace AuxiliumLab.AiSandbox.ApplicationServices.Commands.Simulation.Playground.CreatePlayground;
+
+public readonly record struct CreatePlaygroundCommandParameters(MapConfiguration MapConfiguration, HeroConfiguration HeroConfiguration, EnemyConfiguration EnemyConfiguration);
+
+

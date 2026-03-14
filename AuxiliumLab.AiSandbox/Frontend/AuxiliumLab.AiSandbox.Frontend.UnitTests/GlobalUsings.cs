@@ -1,0 +1,16 @@
+global using Microsoft.VisualStudio.TestTools.UnitTesting;
+global using Microsoft.Extensions.DependencyInjection;
+global using Bunit;
+global using MudBlazor;
+global using TestContext = AuxiliumLab.AiSandbox.Frontend.UnitTests.MudTestContext;
+global using FluentAssertions;
+global using Moq;
+global using AuxiliumLab.Frontend.Features.Training.Dto;
+global using AuxiliumLab.Frontend.Features.Training.Services;
+global using AuxiliumLab.Frontend.Features.Simulation.Dto;
+global using AuxiliumLab.Frontend.Features.Simulation.Services;
+global using AuxiliumLab.Frontend.Features.AggregationRun.Dto;
+global using AuxiliumLab.Frontend.Features.AggregationRun.Services;
+global using AuxiliumLab.Frontend.Features.Statistics.Dto;
+global using AuxiliumLab.Frontend.Features.Statistics.Services;
+global using AuxiliumLab.Frontend.Services;

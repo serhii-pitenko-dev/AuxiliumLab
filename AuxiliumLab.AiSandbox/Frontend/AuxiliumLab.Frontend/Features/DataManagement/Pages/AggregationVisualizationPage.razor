@@ -1,0 +1,102 @@
+@page "/"
+@page "/data-management/visualization/aggregation-run"
+@using ApexCharts
+@inject IStatisticsApiClient StatisticsApi
+
+<PageHeader Title="Aggregation Run Visualization" />
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" md="4">
+        <MudSelect @bind-Value="_selectedJobId" Label="Select Aggregation Run"
+                   Variant="Variant.Outlined" T="Guid?" ToStringFunc="@(id => id.HasValue ? id.Value.ToString()[..8] + "…" : "— Select —")">
+            <MudSelectItem T="Guid?" Value="null">— Select —</MudSelectItem>
+            @foreach (var run in _runs)
+            {
+                var runId = (Guid?)run.JobId;
+                <MudSelectItem T="Guid?" Value="runId">
+                    @run.JobId.ToString()[..8]… (@run.StartedAt.ToString("yyyy-MM-dd HH:mm"))
+                </MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" md="2" Class="d-flex align-center">
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh"
+                   OnClick="LoadAsync" Disabled="_loading">Refresh</MudButton>
+    </MudItem>
+</MudGrid>
+
+@if (_selected is not null)
+{
+    <MudGrid>
+        <!-- Win % per step bar chart -->
+        <MudItem xs="12" md="8">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Win Percentage per Step</MudText>
+            <ApexChart TItem="StepChartItem" Title="">
+                <ApexPointSeries TItem="StepChartItem"
+                                 Items="_chartItems"
+                                 Name="Win %"
+                                 SeriesType="SeriesType.Bar"
+                                 XValue="@(e => e.StepName)"
+                                 YValue="@(e => (decimal)e.WinPercentage)" />
+            </ApexChart>
+        </MudItem>
+
+        <!-- Summary table -->
+        <MudItem xs="12" md="4">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Step Summary</MudText>
+            <MudTable Items="_selected.Steps" Dense="true">
+                <HeaderContent>
+                    <MudTh>Step</MudTh>
+                    <MudTh>Win %</MudTh>
+                    <MudTh>Avg Turns</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.StepName</MudTd>
+                    <MudTd>@context.WinPercentage.ToString("F1")%</MudTd>
+                    <MudTd>@context.AverageTurns.ToString("F1")</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudItem>
+    </MudGrid>
+}
+else if (!_loading && _runs.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">No completed aggregation runs found.</MudAlert>
+}
+
+@code {
+    private record StepChartItem(string StepName, double WinPercentage, double AverageTurns);
+
+    private List<CompletedAggregationRunDto> _runs = [];
+    private Guid? _selectedJobId;
+    private CompletedAggregationRunDto? _selected;
+    private List<StepChartItem> _chartItems = [];
+    private bool _loading;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            _runs = await StatisticsApi.GetCompletedAggregationsAsync();
+        }
+        finally { _loading = false; }
+    }
+
+    protected override void OnParametersSet() => SelectRun();
+
+    private void SelectRun()
+    {
+        _selected   = _selectedJobId.HasValue ? _runs.FirstOrDefault(r => r.JobId == _selectedJobId) : null;
+        _chartItems = _selected?.Steps.Select(s => new StepChartItem(s.StepName, s.WinPercentage, s.AverageTurns)).ToList() ?? [];
+    }
+
+    // Re-select when dropdown changes
+    private Guid? SelectedJobId
+    {
+        get => _selectedJobId;
+        set { _selectedJobId = value; SelectRun(); }
+    }
+}
