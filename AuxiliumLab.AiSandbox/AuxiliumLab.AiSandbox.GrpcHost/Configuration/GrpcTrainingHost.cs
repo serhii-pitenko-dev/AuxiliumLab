@@ -63,6 +63,8 @@ public static class GrpcTrainingHost
         // ── Build and map ─────────────────────────────────────────────────────
         var app = builder.Build();
 
+        app.UseCors("BlazorFrontend");
+
         app.UseSwagger();
         app.UseSwaggerUI(c =>
         {

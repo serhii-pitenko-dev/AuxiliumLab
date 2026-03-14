@@ -5,8 +5,8 @@ Blazor WebAssembly (.NET 10) single-page application for AuxiliumLab AI Sandbox.
 ## Stack
 
 - **Framework:** .NET 10, Blazor WebAssembly
-- **UI:** MudBlazor 7.17.0
-- **Charts:** Blazor-ApexCharts 1.10.0
+- **UI:** MudBlazor 8.0.0
+- **Charts:** Blazor-ApexCharts 2.0.0
 - **Real-time:** Microsoft.AspNetCore.SignalR.Client 9.0.4
 
 ## Feature pages

@@ -42,7 +42,7 @@
                 @for (int i = 0; i < _cmd.Steps.Count; i++)
                 {
                     var idx = i;
-                    <MudGrid Class="mb-2" AlignItems="Center">
+                    <MudGrid Class="mb-2 align-center">
                         <MudItem xs="5">
                             <MudTextField @bind-Value="_cmd.Steps[idx].Name" Label="Step Name"
                                           Variant="Variant.Outlined" />

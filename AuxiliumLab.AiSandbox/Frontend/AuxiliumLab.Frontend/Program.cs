@@ -28,7 +28,8 @@ builder.Services.AddMudServices(config =>
 // ── Core services ─────────────────────────────────────────────────────────
 builder.Services.AddSingleton<INotificationService, NotificationService>();
 builder.Services.AddSingleton<IApiContextProvider, ApiContextProvider>();
-builder.Services.AddSingleton<IMenuService, MenuService>();
+// MenuService injects HttpClient which is Scoped — must be Scoped too.
+builder.Services.AddScoped<IMenuService, MenuService>();
 
 // ── HTTP client for JSON config loading (uses Blazor host base address) ───
 builder.Services.AddScoped(sp => new HttpClient
