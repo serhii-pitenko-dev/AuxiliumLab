@@ -64,6 +64,19 @@ public class SimulationJobStartedDto
     public DateTime       StartedAt { get; set; }
 }
 
+public class SandboxDefaultsDto
+{
+    public int    MaxTurns       { get; set; }
+    public int    MapWidth       { get; set; }
+    public int    MapHeight      { get; set; }
+    public double BlocksPercent  { get; set; }
+    public double EnemiesPercent { get; set; }
+    public int    HeroSpeed      { get; set; }
+    public int    HeroSightRange { get; set; }
+    public int    HeroStamina    { get; set; }
+    public int    EnemySpeed     { get; set; }
+}
+
 // ── SignalR / Real-time events ────────────────────────────────────────────────
 
 public class SimulationCellDto

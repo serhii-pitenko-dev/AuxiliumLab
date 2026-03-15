@@ -1,6 +1,7 @@
 using AuxiliumLab.AiSandbox.Ai.Configuration;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
 using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Simulation;
+using AuxiliumLab.AiSandbox.Common.SimulationVisualizationBridge;
 using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Simulation.Dto;
 using AuxiliumLab.AiSandbox.ApplicationServices.Executors;
 using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Simulation;
@@ -32,6 +33,7 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
     private readonly IOptions<FileSourceConfiguration> _fileSourceConfig;
     private readonly IPolicyTrainerClient _policyTrainerClient;
     private readonly IStatisticFileDataManager _statisticFileManager;
+    private readonly ISimulationVisualizationBridge? _visualizationBridge;
 
     private readonly ConcurrentDictionary<Guid, SimulationJobStatusDto> _jobs = new();
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _jobCts = new();
@@ -42,13 +44,15 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
         IOptions<SandBoxConfiguration> sandboxConfig,
         IOptions<FileSourceConfiguration> fileSourceConfig,
         IPolicyTrainerClient policyTrainerClient,
-        IStatisticFileDataManager statisticFileManager)
+        IStatisticFileDataManager statisticFileManager,
+        ISimulationVisualizationBridge? visualizationBridge = null)
     {
         _serviceProvider      = serviceProvider;
         _sandboxConfig        = sandboxConfig;
         _fileSourceConfig     = fileSourceConfig;
         _policyTrainerClient  = policyTrainerClient;
         _statisticFileManager = statisticFileManager;
+        _visualizationBridge  = visualizationBridge;
     }
 
     // ── ISimulationCommands ──────────────────────────────────────────────────
@@ -79,8 +83,16 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
                 var executorFactory = scope.ServiceProvider.GetRequiredService<IExecutorFactory>();
                 IExecutorFactory activeFactory = BuildFactory(command.Kind, command.Algorithm, executorFactory);
 
-                var executor = activeFactory.CreateStandardExecutor();
-                await executor.RunAsync(cancellationToken: cts.Token);
+                var executor = activeFactory.CreateExecutorForPresentation();
+                _visualizationBridge?.Attach(jobId);
+                try
+                {
+                    await executor.RunAsync(cancellationToken: cts.Token);
+                }
+                finally
+                {
+                    _visualizationBridge?.Detach(jobId);
+                }
 
                 status.CompletedRuns = 1;
                 status.State         = SimulationJobState.Completed;
@@ -170,6 +182,23 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
 
     public Task<IReadOnlyList<SimulationJobStatusDto>> GetSimulationStatusesAsync(CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<SimulationJobStatusDto>>(_jobs.Values.ToList());
+
+    public Task<SandboxDefaultsDto> GetSandboxDefaultsAsync(CancellationToken ct = default)
+    {
+        var cfg = _sandboxConfig.Value;
+        return Task.FromResult(new SandboxDefaultsDto
+        {
+            MaxTurns       = cfg.MaxTurns.Current,
+            MapWidth       = cfg.MapSettings.Size.Width.Current,
+            MapHeight      = cfg.MapSettings.Size.Height.Current,
+            BlocksPercent  = cfg.MapSettings.ElementsPercentages.BlocksPercent.Current,
+            EnemiesPercent = cfg.MapSettings.ElementsPercentages.PercentOfEnemies.Current,
+            HeroSpeed      = cfg.Hero.Speed.Current,
+            HeroSightRange = cfg.Hero.SightRange.Current,
+            HeroStamina    = cfg.Hero.Stamina.Current,
+            EnemySpeed     = cfg.Enemy.Speed.Current
+        });
+    }
 
     // ── Stop / Pause / Resume ────────────────────────────────────────────────
 

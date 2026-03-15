@@ -16,6 +16,8 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // ── Configuration ─────────────────────────────────────────────────────────
 builder.Services.Configure<ApiSettings>(
     builder.Configuration.GetSection("ApiSettings"));
+builder.Services.Configure<SandboxSettings>(
+    builder.Configuration.GetSection("SandBox"));
 
 // ── MudBlazor ─────────────────────────────────────────────────────────────
 builder.Services.AddMudServices(config =>

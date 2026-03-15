@@ -1,3 +1,4 @@
+using AuxiliumLab.AiSandbox.Common.SimulationVisualizationBridge;
 using AuxiliumLab.AiSandbox.WebApi.Features.Simulation;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
@@ -40,6 +41,7 @@ public static class WebApiServiceCollectionExtensions
         // SignalR for real-time simulation visualization
         services.AddSignalR();
         services.AddSingleton<ISimulationHubNotifier, SimulationHubNotifier>();
+        services.AddSingleton<ISimulationVisualizationBridge, SimulationVisualizationBridge>();
 
         // CORS — allow the Blazor WebAssembly frontend to connect
         services.AddCors(options =>

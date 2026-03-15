@@ -7,6 +7,7 @@ using AuxiliumLab.AiSandbox.GrpcHost.Configuration;
 using AuxiliumLab.AiSandbox.Infrastructure.Configuration;
 using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects.StartupSettings;
 using AuxiliumLab.AiSandbox.WebApi.Configuration;
+using AuxiliumLab.AiSandbox.WebApi.Features.Simulation;
 using AuxiliumLab.AiSandbox.WebApi.Features.Training;
 using Microsoft.Extensions.Configuration;
 
@@ -36,7 +37,10 @@ var host = GrpcTrainingHost.Build(args, builder =>
     builder.Services.AddWebApiPresentationServices(typeof(TrainingController).Assembly);
 });
 
-// ── 3. Run ────────────────────────────────────────────────────────────────────
+// ── 3. Map real-time hub (must be after Build, before Run) ────────────────────
+host.MapHub<SimulationHub>("/hubs/simulation");
+
+// ── 4. Run ────────────────────────────────────────────────────────────────────
 await host.RunAsync();
 
 // ── Helper: create required storage directories if missing ───────────────────

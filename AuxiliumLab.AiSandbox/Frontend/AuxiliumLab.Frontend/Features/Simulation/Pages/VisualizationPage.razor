@@ -2,6 +2,7 @@
 @inject ISimulationApiClient SimulationApi
 @inject ISimulationHubClient HubClient
 @inject INotificationService Notifications
+@inject IOptions<SandboxSettings> SandboxConfig
 @implements IAsyncDisposable
 
 <PageHeader Title="Simulation Visualization" />
@@ -143,6 +144,21 @@
         HubClient.OnAgentToggled       += HandleAgentToggled;
         HubClient.OnTurnCompleted      += HandleTurnCompleted;
         HubClient.OnSimulationEnded    += HandleEnded;
+
+        var sb = SandboxConfig.Value;
+        _override = new SimulationSandboxOverrideDto
+        {
+            MaxTurns       = sb.MaxTurns.Current,
+            MapWidth       = sb.MapSettings.Size.Width.Current,
+            MapHeight      = sb.MapSettings.Size.Height.Current,
+            BlocksPercent  = sb.MapSettings.ElementsPercentages.BlocksPercent.Current,
+            EnemiesPercent = sb.MapSettings.ElementsPercentages.PercentOfEnemies.Current,
+            HeroSpeed      = sb.Hero.Speed.Current,
+            HeroSightRange = sb.Hero.SightRange.Current,
+            HeroStamina    = sb.Hero.Stamina.Current,
+            EnemySpeed     = sb.Enemy.Speed.Current
+        };
+        _cmd.SandboxSettings = _override;
     }
 
     private void OnOverrideChanged(SimulationSandboxOverrideDto dto)

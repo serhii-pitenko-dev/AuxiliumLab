@@ -26,3 +26,17 @@ public class SimulationJobStatusDto
     /// <summary>Estimated remaining milliseconds. Null when not available.</summary>
     public long? EstimatedRemainingMs { get; set; }
 }
+
+/// <summary>Default sandbox configuration values read from appsettings.json.</summary>
+public class SandboxDefaultsDto
+{
+    public int MaxTurns { get; set; }
+    public int MapWidth { get; set; }
+    public int MapHeight { get; set; }
+    public double BlocksPercent { get; set; }
+    public double EnemiesPercent { get; set; }
+    public int HeroSpeed { get; set; }
+    public int HeroSightRange { get; set; }
+    public int HeroStamina { get; set; }
+    public int EnemySpeed { get; set; }
+}

@@ -88,4 +88,11 @@ public sealed class SimulationController : ControllerBase
         var statuses = await _simulationQueries.GetSimulationStatusesAsync(ct);
         return Ok(statuses);
     }
-}
+    /// <summary>Returns the default sandbox configuration values from appsettings.json.</summary>
+    [HttpGet("settings/defaults")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetSandboxDefaults(CancellationToken ct)
+    {
+        var defaults = await _simulationQueries.GetSandboxDefaultsAsync(ct);
+        return Ok(defaults);
+    }}
