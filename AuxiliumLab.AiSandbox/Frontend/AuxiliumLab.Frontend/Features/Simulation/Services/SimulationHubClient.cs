@@ -15,6 +15,8 @@ public interface ISimulationHubClient : IAsyncDisposable
     event Action<AgentToggledDto>?      OnAgentToggled;
     event Action<TurnCompletedDto>?     OnTurnCompleted;
     event Action<SimulationEndedDto>?   OnSimulationEnded;
+    /// <summary>Fires for every raw SignalR message received, before the typed handler. Reports "[raw] {name} ok" or "[raw] {name} ERROR: {ex}".</summary>
+    event Action<string>?               OnDebugMessage;
 
     Task ConnectAsync(string jobId, CancellationToken ct = default);
     Task DisconnectAsync(CancellationToken ct = default);
@@ -31,6 +33,7 @@ public sealed class SimulationHubClient : ISimulationHubClient
     public event Action<AgentToggledDto>?      OnAgentToggled;
     public event Action<TurnCompletedDto>?     OnTurnCompleted;
     public event Action<SimulationEndedDto>?   OnSimulationEnded;
+    public event Action<string>?               OnDebugMessage;
 
     public SimulationHubClient(IApiContextProvider context)
         => _context = context;
@@ -45,11 +48,31 @@ public sealed class SimulationHubClient : ISimulationHubClient
             .WithAutomaticReconnect()
             .Build();
 
-        _connection.On<SimulationStartedDto>("SimulationStarted", dto => OnSimulationStarted?.Invoke(dto));
-        _connection.On<AgentMovedDto>       ("AgentMoved",         dto => OnAgentMoved?.Invoke(dto));
-        _connection.On<AgentToggledDto>     ("AgentToggled",       dto => OnAgentToggled?.Invoke(dto));
-        _connection.On<TurnCompletedDto>    ("TurnCompleted",      dto => OnTurnCompleted?.Invoke(dto));
-        _connection.On<SimulationEndedDto>  ("SimulationEnded",    dto => OnSimulationEnded?.Invoke(dto));
+        _connection.On<SimulationStartedDto>("SimulationStarted", dto =>
+        {
+            try { OnSimulationStarted?.Invoke(dto); OnDebugMessage?.Invoke("[raw] SimulationStarted ok"); }
+            catch (Exception ex) { OnDebugMessage?.Invoke($"[raw] SimulationStarted ERROR: {ex.Message}"); }
+        });
+        _connection.On<AgentMovedDto>("AgentMoved", dto =>
+        {
+            try { OnDebugMessage?.Invoke($"[raw] AgentMoved {dto?.AgentId?[..Math.Min(6, dto.AgentId?.Length ?? 0)]} ({dto?.ToX},{dto?.ToY})"); OnAgentMoved?.Invoke(dto!); }
+            catch (Exception ex) { OnDebugMessage?.Invoke($"[raw] AgentMoved ERROR: {ex.Message}"); }
+        });
+        _connection.On<AgentToggledDto>("AgentToggled", dto =>
+        {
+            try { OnAgentToggled?.Invoke(dto); }
+            catch (Exception ex) { OnDebugMessage?.Invoke($"[raw] AgentToggled ERROR: {ex.Message}"); }
+        });
+        _connection.On<TurnCompletedDto>("TurnCompleted", dto =>
+        {
+            try { OnDebugMessage?.Invoke($"[raw] TurnCompleted turn={dto?.TurnNumber} cells={dto?.UpdatedCells?.Length}"); OnTurnCompleted?.Invoke(dto!); }
+            catch (Exception ex) { OnDebugMessage?.Invoke($"[raw] TurnCompleted ERROR: {ex.Message}"); }
+        });
+        _connection.On<SimulationEndedDto>("SimulationEnded", dto =>
+        {
+            try { OnSimulationEnded?.Invoke(dto); OnDebugMessage?.Invoke("[raw] SimulationEnded ok"); }
+            catch (Exception ex) { OnDebugMessage?.Invoke($"[raw] SimulationEnded ERROR: {ex.Message}"); }
+        });
 
         await _connection.StartAsync(ct);
         await _connection.InvokeAsync("JoinSimulation", jobId, ct);

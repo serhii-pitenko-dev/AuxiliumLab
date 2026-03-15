@@ -186,7 +186,7 @@ pytest -v
 ### Blazor frontend tests
 
 ```powershell
-cd AuxiliumLab.AiSandbox/Frontend/AuxiliumLab.AiSandbox.Frontend.UnitTests
+cd AuxiliumLab.AiSandbox/Frontend/AuxiliumLab.AiSandbox.Frontend
 dotnet test
 ```
 
@@ -230,3 +230,16 @@ python -m grpc_tools.protoc `
 | [AuxiliumLab.AiSandbox/docs/ARCHITECTURE.md](AuxiliumLab.AiSandbox/docs/ARCHITECTURE.md) | Onion architecture, dependency graph, data flow diagrams |
 | [auxiliumlab-rl-service-baselines3/README.md](auxiliumlab-rl-service-baselines3/README.md) | Python service architecture, algorithms, API usage |
 | [AI_GUIDELINES.md](AI_GUIDELINES.md) | Repository rules for AI-assisted development |
+
+
+## 9. Prompts to start
+Run only UI from scratch:
+- Docker should run only the following services: auxiliumlab-rl-service-baselines3 AuxiliumLab.AiSandbox.Startup. The Blazor application(AuxiliumLab.Frontend) must NOT run in Docker. It should be started locally from the developer machine using: dotnet run. 
+Tasks: 
+Rebuild the Docker images for: auxiliumlab-rl-service-baselines3, AuxiliumLab.AiSandbox.Startup.
+Recreate and start the Docker containers.
+Verify that both containers start successfully and run without errors.
+Start AuxiliumLab.Frontend locally using `dotnet run`.
+Verify that the frontend can communicate with the backend services and that the entire system works without errors.
+
+Command to stop local run from AI - Get-NetTCPConnection -LocalPort 5000 -State Listen | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_ -Force }

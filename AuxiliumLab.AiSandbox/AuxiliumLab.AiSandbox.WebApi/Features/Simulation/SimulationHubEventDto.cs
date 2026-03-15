@@ -7,13 +7,22 @@ public record SimulationCellDto(
     string ObjectType,
     string[] Effects);
 
-/// <summary>Sent once when the simulation starts; contains the full initial map.</summary>
+/// <summary>Initial position and stats of an agent at simulation start.</summary>
+public record InitialAgentDto(
+    string AgentId,
+    string AgentType,
+    int X,
+    int Y,
+    AgentSnapshotDto Snapshot);
+
+/// <summary>Sent once when the simulation starts; contains the full initial map and agent positions.</summary>
 public record SimulationStartedDto(
     string JobId,
     int Width,
     int Height,
     int MaxTurns,
-    SimulationCellDto[] Cells);
+    SimulationCellDto[] Cells,
+    InitialAgentDto[] Agents);
 
 /// <summary>Sent after each agent move action.</summary>
 public record AgentMovedDto(

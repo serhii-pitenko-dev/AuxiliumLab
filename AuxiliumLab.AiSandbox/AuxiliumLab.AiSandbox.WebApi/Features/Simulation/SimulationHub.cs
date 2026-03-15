@@ -29,17 +29,31 @@ public sealed class SimulationHub : Hub
 
     /// <summary>
     /// Joins the group for a specific simulation job.
-    /// If the simulation already started before this client connected, the cached
-    /// initial state is replayed directly to this client so it never misses it.
+    /// If the simulation already started (or even ended) before this client connected,
+    /// the cached snapshots are replayed so the client always sees the grid and outcome.
     /// </summary>
     public async Task JoinSimulation(string jobId)
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, jobId);
 
         // Replay initial state for clients that connected after SimulationStarted was broadcast
-        var cached = _stateCache.GetCachedStart(jobId);
-        if (cached is not null)
-            await Clients.Caller.SendAsync(Methods.SimulationStarted, cached);
+        var cachedStart = _stateCache.GetCachedStart(jobId);
+        if (cachedStart is not null)
+            await Clients.Caller.SendAsync(Methods.SimulationStarted, cachedStart);
+
+        // Replay final cell-grid snapshot so the board shows the last known layout
+        var lastTurn = _stateCache.GetCachedLastTurn(jobId);
+        if (lastTurn is not null)
+            await Clients.Caller.SendAsync(Methods.TurnCompleted, lastTurn);
+
+        // Replay each agent's last known move so circles render at the final position
+        foreach (var agentMove in _stateCache.GetCachedLastAgentMoves(jobId))
+            await Clients.Caller.SendAsync(Methods.AgentMoved, agentMove);
+
+        // Also replay the final outcome if the simulation already ended
+        var cachedEnd = _stateCache.GetCachedEnd(jobId);
+        if (cachedEnd is not null)
+            await Clients.Caller.SendAsync(Methods.SimulationEnded, cachedEnd);
     }
 
     /// <summary>Leaves the group for a specific simulation job.</summary>

@@ -1,17 +1,18 @@
 # docker-compose.yml
 #
-# Three services:
+# Two services:
 #   rl-service        — Python / Stable Baselines 3 policy trainer (gRPC :50051)
 #   aisandbox-startup — .NET 9 backend: REST :5000, gRPC gym :50062
-#   frontend          — Blazor WASM served via nginx :8080
+#
+# The Blazor WebAssembly frontend (AuxiliumLab.Frontend) is NOT run in Docker.
+# Start it locally on the developer machine with:
+#   cd AuxiliumLab.AiSandbox/Frontend/AuxiliumLab.Frontend
+#   dotnet run
+# The frontend reaches the backend at http://localhost:5000.
 #
 # Quick start:
 #   docker compose build
-#   docker compose up
-#
-# The frontend must reach the backend API from the *browser*, so
-# AISANDBOX_BASE_URL must be the address visible on the user's machine
-# (http://localhost:5000 when running locally).
+#   docker compose up -d
 
 services:
 
@@ -61,26 +62,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # Blazor WebAssembly frontend  (nginx static file server)
-  #
-  # IMPORTANT: AISANDBOX_BASE_URL is injected into wwwroot/appsettings.json
-  # at container start (see Frontend/entrypoint.sh).  Because Blazor WASM
-  # runs in the *browser*, this URL must be reachable from the user's machine,
-  # not from inside the Docker network.
-  # ─────────────────────────────────────────────────────────────────────────
-  frontend:
-    build:
-      context: ./AuxiliumLab.AiSandbox/Frontend
-    ports:
-      - "8080:80"
-    environment:
-      AISANDBOX_BASE_URL: "http://localhost:5000"
-      MARKET_SIMULATION_BASE_URL: "http://localhost:6000"
-    depends_on:
-      aisandbox-startup:
-        condition: service_healthy
 
 volumes:
   rl-models:

@@ -106,6 +106,16 @@ public class SimulationStartedDto
     public int                Height   { get; set; }
     public int                MaxTurns { get; set; }
     public SimulationCellDto[]  Cells  { get; set; } = [];
+    public InitialAgentDto[]    Agents { get; set; } = [];
+}
+
+public class InitialAgentDto
+{
+    public string          AgentId   { get; set; } = string.Empty;
+    public string          AgentType { get; set; } = string.Empty;
+    public int             X         { get; set; }
+    public int             Y         { get; set; }
+    public AgentSnapshotDto Snapshot { get; set; } = new();
 }
 
 public class AgentMovedDto

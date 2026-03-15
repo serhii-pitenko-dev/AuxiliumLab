@@ -5,7 +5,11 @@ using AuxiliumLab.AiSandbox.Common.MessageBroker.Contracts.CoreServicesContract.
 using AuxiliumLab.AiSandbox.Common.MessageBroker.Contracts.GlobalMessagesContract.Events.Lost;
 using AuxiliumLab.AiSandbox.Common.MessageBroker.Contracts.GlobalMessagesContract.Events.Win;
 using AuxiliumLab.AiSandbox.Common.SimulationVisualizationBridge;
+using AuxiliumLab.AiSandbox.Domain.Playgrounds;
 using AuxiliumLab.AiSandbox.Infrastructure.Configuration.Preconditions;
+using AuxiliumLab.AiSandbox.Infrastructure.MemoryManager;
+using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 
@@ -20,8 +24,9 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
 {
     private readonly IMessageBroker _broker;
     private readonly ISimulationHubNotifier _notifier;
-    private readonly IMapQueriesHandleService _mapQueries;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly IOptions<SandBoxConfiguration> _sandboxConfig;
+    private readonly IMemoryDataManager<StandardPlayground> _playgroundMemory;
 
     // Jobs waiting for their first GameStartedEvent to fire
     private readonly ConcurrentQueue<Guid> _pendingAttachments = new();
@@ -29,6 +34,12 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
     private readonly ConcurrentDictionary<Guid, Guid> _playgroundToJob = new();
     // Caches the initial map state per JobId so late-joining SignalR clients can receive it
     private readonly ConcurrentDictionary<string, SimulationStartedDto> _initialStates = new();
+    // Caches the final outcome per JobId so late-joining clients see the result too
+    private readonly ConcurrentDictionary<string, SimulationEndedDto> _finalStates = new();
+    // Caches the latest TurnCompleted per JobId (full cell grid) for replay
+    private readonly ConcurrentDictionary<string, TurnCompletedDto> _lastTurns = new();
+    // Caches the latest AgentMoved per (JobId, AgentId) so late joiners see final positions
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, AgentMovedDto>> _lastAgentMoves = new();
 
     private int _attachedCount;
 
@@ -43,13 +54,15 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
     public SimulationVisualizationBridge(
         IMessageBroker broker,
         ISimulationHubNotifier notifier,
-        IMapQueriesHandleService mapQueries,
-        IOptions<SandBoxConfiguration> sandboxConfig)
+        IServiceScopeFactory scopeFactory,
+        IOptions<SandBoxConfiguration> sandboxConfig,
+        IMemoryDataManager<StandardPlayground> playgroundMemory)
     {
-        _broker        = broker;
-        _notifier      = notifier;
-        _mapQueries    = mapQueries;
-        _sandboxConfig = sandboxConfig;
+        _broker          = broker;
+        _notifier        = notifier;
+        _scopeFactory    = scopeFactory;
+        _sandboxConfig   = sandboxConfig;
+        _playgroundMemory = playgroundMemory;
 
         _onGameStarted  = HandleGameStarted;
         _onAgentMoved   = HandleAgentMoved;
@@ -85,7 +98,9 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
         {
             _playgroundToJob.TryRemove(key, out _);
         }
-        _initialStates.TryRemove(jobId.ToString(), out _);
+        // Do NOT clear _initialStates or _finalStates here — late-joining clients
+        // may call JoinSimulation after the simulation ends and still need the
+        // cached snapshots to reconstruct the grid and final outcome.
 
         if (Interlocked.Decrement(ref _attachedCount) <= 0)
         {
@@ -107,14 +122,19 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
 
         _playgroundToJob[e.PlaygroundId] = jobId;
 
-        var layout = _mapQueries.MapLayoutQuery.GetFromMemory(e.PlaygroundId);
-        var cells  = BuildAllCells(layout.Cells);
-        var dto    = new SimulationStartedDto(
+        using var scope = _scopeFactory.CreateScope();
+        var mapQueries  = scope.ServiceProvider.GetRequiredService<IMapQueriesHandleService>();
+        var layout      = mapQueries.MapLayoutQuery.GetFromMemory(e.PlaygroundId);
+        var cells      = BuildAllCells(layout.Cells);
+        var playground = _playgroundMemory.LoadObject(e.PlaygroundId);
+        var agents     = BuildInitialAgents(layout.Cells, playground);
+        var dto        = new SimulationStartedDto(
             jobId.ToString(),
             layout.Cells.GetLength(0),
             layout.Cells.GetLength(1),
             _sandboxConfig.Value.MaxTurns.Current,
-            cells);
+            cells,
+            agents);
 
         // Cache so late-joining clients (race condition) can retrieve it on hub join
         _initialStates[jobId.ToString()] = dto;
@@ -126,6 +146,17 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
 
     public SimulationStartedDto? GetCachedStart(string jobId)
         => _initialStates.TryGetValue(jobId, out var dto) ? dto : null;
+
+    public TurnCompletedDto? GetCachedLastTurn(string jobId)
+        => _lastTurns.TryGetValue(jobId, out var dto) ? dto : null;
+
+    public IReadOnlyList<AgentMovedDto> GetCachedLastAgentMoves(string jobId)
+        => _lastAgentMoves.TryGetValue(jobId, out var agents)
+            ? agents.Values.ToList()
+            : [];
+
+    public SimulationEndedDto? GetCachedEnd(string jobId)
+        => _finalStates.TryGetValue(jobId, out var dto) ? dto : null;
 
     private void HandleAgentMoved(OnAgentMoveActionEvent e)
     {
@@ -139,6 +170,15 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
             e.To.X,   e.To.Y,
             e.IsSuccess,
             ToSnapshotDto(e.AgentSnapshot));
+
+        // Cache latest position per agent for late-joining clients
+        var dto = new AgentMovedDto(
+            jobId.ToString(), e.AgentId.ToString(), e.AgentSnapshot.Type.ToString(),
+            e.From.X, e.From.Y, e.To.X, e.To.Y, e.IsSuccess,
+            ToSnapshotDto(e.AgentSnapshot));
+        _lastAgentMoves
+            .GetOrAdd(jobId.ToString(), _ => new ConcurrentDictionary<string, AgentMovedDto>())
+            [e.AgentId.ToString()] = dto;
 
         _ = Task.Run(() => _notifier.NotifyAgentMovedAsync(notification));
     }
@@ -162,12 +202,17 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
     {
         if (!_playgroundToJob.TryGetValue(e.PlaygroundId, out var jobId)) return;
 
-        var layout = _mapQueries.MapLayoutQuery.GetFromMemory(e.PlaygroundId);
+        using var scope = _scopeFactory.CreateScope();
+        var mapQueries  = scope.ServiceProvider.GetRequiredService<IMapQueriesHandleService>();
+        var layout = mapQueries.MapLayoutQuery.GetFromMemory(e.PlaygroundId);
         var cells  = BuildAllCells(layout.Cells);
         var notification = new SimulationTurnCompletedNotification(
             jobId.ToString(),
             e.TurnNumber,
             cells);
+
+        // Cache the latest full-grid snapshot so late joiners see the final cell state
+        _lastTurns[jobId.ToString()] = new TurnCompletedDto(jobId.ToString(), e.TurnNumber, cells);
 
         _ = Task.Run(() => _notifier.NotifyTurnCompletedAsync(notification));
     }
@@ -176,12 +221,10 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
     {
         if (!_playgroundToJob.TryGetValue(e.PlaygroundId, out var jobId)) return;
 
-        var dto = new SimulationEndedDto(
-            jobId.ToString(),
-            "Won",
-            e.WinReason.ToString(),
-            0); // final turn not available here — clients already know it from last TurnCompleted
+        var turn = _playgroundMemory.LoadObject(e.PlaygroundId).Turn;
+        var dto  = new SimulationEndedDto(jobId.ToString(), "Won", e.WinReason.ToString(), turn);
 
+        _finalStates[jobId.ToString()] = dto;
         _ = Task.Run(() => _notifier.NotifySimulationEndedAsync(dto));
     }
 
@@ -189,12 +232,10 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
     {
         if (!_playgroundToJob.TryGetValue(e.PlaygroundId, out var jobId)) return;
 
-        var dto = new SimulationEndedDto(
-            jobId.ToString(),
-            "Lost",
-            e.LostReason.ToString(),
-            0);
+        var turn = _playgroundMemory.LoadObject(e.PlaygroundId).Turn;
+        var dto  = new SimulationEndedDto(jobId.ToString(), "Lost", e.LostReason.ToString(), turn);
 
+        _finalStates[jobId.ToString()] = dto;
         _ = Task.Run(() => _notifier.NotifySimulationEndedAsync(dto));
     }
 
@@ -229,4 +270,40 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
             s.Stamina,
             s.MaxStamina,
             s.OrderInTurnQueue);
+
+    private static InitialAgentDto[] BuildInitialAgents(
+        ApplicationServices.Queries.Simulation.Map.Entities.MapCell[,] cells,
+        StandardPlayground playground)
+    {
+        var agents = new List<InitialAgentDto>();
+        int w = cells.GetLength(0);
+        int h = cells.GetLength(1);
+
+        for (int x = 0; x < w; x++)
+        for (int y = 0; y < h; y++)
+        {
+            var cell = cells[x, y];
+
+            if (cell.ObjectType == ObjectType.Hero && playground.Hero is { } hero)
+            {
+                agents.Add(new InitialAgentDto(
+                    hero.Id.ToString(), "Hero", x, y,
+                    new AgentSnapshotDto(hero.Id.ToString(), "Hero",
+                        hero.Speed, hero.SightRange, hero.IsRun,
+                        hero.Stamina, hero.MaxStamina, hero.OrderInTurnQueue)));
+            }
+            else if (cell.ObjectType == ObjectType.Enemy)
+            {
+                var enemy = playground.Enemies.FirstOrDefault(en => en.Id == cell.ObjectId);
+                if (enemy is not null)
+                    agents.Add(new InitialAgentDto(
+                        enemy.Id.ToString(), "Enemy", x, y,
+                        new AgentSnapshotDto(enemy.Id.ToString(), "Enemy",
+                            enemy.Speed, enemy.SightRange, enemy.IsRun,
+                            enemy.Stamina, enemy.MaxStamina, enemy.OrderInTurnQueue)));
+            }
+        }
+
+        return agents.ToArray();
+    }
 }

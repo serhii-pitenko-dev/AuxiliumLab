@@ -144,6 +144,7 @@
         HubClient.OnAgentToggled       += HandleAgentToggled;
         HubClient.OnTurnCompleted      += HandleTurnCompleted;
         HubClient.OnSimulationEnded    += HandleEnded;
+        HubClient.OnDebugMessage       += msg => { AddLog(msg); InvokeAsync(StateHasChanged); };
 
         var sb = SandboxConfig.Value;
         _override = new SimulationSandboxOverrideDto
@@ -233,16 +234,32 @@
         _maxTurns   = e.MaxTurns;
 
         _cells = e.Cells.ToDictionary(c => $"{c.X},{c.Y}");
-        AddLog($"Grid {e.Width}x{e.Height}, max turns={e.MaxTurns}");
+
+        // Populate initial agent positions so the hero/enemies are visible
+        // even for late-joining clients who missed the AgentMoved broadcasts.
+        foreach (var a in e.Agents)
+        {
+            _agentPositions[a.AgentId] = (a.X, a.Y, a.AgentType);
+            _agents[a.AgentId] = a.Snapshot;
+        }
+
+        AddLog($"Grid {e.Width}x{e.Height}, max turns={e.MaxTurns}, agents={e.Agents.Length} [{string.Join(", ", e.Agents.Select(a => $"{a.AgentType}@({a.X},{a.Y})"))  }]");
         InvokeAsync(StateHasChanged);
     }
 
     private void HandleAgentMoved(AgentMovedDto e)
     {
-        _agentPositions[e.AgentId] = (e.ToX, e.ToY, e.AgentType);
-        _agents[e.AgentId] = e.Agent;
-        AddLog($"Turn {_currentTurn}: {e.AgentType} {e.AgentId[..Math.Min(6, e.AgentId.Length)]} → ({e.ToX},{e.ToY})");
-        InvokeAsync(StateHasChanged);
+        try
+        {
+            _agentPositions[e.AgentId] = (e.ToX, e.ToY, e.AgentType);
+            _agents[e.AgentId] = e.Agent;
+            AddLog($"AgentMoved T{_currentTurn}: {e.AgentType} {e.AgentId[..Math.Min(6, e.AgentId.Length)]} → ({e.ToX},{e.ToY})");
+            InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            AddLog($"HandleAgentMoved EXCEPTION: {ex.Message}");
+        }
     }
 
     private void HandleAgentToggled(AgentToggledDto e)
@@ -256,6 +273,7 @@
         _currentTurn = e.TurnNumber;
         foreach (var cell in e.UpdatedCells)
             _cells[$"{cell.X},{cell.Y}"] = cell;
+        AddLog($"TurnCompleted: turn={e.TurnNumber} cells={e.UpdatedCells.Length}");
         InvokeAsync(StateHasChanged);
     }
 
@@ -299,6 +317,7 @@
         HubClient.OnAgentToggled       -= HandleAgentToggled;
         HubClient.OnTurnCompleted      -= HandleTurnCompleted;
         HubClient.OnSimulationEnded    -= HandleEnded;
+        HubClient.OnDebugMessage       -= msg => { AddLog(msg); InvokeAsync(StateHasChanged); };
 
         if (_jobId != default)
             await HubClient.DisconnectAsync();
