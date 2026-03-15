@@ -279,11 +279,10 @@
 
     private static string CellFill(string objectType) => objectType switch
     {
-        "Wall"  => "#616161",
-        "Exit"  => "#43a047",
-        "Chest" => "#ffa726",
-        "Trap"  => "#ef5350",
-        _       => "#fafafa"
+        "Block"       => "#616161",
+        "BorderBlock" => "#424242",
+        "Exit"        => "#43a047",
+        _             => "#fafafa"
     };
 
     private static string AgentFill(string agentType) => agentType switch

@@ -41,7 +41,10 @@ public static class WebApiServiceCollectionExtensions
         // SignalR for real-time simulation visualization
         services.AddSignalR();
         services.AddSingleton<ISimulationHubNotifier, SimulationHubNotifier>();
-        services.AddSingleton<ISimulationVisualizationBridge, SimulationVisualizationBridge>();
+        // Register bridge as a single singleton, exposed via both interfaces
+        services.AddSingleton<SimulationVisualizationBridge>();
+        services.AddSingleton<ISimulationVisualizationBridge>(sp => sp.GetRequiredService<SimulationVisualizationBridge>());
+        services.AddSingleton<ISimulationStateCache>(sp => sp.GetRequiredService<SimulationVisualizationBridge>());
 
         // CORS — allow the Blazor WebAssembly frontend to connect
         services.AddCors(options =>

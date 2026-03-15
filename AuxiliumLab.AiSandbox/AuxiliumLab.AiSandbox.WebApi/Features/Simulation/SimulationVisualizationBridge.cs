@@ -16,7 +16,7 @@ namespace AuxiliumLab.AiSandbox.WebApi.Features.Simulation;
 /// and forwards them to <see cref="ISimulationHubNotifier"/> so the Blazor
 /// frontend receives live grid updates.
 /// </summary>
-public sealed class SimulationVisualizationBridge : ISimulationVisualizationBridge
+public sealed class SimulationVisualizationBridge : ISimulationVisualizationBridge, ISimulationStateCache
 {
     private readonly IMessageBroker _broker;
     private readonly ISimulationHubNotifier _notifier;
@@ -27,6 +27,8 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
     private readonly ConcurrentQueue<Guid> _pendingAttachments = new();
     // Maps PlaygroundId → JobId while a simulation is running
     private readonly ConcurrentDictionary<Guid, Guid> _playgroundToJob = new();
+    // Caches the initial map state per JobId so late-joining SignalR clients can receive it
+    private readonly ConcurrentDictionary<string, SimulationStartedDto> _initialStates = new();
 
     private int _attachedCount;
 
@@ -83,6 +85,7 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
         {
             _playgroundToJob.TryRemove(key, out _);
         }
+        _initialStates.TryRemove(jobId.ToString(), out _);
 
         if (Interlocked.Decrement(ref _attachedCount) <= 0)
         {
@@ -113,8 +116,16 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
             _sandboxConfig.Value.MaxTurns.Current,
             cells);
 
+        // Cache so late-joining clients (race condition) can retrieve it on hub join
+        _initialStates[jobId.ToString()] = dto;
+
         _ = Task.Run(() => _notifier.NotifySimulationStartedAsync(dto));
     }
+
+    // ── ISimulationStateCache ────────────────────────────────────────────────
+
+    public SimulationStartedDto? GetCachedStart(string jobId)
+        => _initialStates.TryGetValue(jobId, out var dto) ? dto : null;
 
     private void HandleAgentMoved(OnAgentMoveActionEvent e)
     {

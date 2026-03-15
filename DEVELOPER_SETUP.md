@@ -132,6 +132,8 @@ dotnet run --project AuxiliumLab.AiSandbox.Startup
 ### Step 3 — (Optional) Run the Blazor frontend (terminal C)
 
 ```powershell
+cd D:\AiProjects\AuxiliumLab\AuxiliumLab.AiSandbox\Frontend\AuxiliumLab.Frontend
+or
 cd AuxiliumLab.AiSandbox/Frontend/AuxiliumLab.Frontend
 dotnet run
 # https://localhost:7001  (or http://localhost:5001)
