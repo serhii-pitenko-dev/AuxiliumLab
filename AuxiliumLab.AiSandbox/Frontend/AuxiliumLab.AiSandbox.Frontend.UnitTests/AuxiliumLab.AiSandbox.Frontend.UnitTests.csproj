@@ -22,7 +22,7 @@
     <PackageReference Include="Moq" Version="4.20.72" />
 
     <!-- MudBlazor (needed by bUnit when rendering components that reference it) -->
-    <PackageReference Include="MudBlazor" Version="7.17.0" />
+    <PackageReference Include="MudBlazor" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>

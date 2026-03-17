@@ -1,0 +1,17 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Frontend Unit Tests",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"test",
+				"d:\\AiProjects\\AuxiliumLab\\AuxiliumLab.AiSandbox\\Frontend\\AuxiliumLab.AiSandbox.Frontend.UnitTests\\AuxiliumLab.AiSandbox.Frontend.UnitTests.csproj",
+				"--logger",
+				"console;verbosity=detailed"
+			],
+			"problemMatcher": []
+		}
+	]
+}

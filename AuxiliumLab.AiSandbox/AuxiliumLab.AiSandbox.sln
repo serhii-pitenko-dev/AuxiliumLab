@@ -1,7 +1,6 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36414.22
+# Visual Studio Version 18
+VisualStudioVersion = 18.4.11605.240 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuxiliumLab.AiSandbox.WebApi", "AuxiliumLab.AiSandbox.WebApi\AuxiliumLab.AiSandbox.WebApi.csproj", "{8CD6742E-A5F0-4426-9582-C73D4DD70505}"
 EndProject
@@ -12,8 +11,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuxiliumLab.AiSandbox.Infrastructure", "AuxiliumLab.AiSandbox.Infrastructure\AuxiliumLab.AiSandbox.Infrastructure.csproj", "{ADDACF68-7685-475D-8DB7-90AE133EA9B4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuxiliumLab.AiSandbox.Domain", "AuxiliumLab.AiSandbox.Domain\AuxiliumLab.AiSandbox.Domain.csproj", "{A7D0EF3D-5C42-4164-8522-98946A0A313F}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuxiliumLab.AiSandbox.ConsolePresentation", "AuxiliumLab.AiSandbox.ConsolePresentation\AuxiliumLab.AiSandbox.ConsolePresentation.csproj", "{D1DA72D5-F117-4EA5-B824-047BFEEDC4E0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuxiliumLab.AiSandbox.SharedBaseTypes", "AuxiliumLab.AiSandbox.SharedBaseTypes\AuxiliumLab.AiSandbox.SharedBaseTypes.csproj", "{D57B39DD-3830-4357-80BF-0EC4AA418554}"
 EndProject
@@ -72,10 +69,6 @@ Global
 		{A7D0EF3D-5C42-4164-8522-98946A0A313F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A7D0EF3D-5C42-4164-8522-98946A0A313F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A7D0EF3D-5C42-4164-8522-98946A0A313F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D1DA72D5-F117-4EA5-B824-047BFEEDC4E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D1DA72D5-F117-4EA5-B824-047BFEEDC4E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D1DA72D5-F117-4EA5-B824-047BFEEDC4E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D1DA72D5-F117-4EA5-B824-047BFEEDC4E0}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D57B39DD-3830-4357-80BF-0EC4AA418554}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D57B39DD-3830-4357-80BF-0EC4AA418554}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D57B39DD-3830-4357-80BF-0EC4AA418554}.Release|Any CPU.ActiveCfg = Release|Any CPU

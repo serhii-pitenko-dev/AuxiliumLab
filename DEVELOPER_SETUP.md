@@ -242,4 +242,3 @@ Verify that both containers start successfully and run without errors.
 Start AuxiliumLab.Frontend locally using `dotnet run`.
 Verify that the frontend can communicate with the backend services and that the entire system works without errors.
 
-Command to stop local run from AI - Get-NetTCPConnection -LocalPort 5000 -State Listen | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_ -Force }
