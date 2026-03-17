@@ -26,7 +26,7 @@ public interface IMessageBroker
 - Registered as a **singleton** in DI — the same instance is shared across the entire process.
 
 ### `IBrokerRpcClient` / `BrokerRpcClient`
-A wrapper that lets an executor send gRPC messages via the message broker (Sb3Contract RPC pattern). Used when the Python SB3 training loop needs a synchronous request/response cycle within a single gym step.
+Extends `MessageBroker` with a **correlation-based request/response (RPC) pattern**. Where `MessageBroker` is a fire-and-forget pub/sub bus, `BrokerRpcClient` adds `RequestAsync<TRequest, TResponse>`: it publishes a request message and asynchronously awaits the matching `Response` (matched by correlation ID via a `TaskCompletionSource`). Used when the Python SB3 training loop drives a synchronous gym step over gRPC — the gRPC handler calls `RequestAsync`, suspending until the simulation executor publishes the correlated response back into the broker.
 
 ## Message Contracts
 

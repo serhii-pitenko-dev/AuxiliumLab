@@ -51,7 +51,7 @@ public class ExecutorForPresentation : Executor, IExecutorForPresentation
 
     protected override void SendAgentMoveNotification(Guid id, Guid playgroundId, Guid agentId, Coordinates from, Coordinates to, bool isSuccess,Agent agent)
     {
-        OnBaseAgentActionEvent moveEvent = new OnAgentMoveActionEvent(
+        var moveEvent = new OnAgentMoveActionEvent(
             id,
             playgroundId,
             agentId,
@@ -60,12 +60,12 @@ public class ExecutorForPresentation : Executor, IExecutorForPresentation
             isSuccess,
             GetAgentSnapshot(agent));
 
-        _messageBroker.Publish<OnBaseAgentActionEvent>(moveEvent);
+        _messageBroker.Publish(moveEvent);
     }
 
     protected override void SendAgentToggleActionNotification(AgentAction action, Guid playgroundId, Guid agentId, bool isActivated, Agent agent)
     {
-        OnBaseAgentActionEvent actionEvent = new OnAgentToggleActionEvent(
+        var actionEvent = new OnAgentToggleActionEvent(
             Guid.NewGuid(),
             playgroundId,
             agentId,
@@ -73,7 +73,7 @@ public class ExecutorForPresentation : Executor, IExecutorForPresentation
             isActivated,
             GetAgentSnapshot(agent));
 
-        _messageBroker.Publish<OnBaseAgentActionEvent>(actionEvent);
+        _messageBroker.Publish(actionEvent);
     }
 
     private AgentSnapshot GetAgentSnapshot(Agent agent)

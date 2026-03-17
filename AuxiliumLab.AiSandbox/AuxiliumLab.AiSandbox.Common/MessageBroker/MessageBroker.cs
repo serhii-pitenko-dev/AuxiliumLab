@@ -6,19 +6,24 @@ namespace AuxiliumLab.AiSandbox.Common.MessageBroker;
 /// <summary>
 /// Implements a thread-safe in-memory message broker using the publish-subscribe pattern.
 /// This broker allows components to communicate without direct coupling by sending and receiving strongly-typed messages.
+/// It is the foundation for all in-process communication; <see cref="BrokerRpcClient"/> builds on top of it
+/// to add a correlation-based request/response (RPC) pattern.
 /// </summary>
 /// <remarks>
 /// The MessageBroker maintains a dictionary where each message type maps to a list of subscriber handlers.
 /// Thread safety is achieved through:
 /// - ConcurrentDictionary for managing the collection of message type subscriptions
 /// - Lock statements when modifying or invoking handler lists to prevent race conditions
-/// 
+///
 /// Message flow:
 /// 1. Components subscribe to specific message types by providing a handler (Action delegate)
 /// 2. When a message is published, all registered handlers for that message type are invoked synchronously
 /// 3. Components can unsubscribe to stop receiving messages
-/// 
-/// All messages must inherit from BaseMessage and be non-null reference types.
+///
+/// For one-shot request/response scenarios (e.g. the Python gRPC gym step), use <see cref="BrokerRpcClient"/>
+/// instead of wiring up Subscribe/Unsubscribe manually.
+///
+/// All messages must inherit from Message and be non-null reference types.
 /// </remarks>
 public class MessageBroker : IMessageBroker
 {

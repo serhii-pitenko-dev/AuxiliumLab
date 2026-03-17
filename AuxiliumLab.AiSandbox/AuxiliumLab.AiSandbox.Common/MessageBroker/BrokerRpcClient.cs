@@ -3,6 +3,18 @@ using System.Collections.Concurrent;
 
 namespace AuxiliumLab.AiSandbox.Common.MessageBroker;
 
+/// <summary>
+/// Extends <see cref="MessageBroker"/> with a correlation-based request/response (RPC) pattern.
+/// While <see cref="MessageBroker"/> provides fire-and-forget pub/sub, <c>BrokerRpcClient</c> layers
+/// asynchronous request/response semantics on top: it publishes a request message and awaits a matching
+/// <see cref="AuxiliumLab.AiSandbox.SharedBaseTypes.MessageTypes.Response"/> identified by a correlation ID,
+/// completing a <see cref="System.Threading.Tasks.TaskCompletionSource{TResult}"/> when the response arrives.
+/// </summary>
+/// <remarks>
+/// Typical use case: the Python SB3 training loop drives a synchronous gym step over gRPC. The gRPC handler
+/// calls <c>RequestAsync</c>, which publishes a <c>RequestSimulationStepCommand</c> into the broker and
+/// suspends until the simulation executor publishes the corresponding <c>SimulationStepResponse</c>.
+/// </remarks>
 public class BrokerRpcClient : IBrokerRpcClient, IDisposable
 {
     private readonly IMessageBroker _broker;
