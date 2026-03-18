@@ -1,1 +1,6 @@
 Stop local run from AI - Get-NetTCPConnection -LocalPort 5000 -State Listen | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_ -Force }
+Run Startup: dotnet run --project AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.Startup/AuxiliumLab.AiSandbox.Startup.csproj
+Run Startup Release: dotnet run --project AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.Startup/AuxiliumLab.AiSandbox.Startup.csproj --configuration Release
+
+Run Frontend: dotnet run --project AuxiliumLab.AiSandbox\Frontend\AuxiliumLab.Frontend\AuxiliumLab.Frontend.csproj
+Run Frontend Release: dotnet run --project AuxiliumLab.AiSandbox\Frontend\AuxiliumLab.Frontend\AuxiliumLab.Frontend.csproj --configuration Release

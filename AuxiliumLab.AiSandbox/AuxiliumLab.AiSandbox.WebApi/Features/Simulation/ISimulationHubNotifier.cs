@@ -21,7 +21,8 @@ public record SimulationAgentMovedNotification(
     int FromX, int FromY,
     int ToX,   int ToY,
     bool IsSuccess,
-    AgentSnapshotDto Agent);
+    AgentSnapshotDto Agent,
+    SimulationCellDto[] UpdatedCells);
 
 /// <summary>Notification payload for agent toggle events.</summary>
 public record SimulationAgentToggledNotification(

@@ -176,10 +176,17 @@ public abstract class Executor : IExecutor
         }
     }
 
+    /// <summary>
+    /// Called before each turn. Override to block the loop while paused.
+    /// </summary>
+    protected virtual Task WaitIfPausedAsync(CancellationToken ct) => Task.CompletedTask;
+
     protected async Task StartSimulationAsync(CancellationToken cancellationToken)
     {
         while (sandboxStatus == SandboxStatus.InProgress && !cancellationToken.IsCancellationRequested)
         {
+            await WaitIfPausedAsync(cancellationToken);
+
             if (_playground.Turn >= _activeConfiguration.MaxTurns.Current)
             {
                 _messageBroker.Publish(new HeroLostEvent(Guid.NewGuid(), _playground.Id, LostReason.MaxTurnsReached));
@@ -235,7 +242,8 @@ public abstract class Executor : IExecutor
 #endif
 
                 AgentDecisionBaseResponse agentDecision = await SendAgentActionRequestAsync(agent, _playground.Id, cancellationToken);
-                ApplyAgentAction(agentDecision);
+                await ApplyAgentActionAsync(agentDecision);
+                await WaitIfPausedAsync(cancellationToken);
 
 #if PERFORMANCE_ANALYSIS
                 actionPerformance.Finish = DateTime.UtcNow;
@@ -293,7 +301,7 @@ public abstract class Executor : IExecutor
         _messageBroker.Publish(new TurnExecutedEvent(Guid.NewGuid(), _playground.Id, _playground.Turn));
     }
 
-    private void ApplyAgentAction(AgentDecisionBaseResponse action)
+    private async Task ApplyAgentActionAsync(AgentDecisionBaseResponse action)
     {
         // Find the agent
         var agent = _playground.Hero.Id == action.AgentId
@@ -323,7 +331,7 @@ public abstract class Executor : IExecutor
                 }
 
             if (NeedsAgentNotifications)
-                SendAgentMoveNotification(moveEvent.Id, _playground.Id, agent.Id, moveEvent.From, moveEvent.To, isSuccess, agent);
+                await SendAgentMoveNotificationAsync(moveEvent.Id, _playground.Id, agent.Id, moveEvent.From, moveEvent.To, isSuccess, agent);
                 break;
 
             case AgentDecisionUseAbilityResponse abilityEvent:
@@ -334,7 +342,7 @@ public abstract class Executor : IExecutor
                     agent.ActionFailed(abilityEvent.ActionType);
 
                 if (NeedsAgentNotifications)
-                    SendAgentToggleActionNotification(abilityEvent.ActionType, _playground.Id, agent.Id, abilityEvent.IsActivated, agent);
+                    await SendAgentToggleActionNotificationAsync(abilityEvent.ActionType, _playground.Id, agent.Id, abilityEvent.IsActivated, agent);
 
                 break;
         }
@@ -400,21 +408,21 @@ public abstract class Executor : IExecutor
         throw new InvalidOperationException("Unknown move scenario");
     }
 
-    protected virtual void SendAgentMoveNotification(
+    protected virtual Task SendAgentMoveNotificationAsync(
         Guid Id,
         Guid PlaygroundId,
         Guid AgentId,
         Coordinates From,
         Coordinates To,
         bool isSuccess,
-        Agent agent) { }
+        Agent agent) => Task.CompletedTask;
 
-    protected virtual void SendAgentToggleActionNotification(
+    protected virtual Task SendAgentToggleActionNotificationAsync(
         AgentAction action,
         Guid playgroundId,
         Guid agentId,
         bool isActivated,
-        Agent agent) { }
+        Agent agent) => Task.CompletedTask;
 
     private async Task CreateRawLog(string logMessage)
     {

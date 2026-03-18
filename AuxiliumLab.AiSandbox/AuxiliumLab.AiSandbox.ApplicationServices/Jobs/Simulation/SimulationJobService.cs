@@ -75,6 +75,9 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
         var cts = new CancellationTokenSource();
         _jobCts[jobId] = cts;
 
+        var pauseGate = new SemaphoreSlim(1, 1);
+        _pauseHandles[jobId] = pauseGate;
+
         _ = Task.Run(async () =>
         {
             try
@@ -84,6 +87,8 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
                 IExecutorFactory activeFactory = BuildFactory(command.Kind, command.Algorithm, executorFactory);
 
                 var executor = activeFactory.CreateExecutorForPresentation();
+                executor.ActionDelayMs = command.ActionDelayMs;
+                executor.PauseGate = pauseGate;
                 _visualizationBridge?.Attach(jobId);
                 try
                 {

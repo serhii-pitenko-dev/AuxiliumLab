@@ -26,6 +26,12 @@ public class ExecutorForPresentation : Executor, IExecutorForPresentation
     /// <inheritdoc/>
     protected override bool NeedsAgentNotifications => true;
 
+    /// <inheritdoc/>
+    public int ActionDelayMs { get; set; } = 0;
+
+    /// <inheritdoc/>
+    public SemaphoreSlim? PauseGate { get; set; }
+
     public ExecutorForPresentation(
         IPlaygroundCommandsHandleService mapCommands,
         IMemoryDataManager<StandardPlayground> sandboxRepository,
@@ -49,8 +55,18 @@ public class ExecutorForPresentation : Executor, IExecutorForPresentation
     {
     }
 
-    protected override void SendAgentMoveNotification(Guid id, Guid playgroundId, Guid agentId, Coordinates from, Coordinates to, bool isSuccess,Agent agent)
+    protected override async Task WaitIfPausedAsync(CancellationToken ct)
     {
+        if (PauseGate is null) return;
+        await PauseGate.WaitAsync(ct);
+        PauseGate.Release();
+    }
+
+    protected override async Task SendAgentMoveNotificationAsync(Guid id, Guid playgroundId, Guid agentId, Coordinates from, Coordinates to, bool isSuccess, Agent agent)
+    {
+        if (ActionDelayMs > 0)
+            await Task.Delay(ActionDelayMs);
+
         var moveEvent = new OnAgentMoveActionEvent(
             id,
             playgroundId,
@@ -63,8 +79,11 @@ public class ExecutorForPresentation : Executor, IExecutorForPresentation
         _messageBroker.Publish(moveEvent);
     }
 
-    protected override void SendAgentToggleActionNotification(AgentAction action, Guid playgroundId, Guid agentId, bool isActivated, Agent agent)
+    protected override async Task SendAgentToggleActionNotificationAsync(AgentAction action, Guid playgroundId, Guid agentId, bool isActivated, Agent agent)
     {
+        if (ActionDelayMs > 0)
+            await Task.Delay(ActionDelayMs);
+
         var actionEvent = new OnAgentToggleActionEvent(
             Guid.NewGuid(),
             playgroundId,

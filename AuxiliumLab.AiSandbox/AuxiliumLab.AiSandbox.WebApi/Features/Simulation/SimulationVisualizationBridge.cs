@@ -162,6 +162,16 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
     {
         if (!_playgroundToJob.TryGetValue(e.PlaygroundId, out var jobId)) return;
 
+        // Rebuild all cells after this move so the frontend receives up-to-date
+        // path and vision effects with every AgentMoved event.
+        SimulationCellDto[] updatedCells;
+        using (var scope = _scopeFactory.CreateScope())
+        {
+            var mapQueries = scope.ServiceProvider.GetRequiredService<IMapQueriesHandleService>();
+            var layout     = mapQueries.MapLayoutQuery.GetFromMemory(e.PlaygroundId);
+            updatedCells   = BuildAllCells(layout.Cells);
+        }
+
         var notification = new SimulationAgentMovedNotification(
             jobId.ToString(),
             e.AgentId.ToString(),
@@ -169,13 +179,15 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
             e.From.X, e.From.Y,
             e.To.X,   e.To.Y,
             e.IsSuccess,
-            ToSnapshotDto(e.AgentSnapshot));
+            ToSnapshotDto(e.AgentSnapshot),
+            updatedCells);
 
         // Cache latest position per agent for late-joining clients
         var dto = new AgentMovedDto(
             jobId.ToString(), e.AgentId.ToString(), e.AgentSnapshot.Type.ToString(),
             e.From.X, e.From.Y, e.To.X, e.To.Y, e.IsSuccess,
-            ToSnapshotDto(e.AgentSnapshot));
+            ToSnapshotDto(e.AgentSnapshot),
+            updatedCells);
         _lastAgentMoves
             .GetOrAdd(jobId.ToString(), _ => new ConcurrentDictionary<string, AgentMovedDto>())
             [e.AgentId.ToString()] = dto;

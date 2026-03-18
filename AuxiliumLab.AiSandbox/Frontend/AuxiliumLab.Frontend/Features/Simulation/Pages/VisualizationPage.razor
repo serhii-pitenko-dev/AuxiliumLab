@@ -67,12 +67,26 @@
             <div style="overflow:auto">
                 <svg width="@(_gridWidth * CellSize)" height="@(_gridHeight * CellSize)"
                      style="display:block;border:1px solid #ccc">
+                    @* Layer 1 – base cells (blocks, exits, empty background) *@
                     @foreach (var cell in _cells.Values)
                     {
                         <rect x="@(cell.X * CellSize)" y="@(cell.Y * CellSize)"
                               width="@CellSize" height="@CellSize"
                               fill="@CellFill(cell.ObjectType)" stroke="#e0e0e0" stroke-width="0.5" />
                     }
+                    @* Layer 2 – effect overlays (path / sight) on empty cells only *@
+                    @foreach (var cell in _cells.Values)
+                    {
+                        var effectFill = GetEffectFill(cell);
+                        if (effectFill is not null)
+                        {
+                            <rect x="@(cell.X * CellSize)" y="@(cell.Y * CellSize)"
+                                  width="@CellSize" height="@CellSize"
+                                  class="@GetEffectClass(cell)"
+                                  fill="@effectFill" />
+                        }
+                    }
+                    @* Layer 3 – agent circles (always on top) *@
                     @foreach (var (_, agent) in _agentPositions)
                     {
                         <circle cx="@(agent.X * CellSize + CellSize / 2)"
@@ -81,6 +95,21 @@
                                 fill="@AgentFill(agent.Type)" opacity="0.85" />
                     }
                 </svg>
+            </div>
+            @* Legend *@
+            <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;font-size:0.72rem;align-items:center">
+                <span style="display:flex;align-items:center;gap:4px">
+                    <svg width="12" height="12"><rect width="12" height="12" fill="rgba(30,136,229,0.60)"/></svg> Hero path
+                </span>
+                <span style="display:flex;align-items:center;gap:4px">
+                    <svg width="12" height="12"><rect width="12" height="12" fill="rgba(229,57,53,0.60)"/></svg> Enemy path
+                </span>
+                <span style="display:flex;align-items:center;gap:4px">
+                    <svg width="12" height="12"><rect width="12" height="12" fill="rgba(30,136,229,0.20)"/></svg> Hero sight
+                </span>
+                <span style="display:flex;align-items:center;gap:4px">
+                    <svg width="12" height="12"><rect width="12" height="12" fill="rgba(229,57,53,0.20)"/></svg> Enemy sight
+                </span>
             </div>
         }
         else

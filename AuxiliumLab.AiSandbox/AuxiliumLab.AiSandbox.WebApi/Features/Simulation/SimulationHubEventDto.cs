@@ -34,7 +34,9 @@ public record AgentMovedDto(
     int ToX,
     int ToY,
     bool IsSuccess,
-    AgentSnapshotDto Agent);
+    AgentSnapshotDto Agent,
+    /// <summary>Full cell snapshot after the move, including updated path/vision effects.</summary>
+    SimulationCellDto[] UpdatedCells);
 
 /// <summary>Sent when an agent toggle-action (Run/RunOff) fires.</summary>
 public record AgentToggledDto(

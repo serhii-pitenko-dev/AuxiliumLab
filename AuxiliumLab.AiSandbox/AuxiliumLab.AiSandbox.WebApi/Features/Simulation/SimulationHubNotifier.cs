@@ -20,7 +20,7 @@ public sealed class SimulationHubNotifier : ISimulationHubNotifier
         => _hub.Clients.Group(n.JobId)
                .SendAsync(SimulationHub.Methods.AgentMoved,
                    new AgentMovedDto(n.JobId, n.AgentId, n.AgentType,
-                       n.FromX, n.FromY, n.ToX, n.ToY, n.IsSuccess, n.Agent), ct);
+                       n.FromX, n.FromY, n.ToX, n.ToY, n.IsSuccess, n.Agent, n.UpdatedCells), ct);
 
     public Task NotifyAgentToggledAsync(SimulationAgentToggledNotification n, CancellationToken ct = default)
         => _hub.Clients.Group(n.JobId)

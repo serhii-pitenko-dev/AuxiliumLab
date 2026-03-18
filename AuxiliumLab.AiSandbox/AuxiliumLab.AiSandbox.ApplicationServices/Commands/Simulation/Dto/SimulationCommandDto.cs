@@ -39,6 +39,12 @@ public class StartSingleSimulationCommand
 
     /// <inheritdoc cref="SimulationSandboxOverrideDto"/>
     public SimulationSandboxOverrideDto? SandboxSettings { get; set; }
+
+    /// <summary>
+    /// Delay in milliseconds applied between each agent action during presentation runs.
+    /// 0 means no delay.
+    /// </summary>
+    public int ActionDelayMs { get; set; } = 0;
 }
 
 /// <summary>Command to start a mass (batch) simulation run.</summary>

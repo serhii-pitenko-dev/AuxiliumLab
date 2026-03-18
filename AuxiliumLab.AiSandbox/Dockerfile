@@ -13,7 +13,6 @@ COPY AuxiliumLab.AiSandbox.Ai/AuxiliumLab.AiSandbox.Ai.csproj                   
 COPY AuxiliumLab.AiSandbox.AiTrainingOrchestrator/AuxiliumLab.AiSandbox.AiTrainingOrchestrator.csproj             AuxiliumLab.AiSandbox.AiTrainingOrchestrator/
 COPY AuxiliumLab.AiSandbox.ApplicationServices/AuxiliumLab.AiSandbox.ApplicationServices.csproj                   AuxiliumLab.AiSandbox.ApplicationServices/
 COPY AuxiliumLab.AiSandbox.Common/AuxiliumLab.AiSandbox.Common.csproj                                             AuxiliumLab.AiSandbox.Common/
-COPY AuxiliumLab.AiSandbox.ConsolePresentation/AuxiliumLab.AiSandbox.ConsolePresentation.csproj                   AuxiliumLab.AiSandbox.ConsolePresentation/
 COPY AuxiliumLab.AiSandbox.Domain/AuxiliumLab.AiSandbox.Domain.csproj                                             AuxiliumLab.AiSandbox.Domain/
 COPY AuxiliumLab.AiSandbox.GrpcHost/AuxiliumLab.AiSandbox.GrpcHost.csproj                                         AuxiliumLab.AiSandbox.GrpcHost/
 COPY AuxiliumLab.AiSandbox.Infrastructure/AuxiliumLab.AiSandbox.Infrastructure.csproj                             AuxiliumLab.AiSandbox.Infrastructure/

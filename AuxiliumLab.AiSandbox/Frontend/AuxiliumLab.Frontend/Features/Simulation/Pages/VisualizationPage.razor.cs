@@ -143,8 +143,16 @@ public partial class VisualizationPage : IAsyncDisposable
     {
         try
         {
-            _agentPositions[e.AgentId] = (e.ToX, e.ToY, e.AgentType);
+            if (e.IsSuccess)
+                _agentPositions[e.AgentId] = (e.ToX, e.ToY, e.AgentType);
             _agents[e.AgentId] = e.Agent;
+
+            // Refresh cells with latest path/vision effects delivered alongside every
+            // AgentMoved event. This keeps effects in sync with the agent's actual
+            // position and also prevents blank cells caused by stale ObjectType values.
+            foreach (var cell in e.UpdatedCells)
+                _cells[$"{cell.X},{cell.Y}"] = cell;
+
             AddLog($"AgentMoved T{_currentTurn}: {e.AgentType} {e.AgentId[..Math.Min(6, e.AgentId.Length)]} → ({e.ToX},{e.ToY})");
             InvokeAsync(StateHasChanged);
         }
@@ -201,6 +209,36 @@ public partial class VisualizationPage : IAsyncDisposable
         "Enemy" => "#e53935",
         _       => "#9c27b0"
     };
+
+    /// <summary>
+    /// Returns an SVG fill colour for the effect overlay rendered on an empty cell.
+    /// Priority (highest first): Hero path → Enemy path → Hero vision → Enemy vision.
+    /// Returns null for non-empty cells (blocks / exits take priority over overlays).
+    /// </summary>
+    internal static string? GetEffectFill(SimulationCellDto cell)
+    {
+        // Solid obstacles never show effect overlays.
+        // Agent-type cells (Hero/Enemy) are fine — the agent is drawn as a circle on top.
+        if (cell.ObjectType is "Block" or "BorderBlock") return null;
+        if (cell.Effects.Length == 0)   return null;
+
+        if (cell.Effects.Contains("Hero:Path"))    return "rgba(30,136,229,0.60)";
+        if (cell.Effects.Contains("Enemy:Path"))   return "rgba(229,57,53,0.60)";
+        if (cell.Effects.Contains("Hero:Vision"))  return "rgba(30,136,229,0.20)";
+        if (cell.Effects.Contains("Enemy:Vision")) return "rgba(229,57,53,0.20)";
+
+        return null;
+    }
+
+    /// <summary>Returns the CSS class name for the highest-priority effect on the cell.</summary>
+    internal static string GetEffectClass(SimulationCellDto cell)
+    {
+        if (cell.Effects.Contains("Hero:Path"))    return "hero-path";
+        if (cell.Effects.Contains("Enemy:Path"))   return "enemy-path";
+        if (cell.Effects.Contains("Hero:Vision"))  return "hero-vision";
+        if (cell.Effects.Contains("Enemy:Vision")) return "enemy-vision";
+        return string.Empty;
+    }
 
     public async ValueTask DisposeAsync()
     {

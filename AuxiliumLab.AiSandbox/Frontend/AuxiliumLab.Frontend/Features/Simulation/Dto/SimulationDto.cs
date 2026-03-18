@@ -23,6 +23,8 @@ public class StartSingleSimulationCommand
     public SimulationKind                Kind           { get; set; } = SimulationKind.RandomAI;
     public ModelType                     Algorithm      { get; set; } = ModelType.PPO;
     public SimulationSandboxOverrideDto? SandboxSettings { get; set; }
+    /// <summary>Delay in milliseconds applied between each agent action during presentation.</summary>
+    public int                           ActionDelayMs  { get; set; } = 500;
 }
 
 public class StartMassSimulationCommand
@@ -120,15 +122,17 @@ public class InitialAgentDto
 
 public class AgentMovedDto
 {
-    public string          JobId     { get; set; } = string.Empty;
-    public string          AgentId   { get; set; } = string.Empty;
-    public string          AgentType { get; set; } = string.Empty;
-    public int             FromX     { get; set; }
-    public int             FromY     { get; set; }
-    public int             ToX       { get; set; }
-    public int             ToY       { get; set; }
-    public bool            IsSuccess { get; set; }
-    public AgentSnapshotDto Agent    { get; set; } = new();
+    public string          JobId        { get; set; } = string.Empty;
+    public string          AgentId      { get; set; } = string.Empty;
+    public string          AgentType    { get; set; } = string.Empty;
+    public int             FromX        { get; set; }
+    public int             FromY        { get; set; }
+    public int             ToX          { get; set; }
+    public int             ToY          { get; set; }
+    public bool            IsSuccess    { get; set; }
+    public AgentSnapshotDto Agent       { get; set; } = new();
+    /// <summary>Full cell snapshot after the move, including updated path/vision effects.</summary>
+    public SimulationCellDto[] UpdatedCells { get; set; } = [];
 }
 
 public class AgentToggledDto
