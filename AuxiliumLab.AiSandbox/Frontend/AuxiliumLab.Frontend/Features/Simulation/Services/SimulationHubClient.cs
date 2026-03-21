@@ -54,7 +54,7 @@ public sealed class SimulationHubClient : ISimulationHubClient
         });
         _connection.On<AgentMovedDto>("AgentMoved", dto =>
         {
-            try { OnDebugMessage?.Invoke($"[raw] AgentMoved {dto?.AgentId?[..Math.Min(6, dto.AgentId?.Length ?? 0)]} ({dto?.To?.X},{dto?.To?.Y})"); OnAgentMoved?.Invoke(dto!); }
+            try { OnDebugMessage?.Invoke($"[raw] AgentMoved {dto?.AgentId?[..Math.Min(6, dto.AgentId?.Length ?? 0)]} ({dto?.From?.X},{dto?.From?.Y})→({dto?.To?.X},{dto?.To?.Y})"); OnAgentMoved?.Invoke(dto!); }
             catch (Exception ex) { OnDebugMessage?.Invoke($"[raw] AgentMoved ERROR: {ex.Message}"); }
         });
         _connection.On<AgentToggledDto>("AgentToggled", dto =>

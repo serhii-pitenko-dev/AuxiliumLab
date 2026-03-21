@@ -157,7 +157,7 @@ public partial class VisualizationPage : IAsyncDisposable
             foreach (var cell in e.UpdatedCells)
                 _cells[$"{cell.Position.X},{cell.Position.Y}"] = cell;
 
-            AddLog($"AgentMoved T{_currentTurn}: {e.AgentType} {e.AgentId[..Math.Min(6, e.AgentId.Length)]} → ({e.To.X},{e.To.Y})");
+            AddLog($"AgentMoved T{_currentTurn}: {e.AgentType} {e.AgentId[..Math.Min(6, e.AgentId.Length)]} ({e.From.X},{e.From.Y}) → ({e.To.X},{e.To.Y})");
             InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)

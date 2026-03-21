@@ -104,7 +104,7 @@ $env:AISANDBOX_BASE_URL = "http://my-backend:5000"
 docker compose up -d
 ```
 
-> **Docker Hub note:** Due to a TLS certificate issue with Cloudflare CDN, all images use `mcr.microsoft.com` only. The frontend is served by a minimal ASP.NET Core `StaticHost` instead of nginx.
+> **Docker Hub note:** Due to a TLS certificate issue with Cloudflare CDN, all images use `mcr.microsoft.com` only.
 
 ---
 
