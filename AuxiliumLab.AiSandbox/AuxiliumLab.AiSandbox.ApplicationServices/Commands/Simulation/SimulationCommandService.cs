@@ -1,6 +1,5 @@
 using AuxiliumLab.AiSandbox.Ai.Configuration;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
-using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Simulation;
 using AuxiliumLab.AiSandbox.ApplicationServices.Executors;
 using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Simulation;
 using AuxiliumLab.AiSandbox.Common.SimulationVisualizationBridge;
@@ -15,16 +14,14 @@ using AuxiliumLab.AiSandbox.Statistics.StatisticDataManager;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
-using System.Text.Json;
 
-namespace AuxiliumLab.AiSandbox.ApplicationServices.Jobs.Simulation;
+namespace AuxiliumLab.AiSandbox.ApplicationServices.Commands.Simulation;
 
 /// <summary>
-/// Singleton service that implements both <see cref="ISimulationCommands"/> and
-/// <see cref="ISimulationQueries"/>. Launches simulation runs on background threads
-/// and tracks job state in memory.
+/// Singleton service that implements <see cref="ISimulationCommands"/>.
+/// Launches simulation runs on background threads and tracks job state in memory.
 /// </summary>
-public sealed class SimulationJobService : ISimulationCommands, ISimulationQueries
+public sealed class SimulationCommandService : ISimulationCommands
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IOptions<SandBoxConfiguration> _sandboxConfig;
@@ -37,7 +34,7 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _jobCts = new();
     private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _pauseHandles = new();
 
-    public SimulationJobService(
+    public SimulationCommandService(
         IServiceProvider serviceProvider,
         IOptions<SandBoxConfiguration> sandboxConfig,
         IOptions<FileSourceConfiguration> fileSourceConfig,
@@ -82,9 +79,8 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
             {
                 using var scope = _serviceProvider.CreateScope();
                 var executorFactory = scope.ServiceProvider.GetRequiredService<IExecutorFactory>();
-                IExecutorFactory activeFactory = BuildFactory(command.Kind, command.Algorithm, executorFactory);
 
-                var executor = activeFactory.CreateExecutorForPresentation(
+                var executor = executorFactory.CreateExecutorForPresentation(
                     command.ActionDelayMs, pauseGate);
                 _visualizationBridge?.Attach(jobId);
                 try
@@ -147,11 +143,11 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
                 var executorFactory  = scope.ServiceProvider.GetRequiredService<IExecutorFactory>();
                 var batchFileManager = scope.ServiceProvider.GetRequiredService<IFileDataManager<GeneralBatchRunInformation>>();
 
-                IExecutorFactory activeFactory = BuildFactory(command.Kind, command.Algorithm, executorFactory);
+                Func<IStandardExecutor> createExecutor = BuildExecutorCreator(command.Kind, command.Algorithm, executorFactory);
 
                 var startupSettings = BuildSimulationStartupSettings(command.IncrementalSweep);
                 var massRunner = new MassRunner(batchFileManager, _statisticFileManager, _sandboxConfig);
-                var result = await massRunner.RunManyAsync(activeFactory, command.SimulationCount, startupSettings: startupSettings);
+                var result = await massRunner.RunManyAsync(createExecutor, command.SimulationCount, startupSettings: startupSettings);
 
                 status.CompletedRuns = result.StandardBatch.TotalRuns;
                 status.State         = SandboxStatus.TurnLimitReached;
@@ -178,30 +174,6 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
 
         return Task.FromResult(new SimulationJobStartedDto { JobId = jobId, Kind = command.Kind, StartedAt = startedAt });
     }
-
-    // ── ISimulationQueries ───────────────────────────────────────────────────
-
-    public Task<IReadOnlyList<SimulationJobStatusDto>> GetSimulationStatusesAsync(CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<SimulationJobStatusDto>>(_jobs.Values.ToList());
-
-    public Task<SandboxDefaultsDto> GetSandboxDefaultsAsync(CancellationToken ct = default)
-    {
-        var cfg = _sandboxConfig.Value;
-        return Task.FromResult(new SandboxDefaultsDto
-        {
-            MaxTurns       = cfg.MaxTurns.Current,
-            MapWidth       = cfg.MapSettings.Size.Width.Current,
-            MapHeight      = cfg.MapSettings.Size.Height.Current,
-            BlocksPercent  = cfg.MapSettings.ElementsPercentages.BlocksPercent.Current,
-            EnemiesPercent = cfg.MapSettings.ElementsPercentages.PercentOfEnemies.Current,
-            HeroSpeed      = cfg.Hero.Speed.Current,
-            HeroSightRange = cfg.Hero.SightRange.Current,
-            HeroStamina    = cfg.Hero.Stamina.Current,
-            EnemySpeed     = cfg.Enemy.Speed.Current
-        });
-    }
-
-    // ── Stop / Pause / Resume ────────────────────────────────────────────────
 
     public Task<bool> StopSimulationAsync(Guid jobId, CancellationToken ct = default)
     {
@@ -243,13 +215,17 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
         return Task.FromResult(true);
     }
 
+    /// <summary>Returns a snapshot of all job statuses (used by query services).</summary>
+    internal IReadOnlyList<SimulationJobStatusDto> GetJobStatuses()
+        => _jobs.Values.ToList();
+
     // ── Private helpers ──────────────────────────────────────────────────────
 
-    private IExecutorFactory BuildFactory(
+    private Func<IStandardExecutor> BuildExecutorCreator(
         SimulationKind kind, ModelType algorithm, IExecutorFactory baseFactory)
     {
         if (kind != SimulationKind.TrainedAI)
-            return baseFactory;
+            return baseFactory.CreateStandardExecutor;
 
         if (algorithm != ModelType.PPO)
             throw new NotImplementedException($"Trained AI simulation for '{algorithm}' is not yet implemented.");
@@ -278,7 +254,7 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
             PolicyType = AiPolicy.MLP
         };
 
-        return new InferenceExecutorFactory(baseFactory, _policyTrainerClient, modelPath, aiConfig);
+        return () => baseFactory.CreateInferenceExecutor(_policyTrainerClient, modelPath, aiConfig);
     }
 
     private static SimulationStartupSettings BuildSimulationStartupSettings(IncrementalSweeperDto? sweep)

@@ -1,31 +1,29 @@
-using AuxiliumLab.AiSandbox.ApplicationServices.Jobs.AggregationRun;
-using AuxiliumLab.AiSandbox.ApplicationServices.Jobs.Simulation;
-using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Statistic;
+using AuxiliumLab.AiSandbox.ApplicationServices.Queries.AggregationRun;
+using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Simulation;
 
-namespace AuxiliumLab.AiSandbox.ApplicationServices.Jobs.Statistic;
+namespace AuxiliumLab.AiSandbox.ApplicationServices.Queries.Statistic;
 
 /// <summary>
 /// Implements <see cref="IStatisticQueries"/> by reading completed-job data from
-/// the in-memory job stores held by <see cref="SimulationJobService"/> and
-/// <see cref="AggregationJobService"/>.
+/// <see cref="ISimulationQueries"/> and <see cref="IAggregationRunQueries"/>.
 /// </summary>
 public sealed class StatisticQueryService : IStatisticQueries
 {
-    private readonly SimulationJobService _simulationJobs;
-    private readonly AggregationJobService _aggregationJobs;
+    private readonly ISimulationQueries _simulationQueries;
+    private readonly IAggregationRunQueries _aggregationQueries;
 
     public StatisticQueryService(
-        SimulationJobService simulationJobs,
-        AggregationJobService aggregationJobs)
+        ISimulationQueries simulationQueries,
+        IAggregationRunQueries aggregationQueries)
     {
-        _simulationJobs  = simulationJobs;
-        _aggregationJobs = aggregationJobs;
+        _simulationQueries  = simulationQueries;
+        _aggregationQueries = aggregationQueries;
     }
 
     public async Task<IReadOnlyList<CompletedSimulationRunDto>> GetCompletedSimulationRunsAsync(
         CancellationToken ct = default)
     {
-        var allJobs = await _simulationJobs.GetSimulationStatusesAsync(ct);
+        var allJobs = await _simulationQueries.GetSimulationStatusesAsync(ct);
         return allJobs
             .Where(j => j.State != SandboxStatus.InProgress && j.State != SandboxStatus.Failed)
             .Select(j => new CompletedSimulationRunDto
@@ -45,7 +43,7 @@ public sealed class StatisticQueryService : IStatisticQueries
     public async Task<IReadOnlyList<CompletedAggregationRunDto>> GetCompletedAggregationRunsAsync(
         CancellationToken ct = default)
     {
-        var allJobs = await _aggregationJobs.GetAggregationStatusesAsync(ct);
+        var allJobs = await _aggregationQueries.GetAggregationStatusesAsync(ct);
         return allJobs
             .Where(j => j.State == AggregationJobState.Completed)
             .Select(j => new CompletedAggregationRunDto

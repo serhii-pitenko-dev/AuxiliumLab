@@ -15,29 +15,24 @@ Contains **no game rules** — those live exclusively in `Domain`.
 ```
 ApplicationServices/
 ├── Commands/
-│   ├── Simulation/                 ISimulationCommands
+│   ├── Simulation/                 ISimulationCommands, SimulationCommandService
 │   │   ├── Dto/                    StartSingleSimulationCommand, StartMassSimulationCommand, SimulationJobStartedDto
 │   │   └── Playground/             IPlaygroundCommandsHandleService, PlaygroundCommandsHandleService
 │   │       └── CreatePlayground/   CreatePlaygroundCommand + handler
-│   ├── Training/                   ITrainingCommands
+│   ├── Training/                   ITrainingCommands, TrainingCommandService
 │   │   └── Dto/                    StartPpoTrainingCommand, PpoHyperparametersDto, TrainingJobStartedDto …
-│   └── AggregationRun/             IAggregationRunCommands
+│   └── AggregationRun/             IAggregationRunCommands, AggregationRunCommandService
 │       └── Dto/                    StartAggregationCommand, AggregationJobStartedDto …
 ├── Queries/
-│   ├── Simulation/                 ISimulationQueries
+│   ├── Simulation/                 ISimulationQueries, SimulationQueryService
 │   │   ├── Dto/                    SimulationJobStatusDto
 │   │   └── Map/                    IMapQueriesHandleService, GetMapLayout, GetAffectedCells
-│   ├── Training/                   ITrainingQueries
+│   ├── Training/                   ITrainingQueries, TrainingQueryService
 │   │   └── Dto/                    TrainingJobStatusDto, TrainedModelInfoDto, TrainingPreconditionsDto
-│   ├── AggregationRun/             IAggregationRunQueries
+│   ├── AggregationRun/             IAggregationRunQueries, AggregationRunQueryService
 │   │   └── Dto/                    AggregationJobStatusDto
-│   └── Statistic/                  IStatisticQueries
+│   └── Statistic/                  IStatisticQueries, StatisticQueryService
 │       └── Dto/                    CompletedSimulationRunDto, CompletedAggregationRunDto, AggregationStepResultDto
-├── Jobs/                           Background job service implementations
-│   ├── Training/                   TrainingJobService  (implements ITrainingCommands + ITrainingQueries)
-│   ├── Simulation/                 SimulationJobService (implements ISimulationCommands + ISimulationQueries)
-│   ├── AggregationRun/             AggregationJobService (implements IAggregationRunCommands + IAggregationRunQueries)
-│   └── Statistic/                  StatisticQueryService (implements IStatisticQueries)
 ├── Executors/                      Core simulation loop implementations
 ├── Runner/
 │   ├── SingleRunner/               One-shot run helpers
@@ -56,7 +51,7 @@ ApplicationServices/
 
 ### Commands
 
-#### `ISimulationCommands` / `SimulationJobService`
+#### `ISimulationCommands` / `SimulationCommandService`
 - `StartSingleSimulationAsync(StartSingleSimulationCommand, ct)` — fires a single simulation in the background; returns `SimulationJobStartedDto`.
 - `StartMassSimulationAsync(StartMassSimulationCommand, ct)` — fires a mass (batch) simulation; returns `SimulationJobStartedDto`.
 
@@ -64,25 +59,26 @@ ApplicationServices/
 - `RandomAI` — random actions.
 - `TrainedAI` — loads the latest trained model for the specified `Algorithm`.
 
-#### `ITrainingCommands` / `TrainingJobService`
+#### `ITrainingCommands` / `TrainingCommandService`
 - `StartPpoTrainingAsync(StartPpoTrainingCommand, ct)` — launches a PPO training run; returns `TrainingJobStartedDto`.
 - All hyperparameter and sandbox fields are **optional** — missing values fall back to `appsettings.json → TrainingSettings` defaults.
 
-#### `IAggregationRunCommands` / `AggregationJobService`
+#### `IAggregationRunCommands` / `AggregationRunCommandService`
 - `StartAggregationAsync(StartAggregationCommand, ct)` — starts a multi-step aggregation pipeline; returns `AggregationJobStartedDto`.
 - `Steps` may be empty → falls back to `appsettings.json → AggregationSettings`.
 - `TrainingOverrides` optional — overrides PPO hyperparameters for the embedded Training step.
 
 ### Queries
 
-#### `ISimulationQueries` / `SimulationJobService`
+#### `ISimulationQueries` / `SimulationQueryService`
 - `GetSimulationStatusesAsync(ct)` → `IReadOnlyList<SimulationJobStatusDto>` — running and recently completed jobs.
+- `GetSandboxDefaultsAsync(ct)` → `SandboxDefaultsDto` — reads defaults from configuration.
 
-#### `ITrainingQueries` / `TrainingJobService`
+#### `ITrainingQueries` / `TrainingQueryService`
 - `GetTrainingStatusesAsync(ct)` → `IReadOnlyList<TrainingJobStatusDto>`
 - `GetTrainedModelsAsync(ct)` → `IReadOnlyList<TrainedModelInfoDto>` — scans the trained-models directory.
 
-#### `IAggregationRunQueries` / `AggregationJobService`
+#### `IAggregationRunQueries` / `AggregationRunQueryService`
 - `GetAggregationStatusesAsync(ct)` → `IReadOnlyList<AggregationJobStatusDto>` — with per-step progress.
 
 #### `IStatisticQueries` / `StatisticQueryService`
@@ -177,16 +173,16 @@ Coordinates the full RL training loop:
 4. Calls `IPolicyTrainerClient.StartTrainingXxx()` to kick off the Python SB3 training.
 5. Accepts an optional `StartPpoTrainingCommand? overrides` to apply per-request hyperparameter overrides on top of the `appsettings.json → TrainingSettings` defaults.
 
-### Jobs Layer (`Jobs/`)
-Background job services implement both the command and query interfaces for a feature.  
-All jobs run via `Task.Run` fire-and-forget and maintain an in-memory job registry (`ConcurrentDictionary`).
+### Command / Query Services
+Command services implement both the command and query interfaces for a feature.  
+All command services run via `Task.Run` fire-and-forget and maintain an in-memory job registry (`ConcurrentDictionary`).
 
 | Service | Implements | Function |
 |---|---|---|
-| `TrainingJobService` | `ITrainingCommands`, `ITrainingQueries` | PPO training jobs |
-| `SimulationJobService` | `ISimulationCommands`, `ISimulationQueries` | Single and mass simulation jobs |
-| `AggregationJobService` | `IAggregationRunCommands`, `IAggregationRunQueries` | Multi-step aggregation jobs |
-| `StatisticQueryService` | `IStatisticQueries` | Reads completed-run data from the statistics file store |
+| `TrainingCommandService` | `ITrainingCommands`, `ITrainingQueries` | PPO training jobs |
+| `SimulationCommandService` | `ISimulationCommands`, `ISimulationQueries` | Single and mass simulation jobs |
+| `AggregationRunCommandService` | `IAggregationRunCommands`, `IAggregationRunQueries` | Multi-step aggregation jobs |
+| `StatisticQueryService` | `IStatisticQueries` | Reads completed-run data from the in-memory job stores |
 
 ### Saver — Persistence
 `Saver/Persistence/Sandbox/`:
@@ -201,7 +197,7 @@ Wraps a pre-saved `StandardPlaygroundState`. When `IsPreconditionStart = true` i
 
 ```
 REST API / Startup
-   └─ Job Service (e.g. TrainingJobService)
+   └─ Command Service (e.g. TrainingCommandService)
          └─ Runner (TrainingRunner / MassRunner / AggregationRunner)
                └─ Executor.RunAsync()
                      ├─ PlaygroundCommandsHandleService.CreatePlayground()

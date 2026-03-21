@@ -126,8 +126,7 @@ public class AggregationRunner
                     var result = await RunMassStepAsync(
                         step,
                         standardSimCount,
-                        incrementalProperties,
-                        createInferenceFactory: null);
+                        incrementalProperties);
 
                     stepResults.Add(new AggregationStepResult(
                         step.Name,
@@ -159,19 +158,19 @@ public class AggregationRunner
                         PolicyType = policyType
                     };
 
-                    // Build the inference factory when a model path is available;
+                    // Build the executor creator when a model path is available;
                     // fall back to RandomActions when no trained model exists.
-                    Func<IExecutorFactory, IExecutorFactory>? inferenceFactoryBuilder =
+                    Func<IExecutorFactory, IStandardExecutor>? createInferenceExecutor =
                         string.IsNullOrEmpty(modelPath)
                             ? null
-                            : innerFactory => new InferenceExecutorFactory(
-                                innerFactory, _policyTrainerClient, modelPath, aiConfig);
+                            : factory => factory.CreateInferenceExecutor(
+                                _policyTrainerClient, modelPath, aiConfig);
 
                     var result = await RunMassStepAsync(
                         step,
                         standardSimCount,
                         incrementalProperties,
-                        createInferenceFactory: inferenceFactoryBuilder);
+                        createExecutorOverride: createInferenceExecutor);
 
                     stepResults.Add(new AggregationStepResult(
                         step.Name,
@@ -208,16 +207,15 @@ public class AggregationRunner
         AggregationStepConfiguration step,
         int standardSimCount,
         SimulationIncrementalPropertiesSettings incrementalProperties,
-        Func<IExecutorFactory, IExecutorFactory>? createInferenceFactory)
+        Func<IExecutorFactory, IStandardExecutor>? createExecutorOverride = null)
     {
         using var scope = _serviceProvider.CreateScope();
         var executorFactory  = scope.ServiceProvider.GetRequiredService<IExecutorFactory>();
         var batchFileManager = scope.ServiceProvider.GetRequiredService<IFileDataManager<GeneralBatchRunInformation>>();
 
-        // Optionally wrap with inference factory.
-        IExecutorFactory activeFactory = createInferenceFactory is not null
-            ? createInferenceFactory(executorFactory)
-            : executorFactory;
+        Func<IStandardExecutor> createExecutor = createExecutorOverride is not null
+            ? () => createExecutorOverride(executorFactory)
+            : executorFactory.CreateStandardExecutor;
 
         var simulationSettings = new SimulationStartupSettings
         {
@@ -232,6 +230,6 @@ public class AggregationRunner
         };
 
         var massRunner = new MassRunnerClass(batchFileManager, _statisticFileManager, _sandboxConfig);
-        return await massRunner.RunManyAsync(activeFactory, standardSimCount, startupSettings: simulationSettings);
+        return await massRunner.RunManyAsync(createExecutor, standardSimCount, startupSettings: simulationSettings);
     }
 }

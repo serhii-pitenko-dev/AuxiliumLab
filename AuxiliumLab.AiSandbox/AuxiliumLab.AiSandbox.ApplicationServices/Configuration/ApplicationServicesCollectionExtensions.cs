@@ -5,10 +5,6 @@ using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Simulation.Playground;
 using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Simulation.Playground.CreatePlayground;
 using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Training;
 using AuxiliumLab.AiSandbox.ApplicationServices.Executors;
-using AuxiliumLab.AiSandbox.ApplicationServices.Jobs.AggregationRun;
-using AuxiliumLab.AiSandbox.ApplicationServices.Jobs.Simulation;
-using AuxiliumLab.AiSandbox.ApplicationServices.Jobs.Statistic;
-using AuxiliumLab.AiSandbox.ApplicationServices.Jobs.Training;
 using AuxiliumLab.AiSandbox.ApplicationServices.Queries.AggregationRun;
 using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Simulation;
 using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Simulation.Map.GetAffectedCells;
@@ -80,19 +76,20 @@ public static class ApplicationServicesCollectionExtensions
             sp => sp.GetRequiredService<IExecutorFactory>().CreateStandardExecutor());
         services.AddSingleton<ITestPreconditionData, TestPreconditionData>();
 
-        // ── Feature job services (singleton: own background-job state) ───────
-        services.AddSingleton<TrainingJobService>();
-        services.AddSingleton<ITrainingCommands>(sp => sp.GetRequiredService<TrainingJobService>());
-        services.AddSingleton<ITrainingQueries>(sp => sp.GetRequiredService<TrainingJobService>());
+        // ── Feature command services (singleton: own background-job state) ────
+        services.AddSingleton<TrainingCommandService>();
+        services.AddSingleton<ITrainingCommands>(sp => sp.GetRequiredService<TrainingCommandService>());
 
-        services.AddSingleton<SimulationJobService>();
-        services.AddSingleton<ISimulationCommands>(sp => sp.GetRequiredService<SimulationJobService>());
-        services.AddSingleton<ISimulationQueries>(sp => sp.GetRequiredService<SimulationJobService>());
+        services.AddSingleton<SimulationCommandService>();
+        services.AddSingleton<ISimulationCommands>(sp => sp.GetRequiredService<SimulationCommandService>());
 
-        services.AddSingleton<AggregationJobService>();
-        services.AddSingleton<IAggregationRunCommands>(sp => sp.GetRequiredService<AggregationJobService>());
-        services.AddSingleton<IAggregationRunQueries>(sp => sp.GetRequiredService<AggregationJobService>());
+        services.AddSingleton<AggregationRunCommandService>();
+        services.AddSingleton<IAggregationRunCommands>(sp => sp.GetRequiredService<AggregationRunCommandService>());
 
+        // ── Feature query services ───────────────────────────────────────────
+        services.AddSingleton<ITrainingQueries, TrainingQueryService>();
+        services.AddSingleton<ISimulationQueries, SimulationQueryService>();
+        services.AddSingleton<IAggregationRunQueries, AggregationRunQueryService>();
         services.AddSingleton<IStatisticQueries, StatisticQueryService>();
 
         return services;

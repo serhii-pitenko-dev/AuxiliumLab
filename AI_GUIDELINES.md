@@ -67,7 +67,7 @@ infra/       ← infrastructure (config, storage, adapters)
 
 | Project | Responsibility |
 |---|---|
-| `ApplicationServices` | All use-case orchestration: commands (`ISimulationCommands`, `ITrainingCommands`, `IAggregationRunCommands`), queries (`ISimulationQueries`, `ITrainingQueries`, etc.), background jobs (`TrainingJobService`, `SimulationJobService`, `AggregationJobService`), executors (`Executor`, `StandardExecutor`, `ExecutorForPresentation`), runners (`SingleRunner`, `MassRunner`, `AggregationRunner`, `TrainingRunner`), playground state persistence mapper. |
+| `ApplicationServices` | All use-case orchestration: commands (`ISimulationCommands`, `ITrainingCommands`, `IAggregationRunCommands`), queries (`ISimulationQueries`, `ITrainingQueries`, etc.), command services (`TrainingCommandService`, `SimulationCommandService`, `AggregationRunCommandService`), executors (`Executor`, `StandardExecutor`, `ExecutorForPresentation`), runners (`SingleRunner`, `MassRunner`, `AggregationRunner`, `TrainingRunner`), playground state persistence mapper. |
 | `Ai` | `IAiActions` interface + implementations: `RandomActions` (random baseline), `Sb3Actions` (RL bridge), `ObservationBuilder` (encodes agent state + vision grid into a flat `float[]`). Registered as `IAiActions` in DI. |
 | `AiTrainingOrchestrator` | `ITraining` / `PpoTraining` / `A2cTraining` / `DqnTraining` (hyperparameters), `IPolicyTrainerClient` / `PolicyTrainerClient` (gRPC to Python :50051), `EnvironmentSpecBuilder` (env spec negotiation), `BaseTraining` (physical-core scaling). |
 
@@ -85,7 +85,7 @@ infra/       ← infrastructure (config, storage, adapters)
 | `ConsolePresentation` | `ConsoleRunner` — subscribes to `IMessageBroker` events and renders the grid using Spectre.Console. Optimised for partial re-render via `GetAffectedCells()`. |
 | `GrpcHost` | `SimulationService` — Gymnasium gRPC endpoint (`:50062`). Bridges Python `reset`/`step` calls to `IMessageBroker` using `TaskCompletionSource` correlation. Active only during training. |
 | `WebApi` | ASP.NET Core controllers (`TrainingController`, `SimulationController`, `AggregationRunController`, `StatisticController`). All routes under `/ai-sandbox/`. Write endpoints return 202 Accepted (fire-and-forget). |
-| `Startup` | Composition root: DI wiring, `MenuRunner`, host selection (Kestrel for training, generic host otherwise), `WebApiHost` launch. |
+| `Startup` | Composition root: DI wiring, host selection (Kestrel for training, generic host otherwise), `WebApiHost` launch. |
 | `Frontend` | Blazor WebAssembly SPA. Feature-based folder layout under `Features/`. Connects to the REST API and to `/hubs/simulation` (SignalR) for live grid visualisation. |
 
 ---
@@ -155,7 +155,7 @@ These boundaries must not be crossed when adding new functionality:
 | Events (MessageBroker) | Past tense: `…Event` | `HeroWonEvent`, `TurnExecutedEvent` |
 | Commands (MessageBroker) | Imperative: `Request…Command` | `RequestSimulationStepCommand` |
 | Responses (MessageBroker) | `…Response` | `SimulationStepResponse` |
-| Job services | `…JobService` | `TrainingJobService`, `SimulationJobService` |
+| Command services | `…CommandService` | `TrainingCommandService`, `SimulationCommandService` |
 | Executors | `…Executor` | `StandardExecutor`, `ExecutorForPresentation` |
 | Runners | `…Runner` | `TrainingRunner`, `MassRunner` |
 | Factories | `…Factory` | `PlaygroundFactory`, `HeroFactory` |

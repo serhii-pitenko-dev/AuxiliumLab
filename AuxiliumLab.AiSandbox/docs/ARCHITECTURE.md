@@ -94,14 +94,16 @@ Executor (Application) ──publish──► IMessageBroker
               (renders map)        (gRPC responses)   (training loop)
 ```
 
-### Command / Query segregation (light CQRS) + Jobs
-`ApplicationServices` splits operations into three tiers:
-- **Commands** — DTOs and interfaces that mutate state (start a training run, start a simulation, etc.)
-- **Queries** — DTOs and interfaces that read state without mutation (get job status, list trained models, list completed runs)
-- **Jobs** — background service implementations that wire commands + queries to runners/executors:
-  - `TrainingJobService` (`ITrainingCommands` + `ITrainingQueries`)
-  - `SimulationJobService` (`ISimulationCommands` + `ISimulationQueries`)
-  - `AggregationJobService` (`IAggregationRunCommands` + `IAggregationRunQueries`)
+### Command / Query segregation (light CQRS)
+`ApplicationServices` splits operations into two tiers:
+- **Commands** — DTOs, interfaces, and command service implementations that mutate state (start a training run, start a simulation, etc.)
+- **Queries** — DTOs, interfaces, and query service implementations that read state without mutation (get job status, list trained models, list completed runs)
+
+Command services implement the command interfaces and maintain in-memory job registries.
+Dedicated query services implement the query interfaces and read state from command services or configuration:
+  - `TrainingCommandService` (`ITrainingCommands`) → `TrainingQueryService` (`ITrainingQueries`)
+  - `SimulationCommandService` (`ISimulationCommands`) → `SimulationQueryService` (`ISimulationQueries`)
+  - `AggregationRunCommandService` (`IAggregationRunCommands`) → `AggregationRunQueryService` (`IAggregationRunQueries`)
   - `StatisticQueryService` (`IStatisticQueries`)
 
 Playground-level state-mutation is encapsulated in `IPlaygroundCommandsHandleService` and map-reading in `IMapQueriesHandleService`.
@@ -129,7 +131,7 @@ Each execution mode uses a different `IExecutor` implementation:
        │   e.g. POST /ai-sandbox/training/ppo
        ▼
   ITrainingCommands.StartPpoTrainingAsync()
-       │   implemented by TrainingJobService
+       │   implemented by TrainingCommandService
        ▼
   Task.Run { TrainingRunner.RunTrainingAsync() }   ← fire-and-forget
        │

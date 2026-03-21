@@ -4,23 +4,20 @@ using AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Configuration;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
 using AuxiliumLab.AiSandbox.Common.MessageBroker;
-using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Training;
 using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Training;
 using AuxiliumLab.AiSandbox.ApplicationServices.Trainer;
 using AuxiliumLab.AiSandbox.Infrastructure.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
-using System.Text.Json;
 
-namespace AuxiliumLab.AiSandbox.ApplicationServices.Jobs.Training;
+namespace AuxiliumLab.AiSandbox.ApplicationServices.Commands.Training;
 
 /// <summary>
-/// Singleton service that implements both <see cref="ITrainingCommands"/> and
-/// <see cref="ITrainingQueries"/>. Launches training on background threads and
-/// tracks job state in memory.
+/// Singleton service that implements <see cref="ITrainingCommands"/>.
+/// Launches training on background threads and tracks job state in memory.
 /// </summary>
-public sealed class TrainingJobService : ITrainingCommands, ITrainingQueries
+public sealed class TrainingCommandService : ITrainingCommands
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly TrainingSettings _trainingSettings;
@@ -32,7 +29,7 @@ public sealed class TrainingJobService : ITrainingCommands, ITrainingQueries
     private readonly ConcurrentDictionary<Guid, TrainingJobStatusDto> _jobs = new();
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _jobCts = new();
 
-    public TrainingJobService(
+    public TrainingCommandService(
         IServiceProvider serviceProvider,
         TrainingSettings trainingSettings,
         Sb3AlgorithmTypeProvider algorithmTypeProvider,
@@ -74,58 +71,23 @@ public sealed class TrainingJobService : ITrainingCommands, ITrainingQueries
         StartGenericTrainingCommand command, CancellationToken ct = default)
         => throw new NotImplementedException("DDPG training is not yet implemented.");
 
-    // ── ITrainingQueries ─────────────────────────────────────────────────────
-
-    public Task<IReadOnlyList<TrainingJobStatusDto>> GetTrainingStatusesAsync(CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<TrainingJobStatusDto>>(_jobs.Values.ToList());
-
-    public Task<IReadOnlyList<TrainedModelInfoDto>> GetTrainedModelsAsync(CancellationToken ct = default)
+    public Task<bool> StopTrainingAsync(Guid jobId, CancellationToken ct = default)
     {
-        var basePath = _fileSourceConfig.Value.FileStorage.BasePath;
-        var trainedFolder = _fileSourceConfig.Value.FileStorage.TrainedAlgorithms;
-        var root = Path.Combine(basePath, trainedFolder);
-        var models = new List<TrainedModelInfoDto>();
+        if (!_jobs.TryGetValue(jobId, out var status) || status.State != TrainingJobState.Running)
+            return Task.FromResult(false);
 
-        if (!Directory.Exists(root))
-            return Task.FromResult<IReadOnlyList<TrainedModelInfoDto>>(models);
+        if (_jobCts.TryGetValue(jobId, out var cts))
+            cts.Cancel();
 
-        foreach (var algoDir in Directory.EnumerateDirectories(root))
-        {
-            string algorithm = Path.GetFileName(algoDir);
-            foreach (var expDir in Directory.EnumerateDirectories(algoDir))
-            {
-                string experimentId = Path.GetFileName(expDir);
-                string modelFile    = Path.Combine(expDir, "model.zip");
-                if (!File.Exists(modelFile))
-                    continue;
-
-                TrainingPreconditionsDto? preconditions = null;
-                string preconditionsFile = Path.Combine(expDir, "preconditions.json");
-                if (File.Exists(preconditionsFile))
-                {
-                    try
-                    {
-                        string json = File.ReadAllText(preconditionsFile);
-                        preconditions = JsonSerializer.Deserialize<TrainingPreconditionsDto>(json,
-                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                    }
-                    catch { /* corrupt file — skip */ }
-                }
-
-                models.Add(new TrainedModelInfoDto
-                {
-                    Algorithm    = algorithm,
-                    ExperimentId = experimentId,
-                    ModelFilePath = modelFile,
-                    TrainedAt    = File.GetLastWriteTime(modelFile),
-                    Preconditions = preconditions
-                });
-            }
-        }
-
-        return Task.FromResult<IReadOnlyList<TrainedModelInfoDto>>(
-            models.OrderByDescending(m => m.TrainedAt).ToList());
+        status.State        = TrainingJobState.Failed;
+        status.CompletedAt  = DateTime.UtcNow;
+        status.ErrorMessage = "Stopped by user.";
+        return Task.FromResult(true);
     }
+
+    /// <summary>Returns a snapshot of all job statuses (used by query services).</summary>
+    internal IReadOnlyList<TrainingJobStatusDto> GetJobStatuses()
+        => _jobs.Values.ToList();
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
@@ -190,19 +152,5 @@ public sealed class TrainingJobService : ITrainingCommands, ITrainingQueries
         });
 
         return Task.FromResult(new TrainingJobStartedDto { JobId = jobId, Algorithm = algoName, ExperimentId = experimentId, StartedAt = startedAt });
-    }
-
-    public Task<bool> StopTrainingAsync(Guid jobId, CancellationToken ct = default)
-    {
-        if (!_jobs.TryGetValue(jobId, out var status) || status.State != TrainingJobState.Running)
-            return Task.FromResult(false);
-
-        if (_jobCts.TryGetValue(jobId, out var cts))
-            cts.Cancel();
-
-        status.State        = TrainingJobState.Failed;
-        status.CompletedAt  = DateTime.UtcNow;
-        status.ErrorMessage = "Stopped by user.";
-        return Task.FromResult(true);
     }
 }

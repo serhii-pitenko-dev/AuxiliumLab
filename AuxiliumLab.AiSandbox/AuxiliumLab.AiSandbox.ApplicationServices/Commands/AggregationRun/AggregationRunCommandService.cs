@@ -4,7 +4,6 @@ using AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Configuration;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
 using AuxiliumLab.AiSandbox.Common.MessageBroker;
-using AuxiliumLab.AiSandbox.ApplicationServices.Commands.AggregationRun;
 using AuxiliumLab.AiSandbox.ApplicationServices.Queries.AggregationRun;
 using AuxiliumLab.AiSandbox.ApplicationServices.Runner.AggregationRunner;
 using AuxiliumLab.AiSandbox.Infrastructure.Configuration;
@@ -15,14 +14,13 @@ using AuxiliumLab.AiSandbox.Statistics.StatisticDataManager;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 
-namespace AuxiliumLab.AiSandbox.ApplicationServices.Jobs.AggregationRun;
+namespace AuxiliumLab.AiSandbox.ApplicationServices.Commands.AggregationRun;
 
 /// <summary>
-/// Singleton service that implements both <see cref="IAggregationRunCommands"/> and
-/// <see cref="IAggregationRunQueries"/>. Launches aggregation runs on background threads
-/// and tracks job state in memory.
+/// Singleton service that implements <see cref="IAggregationRunCommands"/>.
+/// Launches aggregation runs on background threads and tracks job state in memory.
 /// </summary>
-public sealed class AggregationJobService : IAggregationRunCommands, IAggregationRunQueries
+public sealed class AggregationRunCommandService : IAggregationRunCommands
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly TrainingSettings _trainingSettings;
@@ -37,7 +35,7 @@ public sealed class AggregationJobService : IAggregationRunCommands, IAggregatio
     private readonly ConcurrentDictionary<Guid, AggregationJobStatusDto> _jobs = new();
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _jobCts = new();
 
-    public AggregationJobService(
+    public AggregationRunCommandService(
         IServiceProvider serviceProvider,
         TrainingSettings trainingSettings,
         Sb3AlgorithmTypeProvider algorithmTypeProvider,
@@ -153,10 +151,9 @@ public sealed class AggregationJobService : IAggregationRunCommands, IAggregatio
         });
     }
 
-    // ── IAggregationRunQueries ───────────────────────────────────────────────
-
-    public Task<IReadOnlyList<AggregationJobStatusDto>> GetAggregationStatusesAsync(CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<AggregationJobStatusDto>>(_jobs.Values.ToList());
+    /// <summary>Returns a snapshot of all job statuses (used by query services).</summary>
+    internal IReadOnlyList<AggregationJobStatusDto> GetJobStatuses()
+        => _jobs.Values.ToList();
 
     public Task<bool> StopAggregationAsync(Guid jobId, CancellationToken ct = default)
     {
