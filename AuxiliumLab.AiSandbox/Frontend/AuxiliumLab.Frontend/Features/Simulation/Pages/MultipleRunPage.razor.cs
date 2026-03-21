@@ -1,4 +1,3 @@
-using AuxiliumLab.Frontend.Features.Simulation.Dto;
 
 namespace AuxiliumLab.Frontend.Features.Simulation.Pages;
 

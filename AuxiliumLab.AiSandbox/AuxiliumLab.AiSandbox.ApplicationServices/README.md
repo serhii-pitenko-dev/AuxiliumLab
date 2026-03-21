@@ -66,11 +66,11 @@ ApplicationServices/
 
 #### `ITrainingCommands` / `TrainingJobService`
 - `StartPpoTrainingAsync(StartPpoTrainingCommand, ct)` — launches a PPO training run; returns `TrainingJobStartedDto`.
-- All hyperparameter and sandbox fields are **optional** — missing values fall back to `training-settings.json` defaults.
+- All hyperparameter and sandbox fields are **optional** — missing values fall back to `appsettings.json → TrainingSettings` defaults.
 
 #### `IAggregationRunCommands` / `AggregationJobService`
 - `StartAggregationAsync(StartAggregationCommand, ct)` — starts a multi-step aggregation pipeline; returns `AggregationJobStartedDto`.
-- `Steps` may be empty → falls back to `aggregation-settings.json`.
+- `Steps` may be empty → falls back to `appsettings.json → AggregationSettings`.
 - `TrainingOverrides` optional — overrides PPO hyperparameters for the embedded Training step.
 
 ### Queries
@@ -175,7 +175,7 @@ Coordinates the full RL training loop:
 2. Resolves scoped executor pairs (one per physical CPU core).
 3. Starts all executor tasks — each loops an `Sb3Actions`-driven simulation episode.
 4. Calls `IPolicyTrainerClient.StartTrainingXxx()` to kick off the Python SB3 training.
-5. Accepts an optional `StartPpoTrainingCommand? overrides` to apply per-request hyperparameter overrides on top of the `training-settings.json` defaults.
+5. Accepts an optional `StartPpoTrainingCommand? overrides` to apply per-request hyperparameter overrides on top of the `appsettings.json → TrainingSettings` defaults.
 
 ### Jobs Layer (`Jobs/`)
 Background job services implement both the command and query interfaces for a feature.  

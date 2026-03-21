@@ -1,4 +1,3 @@
-using AuxiliumLab.Frontend.Features.Simulation.Dto;
 using Microsoft.AspNetCore.Components;
 
 namespace AuxiliumLab.Frontend.Shared;

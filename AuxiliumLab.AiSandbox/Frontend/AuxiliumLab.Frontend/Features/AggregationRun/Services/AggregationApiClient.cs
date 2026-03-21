@@ -1,4 +1,3 @@
-using AuxiliumLab.Frontend.Features.AggregationRun.Dto;
 using AuxiliumLab.Frontend.Http;
 
 namespace AuxiliumLab.Frontend.Features.AggregationRun.Services;

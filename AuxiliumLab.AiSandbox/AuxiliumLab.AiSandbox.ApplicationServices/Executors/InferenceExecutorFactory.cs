@@ -29,8 +29,10 @@ public sealed class InferenceExecutorFactory : IExecutorFactory
     }
 
     /// <summary>Delegates to the inner factory (presentation executors use the DI-registered IAiActions).</summary>
-    public IExecutorForPresentation CreateExecutorForPresentation()
-        => _inner.CreateExecutorForPresentation();
+    public IExecutorForPresentation CreateExecutorForPresentation(
+        int actionDelayMs = 0,
+        SemaphoreSlim? pauseGate = null)
+        => _inner.CreateExecutorForPresentation(actionDelayMs, pauseGate);
 
     /// <summary>Creates an inference-based executor instead of the default random-actions executor.</summary>
     public IStandardExecutor CreateStandardExecutor()

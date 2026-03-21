@@ -1,4 +1,3 @@
-using AuxiliumLab.Frontend.Features.Training.Dto;
 
 namespace AuxiliumLab.Frontend.Features.Training.Pages;
 
@@ -10,21 +9,22 @@ public partial class PpoTrainingPage
         {
             TotalTimesteps = 100_000,
             LearningRate   = 0.0003,
-            NSteps         = 2048,
+            NSteps         = 256,
             BatchSize      = 64,
-            NEpochs        = 10,
-            Gamma          = 0.99,
+            NEpochs        = 5,
+            Gamma          = 0.90,
             GaeLambda      = 0.95,
             ClipRange      = 0.2,
-            EntCoef        = 0.0,
+            EntCoef        = 0.1,
+            Seed           = 42,
             NEnvs          = 4
         },
         SandboxSettings = new TrainingSandboxSettingsDto(),
         RewardSettings  = new RewardSettingsDto
         {
-            StepPenalty = -0.001f,
-            WinReward   = 1.0f,
-            LossReward  = -1.0f
+            StepPenalty = -0.1f,
+            WinReward   = 10.0f,
+            LossReward  = -10.0f
         }
     };
 

@@ -5,7 +5,7 @@ namespace AuxiliumLab.AiSandbox.Domain.Statistics.Result;
 /// A step is either a training job or a mass simulation job.
 /// </summary>
 public record AggregationStepResult(
-    /// <summary>Human-readable label configured in aggregation-settings.json (e.g. "Random AI", "PPO - AI").</summary>
+    /// <summary>Human-readable label configured in the AggregationSettings section (e.g. "Random AI", "PPO - AI").</summary>
     string StepName,
 
     /// <summary>The execution mode string for this step (e.g. "Training", "MassRandomAISimulation").</summary>

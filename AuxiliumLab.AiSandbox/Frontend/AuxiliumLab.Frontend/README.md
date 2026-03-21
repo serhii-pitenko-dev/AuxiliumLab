@@ -28,12 +28,16 @@ Blazor WebAssembly (.NET 10) single-page application for AuxiliumLab AI Sandbox.
 
 ## SignalR
 
-The visualization page connects to `/hubs/simulation` on the backend. Events:
+The visualization page connects to `/hubs/simulation` on the backend.  
+All event DTOs use strongly typed enums (`ObjectType`, `EEffect`) and structured `AgentEffectDto` arrays — no raw strings.  
+Shared types live in `SharedContracts` (`SimulationHubEvents.cs`).
 
-- `SimulationStarted` — grid dimensions, initial cells
-- `AgentMoved` — agent position update
-- `AgentToggled` — agent action (run/sprint/toggle)
-- `TurnCompleted` — per-turn cell updates
+Events:
+
+- `SimulationStarted` — grid dimensions, initial cells with typed `ObjectType` and `AgentEffectDto[]` effects, initial agents with `ObjectType` enum
+- `AgentMoved` — agent position update with `ObjectType` agent type, updated cells, agent snapshot
+- `AgentToggled` — agent action (run/sprint/toggle) with `ObjectType` agent type
+- `TurnCompleted` — per-turn cell updates with typed effects
 - `SimulationEnded` — outcome + final turn
 
 ## Notifications

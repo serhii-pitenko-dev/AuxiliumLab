@@ -1,4 +1,3 @@
-using AuxiliumLab.Frontend.Features.AggregationRun.Dto;
 
 namespace AuxiliumLab.Frontend.Features.AggregationRun.Pages;
 

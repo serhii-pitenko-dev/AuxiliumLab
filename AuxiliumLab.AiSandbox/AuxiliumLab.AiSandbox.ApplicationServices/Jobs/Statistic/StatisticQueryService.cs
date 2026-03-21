@@ -1,9 +1,6 @@
 using AuxiliumLab.AiSandbox.ApplicationServices.Jobs.AggregationRun;
 using AuxiliumLab.AiSandbox.ApplicationServices.Jobs.Simulation;
-using AuxiliumLab.AiSandbox.ApplicationServices.Queries.AggregationRun.Dto;
-using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Simulation.Dto;
 using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Statistic;
-using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Statistic.Dto;
 
 namespace AuxiliumLab.AiSandbox.ApplicationServices.Jobs.Statistic;
 
@@ -30,7 +27,7 @@ public sealed class StatisticQueryService : IStatisticQueries
     {
         var allJobs = await _simulationJobs.GetSimulationStatusesAsync(ct);
         return allJobs
-            .Where(j => j.State == SimulationJobState.Completed)
+            .Where(j => j.State != SandboxStatus.InProgress && j.State != SandboxStatus.Failed)
             .Select(j => new CompletedSimulationRunDto
             {
                 JobId        = j.JobId,

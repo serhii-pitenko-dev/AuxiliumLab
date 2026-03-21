@@ -27,10 +27,10 @@ public class ExecutorForPresentation : Executor, IExecutorForPresentation
     protected override bool NeedsAgentNotifications => true;
 
     /// <inheritdoc/>
-    public int ActionDelayMs { get; set; } = 0;
+    public int ActionDelayMs { get; }
 
     /// <inheritdoc/>
-    public SemaphoreSlim? PauseGate { get; set; }
+    public SemaphoreSlim? PauseGate { get; }
 
     public ExecutorForPresentation(
         IPlaygroundCommandsHandleService mapCommands,
@@ -45,7 +45,9 @@ public class ExecutorForPresentation : Executor, IExecutorForPresentation
         IFileDataManager<RawDataLog> rawDataLogFileRepository,
         IFileDataManager<TurnExecutionPerformance> turnExecutionPerformanceFileRepository,
         IFileDataManager<SandboxExecutionPerformance> sandboxExecutionPerformanceFileRepository,
-        ITestPreconditionData testPreconditionData) :
+        ITestPreconditionData testPreconditionData,
+        int actionDelayMs = 0,
+        SemaphoreSlim? pauseGate = null) :
         base(mapCommands, sandboxRepository, aiActions,
              configuration,
              playgroundStateFileRepository, agentStateMemoryRepository, messageBroker,
@@ -53,6 +55,8 @@ public class ExecutorForPresentation : Executor, IExecutorForPresentation
              turnExecutionPerformanceFileRepository, sandboxExecutionPerformanceFileRepository,
              testPreconditionData)
     {
+        ActionDelayMs = actionDelayMs;
+        PauseGate = pauseGate;
     }
 
     protected override async Task WaitIfPausedAsync(CancellationToken ct)

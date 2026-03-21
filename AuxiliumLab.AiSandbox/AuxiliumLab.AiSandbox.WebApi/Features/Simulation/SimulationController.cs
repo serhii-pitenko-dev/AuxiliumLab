@@ -1,5 +1,4 @@
 using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Simulation;
-using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Simulation.Dto;
 using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Simulation;
 using Microsoft.AspNetCore.Mvc;
 

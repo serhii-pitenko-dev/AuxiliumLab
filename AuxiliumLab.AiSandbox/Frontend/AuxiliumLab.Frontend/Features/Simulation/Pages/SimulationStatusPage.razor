@@ -32,7 +32,7 @@
         <MudTd DataLabel="Started At">@context.StartedAt.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
         <MudTd DataLabel="Completed At">@(context.CompletedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "—")</MudTd>
         <MudTd DataLabel="Actions">
-            @if (context.State == SimulationJobState.Running)
+            @if (context.State == SandboxStatus.InProgress)
             {
                 <MudIconButton Icon="@Icons.Material.Filled.Stop" Color="Color.Error" Size="Size.Small"
                                OnClick="@(() => StopAsync(context.JobId))" />

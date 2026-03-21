@@ -63,7 +63,9 @@ public class ExecutorFactory : IExecutorFactory
         _testPreconditionData = testPreconditionData;
     }
 
-    public IExecutorForPresentation CreateExecutorForPresentation()
+    public IExecutorForPresentation CreateExecutorForPresentation(
+        int actionDelayMs = 0,
+        SemaphoreSlim? pauseGate = null)
     {
         return new ExecutorForPresentation(
             _mapCommands,
@@ -78,7 +80,9 @@ public class ExecutorFactory : IExecutorFactory
             _rawDataLogFileRepository,
             _turnExecutionPerformanceFileRepository,
             _sandboxExecutionPerformanceFileRepository,
-            _testPreconditionData);
+            _testPreconditionData,
+            actionDelayMs,
+            pauseGate);
     }
 
     public IStandardExecutor CreateStandardExecutor()

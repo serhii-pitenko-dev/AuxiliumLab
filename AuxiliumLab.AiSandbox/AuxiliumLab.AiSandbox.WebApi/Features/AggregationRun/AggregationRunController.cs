@@ -1,5 +1,4 @@
 using AuxiliumLab.AiSandbox.ApplicationServices.Commands.AggregationRun;
-using AuxiliumLab.AiSandbox.ApplicationServices.Commands.AggregationRun.Dto;
 using AuxiliumLab.AiSandbox.ApplicationServices.Queries.AggregationRun;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,7 +26,7 @@ public sealed class AggregationRunController : ControllerBase
 
     /// <summary>Starts a full aggregation run in the background.</summary>
     /// <remarks>
-    /// When <c>Steps</c> is empty the steps from <c>aggregation-settings.json</c> are used.<br/>
+    /// When <c>Steps</c> is empty the steps from <c>appsettings.json → AggregationSettings</c> are used.<br/>
     /// Returns 202 Accepted immediately with the job descriptor.
     /// </remarks>
     [HttpPost("run")]

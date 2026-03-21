@@ -1,5 +1,3 @@
-using AuxiliumLab.AiSandbox.ApplicationServices.Commands.AggregationRun.Dto;
-
 namespace AuxiliumLab.AiSandbox.ApplicationServices.Commands.AggregationRun;
 
 /// <summary>

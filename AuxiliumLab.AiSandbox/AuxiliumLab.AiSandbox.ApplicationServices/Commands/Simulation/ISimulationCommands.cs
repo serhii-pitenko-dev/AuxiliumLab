@@ -1,5 +1,3 @@
-using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Simulation.Dto;
-
 namespace AuxiliumLab.AiSandbox.ApplicationServices.Commands.Simulation;
 
 /// <summary>

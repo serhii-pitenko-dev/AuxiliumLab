@@ -1,4 +1,3 @@
-using AuxiliumLab.Frontend.Features.AggregationRun.Dto;
 
 namespace AuxiliumLab.Frontend.Features.AggregationRun.Pages;
 
@@ -7,9 +6,13 @@ public partial class AggregationRunPage
     private StartAggregationCommand _cmd = new()
     {
         StandardSimulationCount = 100,
-        Algorithm               = "PPO",
-        PolicyType              = "MLP",
-        Steps                   = [new AggregationStepDto { Name = "Step1", Mode = "Standard" }]
+        Algorithm               = ModelType.PPO,
+        PolicyType              = AiPolicy.MLP,
+        Steps =
+        [
+            new AggregationStepDto { Name = "Random AI", Mode = "MassRandomAISimulation" },
+            new AggregationStepDto { Name = "PPO - AI",  Mode = "MassTrainedAISimulation" }
+        ]
     };
 
     private bool _loading;

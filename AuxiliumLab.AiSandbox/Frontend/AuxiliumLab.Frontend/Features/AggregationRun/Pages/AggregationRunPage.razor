@@ -12,14 +12,14 @@
                                  Variant="Variant.Outlined" Min="1" Class="mb-3" />
 
                 <MudSelect @bind-Value="_cmd.Algorithm" Label="Algorithm" Variant="Variant.Outlined" Class="mb-3">
-                    <MudSelectItem Value='"PPO"'>PPO</MudSelectItem>
-                    <MudSelectItem Value='"A2C"'>A2C</MudSelectItem>
-                    <MudSelectItem Value='"DQN"'>DQN</MudSelectItem>
+                    <MudSelectItem Value="ModelType.PPO">PPO</MudSelectItem>
+                    <MudSelectItem Value="ModelType.A2C">A2C</MudSelectItem>
+                    <MudSelectItem Value="ModelType.DQN">DQN</MudSelectItem>
                 </MudSelect>
 
                 <MudSelect @bind-Value="_cmd.PolicyType" Label="Policy Type" Variant="Variant.Outlined" Class="mb-3">
-                    <MudSelectItem Value='"MLP"'>MLP</MudSelectItem>
-                    <MudSelectItem Value='"CNN"'>CNN</MudSelectItem>
+                    <MudSelectItem Value="AiPolicy.MLP">MLP</MudSelectItem>
+                    <MudSelectItem Value="AiPolicy.LSTM">LSTM</MudSelectItem>
                 </MudSelect>
             </MudCardContent>
         </MudCard>

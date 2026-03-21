@@ -111,7 +111,7 @@ public abstract class Executor : IExecutor
         await RunAsync(sandboxId);
     }
 
-    public virtual async Task RunAsync(Guid sandboxId = default, SandBoxConfiguration sandBoxConfiguration = default, CancellationToken cancellationToken = default)
+    public virtual async Task<SandboxStatus> RunAsync(Guid sandboxId = default, SandBoxConfiguration sandBoxConfiguration = default, CancellationToken cancellationToken = default)
     {
         _activeConfiguration = sandBoxConfiguration ?? _configuration;
 
@@ -137,6 +137,8 @@ public abstract class Executor : IExecutor
 
         // Invoke game started events for playground
         await StartSimulationPreparationsAsync(cancellationToken);
+
+        return sandboxStatus;
     }
 
     /// <summary>

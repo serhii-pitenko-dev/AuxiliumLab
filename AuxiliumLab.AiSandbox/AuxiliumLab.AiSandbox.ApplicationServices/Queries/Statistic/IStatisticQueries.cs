@@ -1,5 +1,3 @@
-using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Statistic.Dto;
-
 namespace AuxiliumLab.AiSandbox.ApplicationServices.Queries.Statistic;
 
 /// <summary>

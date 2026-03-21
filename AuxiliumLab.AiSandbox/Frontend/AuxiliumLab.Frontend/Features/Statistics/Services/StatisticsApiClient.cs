@@ -1,4 +1,3 @@
-using AuxiliumLab.Frontend.Features.Statistics.Dto;
 using AuxiliumLab.Frontend.Http;
 
 namespace AuxiliumLab.Frontend.Features.Statistics.Services;

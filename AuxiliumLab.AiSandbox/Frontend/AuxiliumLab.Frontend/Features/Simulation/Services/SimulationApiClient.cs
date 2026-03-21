@@ -1,4 +1,3 @@
-using AuxiliumLab.Frontend.Features.Simulation.Dto;
 using AuxiliumLab.Frontend.Http;
 
 namespace AuxiliumLab.Frontend.Features.Simulation.Services;

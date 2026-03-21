@@ -1,4 +1,5 @@
 ﻿@page "/simulation/visualization"
+@using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects
 @inject ISimulationApiClient SimulationApi
 @inject ISimulationHubClient HubClient
 @inject INotificationService Notifications
@@ -70,17 +71,17 @@
                     @* Layer 1 – base cells (blocks, exits, empty background) *@
                     @foreach (var cell in _cells.Values)
                     {
-                        <rect x="@(cell.X * CellSize)" y="@(cell.Y * CellSize)"
+                        <rect x="@(cell.Position.X * CellSize)" y="@(cell.Position.Y * CellSize)"
                               width="@CellSize" height="@CellSize"
                               fill="@CellFill(cell.ObjectType)" stroke="#e0e0e0" stroke-width="0.5" />
                     }
-                    @* Layer 2 – effect overlays (path / sight) on empty cells only *@
+                    @* Layer 2 – effect overlays (path / sight) on non-block cells *@
                     @foreach (var cell in _cells.Values)
                     {
                         var effectFill = GetEffectFill(cell);
                         if (effectFill is not null)
                         {
-                            <rect x="@(cell.X * CellSize)" y="@(cell.Y * CellSize)"
+                            <rect x="@(cell.Position.X * CellSize)" y="@(cell.Position.Y * CellSize)"
                                   width="@CellSize" height="@CellSize"
                                   class="@GetEffectClass(cell)"
                                   fill="@effectFill" />
@@ -89,8 +90,8 @@
                     @* Layer 3 – agent circles (always on top) *@
                     @foreach (var (_, agent) in _agentPositions)
                     {
-                        <circle cx="@(agent.X * CellSize + CellSize / 2)"
-                                cy="@(agent.Y * CellSize + CellSize / 2)"
+                        <circle cx="@(agent.Position.X * CellSize + CellSize / 2)"
+                                cy="@(agent.Position.Y * CellSize + CellSize / 2)"
                                 r="@(CellSize / 2 - 2)"
                                 fill="@AgentFill(agent.Type)" opacity="0.85" />
                     }
@@ -119,7 +120,7 @@
 
         @if (_outcome is not null)
         {
-            <MudAlert Severity="@(_outcome == "Win" ? Severity.Success : Severity.Error)" Class="mt-2">
+            <MudAlert Severity="@(_outcome == "Won" ? Severity.Success : Severity.Error)" Class="mt-2">
                 Simulation ended: @_outcome @(_reason is not null ? $"({_reason})" : "")
             </MudAlert>
         }

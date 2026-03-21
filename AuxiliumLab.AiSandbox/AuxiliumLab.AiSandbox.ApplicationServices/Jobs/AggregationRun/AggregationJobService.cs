@@ -5,9 +5,7 @@ using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Configuration;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
 using AuxiliumLab.AiSandbox.Common.MessageBroker;
 using AuxiliumLab.AiSandbox.ApplicationServices.Commands.AggregationRun;
-using AuxiliumLab.AiSandbox.ApplicationServices.Commands.AggregationRun.Dto;
 using AuxiliumLab.AiSandbox.ApplicationServices.Queries.AggregationRun;
-using AuxiliumLab.AiSandbox.ApplicationServices.Queries.AggregationRun.Dto;
 using AuxiliumLab.AiSandbox.ApplicationServices.Runner.AggregationRunner;
 using AuxiliumLab.AiSandbox.Infrastructure.Configuration;
 using AuxiliumLab.AiSandbox.Infrastructure.Configuration.Preconditions;
@@ -147,10 +145,12 @@ public sealed class AggregationJobService : IAggregationRunCommands, IAggregatio
             }
         });
 
-        return Task.FromResult(new AggregationJobStartedDto(
-            jobId,
-            steps.Select(s => s.Name).ToList(),
-            startedAt));
+        return Task.FromResult(new AggregationJobStartedDto
+        {
+            JobId     = jobId,
+            StepNames = steps.Select(s => s.Name).ToList(),
+            StartedAt = startedAt
+        });
     }
 
     // ── IAggregationRunQueries ───────────────────────────────────────────────

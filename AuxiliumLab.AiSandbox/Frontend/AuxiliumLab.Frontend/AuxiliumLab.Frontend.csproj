@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="AuxiliumLab.AiSandbox.Frontend.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- MudBlazor UI component library -->
     <PackageReference Include="MudBlazor" Version="8.0.0" />
 
@@ -30,6 +34,11 @@
     <Content Update="wwwroot\appsettings.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Update="wwwroot\appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Update="wwwroot\menu-config.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\AuxiliumLab.AiSandbox.SharedContracts\AuxiliumLab.AiSandbox.SharedContracts.csproj" />
+    <ProjectReference Include="..\..\AuxiliumLab.AiSandbox.SharedBaseTypes\AuxiliumLab.AiSandbox.SharedBaseTypes.csproj" />
   </ItemGroup>
 
 </Project>

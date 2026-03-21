@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\AuxiliumLab.AiSandbox.SharedContracts\AuxiliumLab.AiSandbox.SharedContracts.csproj" />
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.Common\AuxiliumLab.AiSandbox.Common.csproj" />
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.Infrastructure\AuxiliumLab.AiSandbox.Infrastructure.csproj" />
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.SharedBaseTypes\AuxiliumLab.AiSandbox.SharedBaseTypes.csproj" />

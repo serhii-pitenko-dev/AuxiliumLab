@@ -1,3 +1,5 @@
+using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects;
+
 namespace AuxiliumLab.AiSandbox.WebApi.Features.Simulation;
 
 /// <summary>
@@ -17,9 +19,9 @@ public interface ISimulationHubNotifier
 public record SimulationAgentMovedNotification(
     string JobId,
     string AgentId,
-    string AgentType,
-    int FromX, int FromY,
-    int ToX,   int ToY,
+    ObjectType AgentType,
+    Coordinates From,
+    Coordinates To,
     bool IsSuccess,
     AgentSnapshotDto Agent,
     SimulationCellDto[] UpdatedCells);
@@ -28,7 +30,7 @@ public record SimulationAgentMovedNotification(
 public record SimulationAgentToggledNotification(
     string JobId,
     string AgentId,
-    string AgentType,
+    ObjectType AgentType,
     string Action,
     bool IsActivated,
     AgentSnapshotDto Agent);

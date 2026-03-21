@@ -40,8 +40,6 @@ public static class GrpcTrainingHost
         configure?.Invoke(builder);
 
         // ── Training-specific: settings ───────────────────────────────────────
-        builder.Configuration.AddJsonFile("training-settings.json", optional: false, reloadOnChange: false);
-        builder.Configuration.AddJsonFile("aggregation-settings.json", optional: true, reloadOnChange: false);
         var trainingSettings =
             builder.Configuration.GetSection("TrainingSettings").Get<TrainingSettings>()
             ?? new TrainingSettings();

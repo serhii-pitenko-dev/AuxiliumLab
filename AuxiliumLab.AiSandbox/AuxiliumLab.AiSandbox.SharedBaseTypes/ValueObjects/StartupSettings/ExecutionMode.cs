@@ -39,7 +39,7 @@ public enum ExecutionMode
     /// <summary>
     /// Runs a configurable sequence of jobs (Training, MassRandomAISimulation, MassTrainedAISimulation) one after another
     /// and produces a combined aggregation report CSV that compares results across run types.
-    /// The sequence is defined in aggregation-settings.json.
+    /// The sequence is defined in the AggregationSettings section of appsettings.json.
     /// </summary>
     AggregationRun
 }

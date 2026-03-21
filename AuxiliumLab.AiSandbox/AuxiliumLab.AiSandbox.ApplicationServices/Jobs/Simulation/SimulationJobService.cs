@@ -1,11 +1,9 @@
 using AuxiliumLab.AiSandbox.Ai.Configuration;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
 using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Simulation;
-using AuxiliumLab.AiSandbox.Common.SimulationVisualizationBridge;
-using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Simulation.Dto;
 using AuxiliumLab.AiSandbox.ApplicationServices.Executors;
 using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Simulation;
-using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Simulation.Dto;
+using AuxiliumLab.AiSandbox.Common.SimulationVisualizationBridge;
 using AuxiliumLab.AiSandbox.ApplicationServices.Runner.MassRunner;
 using AuxiliumLab.AiSandbox.Domain.Statistics.Result;
 using AuxiliumLab.AiSandbox.Infrastructure.Configuration;
@@ -66,7 +64,7 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
         {
             JobId      = jobId,
             Kind       = command.Kind,
-            State      = SimulationJobState.Running,
+            State      = SandboxStatus.InProgress,
             StartedAt  = startedAt,
             TotalRuns  = 1
         };
@@ -86,13 +84,12 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
                 var executorFactory = scope.ServiceProvider.GetRequiredService<IExecutorFactory>();
                 IExecutorFactory activeFactory = BuildFactory(command.Kind, command.Algorithm, executorFactory);
 
-                var executor = activeFactory.CreateExecutorForPresentation();
-                executor.ActionDelayMs = command.ActionDelayMs;
-                executor.PauseGate = pauseGate;
+                var executor = activeFactory.CreateExecutorForPresentation(
+                    command.ActionDelayMs, pauseGate);
                 _visualizationBridge?.Attach(jobId);
                 try
                 {
-                    await executor.RunAsync(cancellationToken: cts.Token);
+                    status.State = await executor.RunAsync(cancellationToken: cts.Token);
                 }
                 finally
                 {
@@ -100,18 +97,17 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
                 }
 
                 status.CompletedRuns = 1;
-                status.State         = SimulationJobState.Completed;
                 status.CompletedAt   = DateTime.UtcNow;
             }
             catch (OperationCanceledException)
             {
-                status.State        = SimulationJobState.Failed;
+                status.State        = SandboxStatus.Failed;
                 status.CompletedAt  = DateTime.UtcNow;
                 status.ErrorMessage = "Stopped by user.";
             }
             catch (Exception ex)
             {
-                status.State        = SimulationJobState.Failed;
+                status.State        = SandboxStatus.Failed;
                 status.CompletedAt  = DateTime.UtcNow;
                 status.ErrorMessage = ex.Message;
             }
@@ -122,7 +118,7 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
             }
         });
 
-        return Task.FromResult(new SimulationJobStartedDto(jobId, command.Kind, startedAt));
+        return Task.FromResult(new SimulationJobStartedDto { JobId = jobId, Kind = command.Kind, StartedAt = startedAt });
     }
 
     public Task<SimulationJobStartedDto> StartMassSimulationAsync(
@@ -134,7 +130,7 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
         {
             JobId      = jobId,
             Kind       = command.Kind,
-            State      = SimulationJobState.Running,
+            State      = SandboxStatus.InProgress,
             StartedAt  = startedAt,
             TotalRuns  = command.SimulationCount
         };
@@ -158,18 +154,18 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
                 var result = await massRunner.RunManyAsync(activeFactory, command.SimulationCount, startupSettings: startupSettings);
 
                 status.CompletedRuns = result.StandardBatch.TotalRuns;
-                status.State         = SimulationJobState.Completed;
+                status.State         = SandboxStatus.TurnLimitReached;
                 status.CompletedAt   = DateTime.UtcNow;
             }
             catch (OperationCanceledException)
             {
-                status.State        = SimulationJobState.Failed;
+                status.State        = SandboxStatus.Failed;
                 status.CompletedAt  = DateTime.UtcNow;
                 status.ErrorMessage = "Stopped by user.";
             }
             catch (Exception ex)
             {
-                status.State        = SimulationJobState.Failed;
+                status.State        = SandboxStatus.Failed;
                 status.CompletedAt  = DateTime.UtcNow;
                 status.ErrorMessage = ex.Message;
             }
@@ -180,7 +176,7 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
             }
         });
 
-        return Task.FromResult(new SimulationJobStartedDto(jobId, command.Kind, startedAt));
+        return Task.FromResult(new SimulationJobStartedDto { JobId = jobId, Kind = command.Kind, StartedAt = startedAt });
     }
 
     // ── ISimulationQueries ───────────────────────────────────────────────────
@@ -209,7 +205,7 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
 
     public Task<bool> StopSimulationAsync(Guid jobId, CancellationToken ct = default)
     {
-        if (!_jobs.TryGetValue(jobId, out var status) || status.State != SimulationJobState.Running)
+        if (!_jobs.TryGetValue(jobId, out var status) || status.State != SandboxStatus.InProgress)
             return Task.FromResult(false);
 
         if (_jobCts.TryGetValue(jobId, out var cts))
@@ -219,7 +215,7 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
         if (_pauseHandles.TryGetValue(jobId, out var sem) && sem.CurrentCount == 0)
             sem.Release();
 
-        status.State       = SimulationJobState.Failed;
+        status.State       = SandboxStatus.Failed;
         status.CompletedAt = DateTime.UtcNow;
         status.ErrorMessage = "Stopped by user.";
         return Task.FromResult(true);
@@ -227,7 +223,7 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
 
     public Task<bool> PauseSimulationAsync(Guid jobId, CancellationToken ct = default)
     {
-        if (!_jobs.TryGetValue(jobId, out var status) || status.State != SimulationJobState.Running)
+        if (!_jobs.TryGetValue(jobId, out var status) || status.State != SandboxStatus.InProgress)
             return Task.FromResult(false);
 
         if (_pauseHandles.TryGetValue(jobId, out var sem) && sem.CurrentCount > 0)
@@ -238,7 +234,7 @@ public sealed class SimulationJobService : ISimulationCommands, ISimulationQueri
 
     public Task<bool> ResumeSimulationAsync(Guid jobId, CancellationToken ct = default)
     {
-        if (!_jobs.TryGetValue(jobId, out var status) || status.State != SimulationJobState.Running)
+        if (!_jobs.TryGetValue(jobId, out var status) || status.State != SandboxStatus.InProgress)
             return Task.FromResult(false);
 
         if (_pauseHandles.TryGetValue(jobId, out var sem) && sem.CurrentCount == 0)

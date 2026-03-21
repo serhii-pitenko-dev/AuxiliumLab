@@ -5,7 +5,9 @@ namespace AuxiliumLab.AiSandbox.ApplicationServices.Executors;
 
 public interface IExecutorFactory
 {
-    IExecutorForPresentation CreateExecutorForPresentation();
+    IExecutorForPresentation CreateExecutorForPresentation(
+        int actionDelayMs = 0,
+        SemaphoreSlim? pauseGate = null);
     IStandardExecutor CreateStandardExecutor();
 
     /// <summary>

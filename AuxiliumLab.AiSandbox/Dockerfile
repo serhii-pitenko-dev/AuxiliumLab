@@ -17,6 +17,7 @@ COPY AuxiliumLab.AiSandbox.Domain/AuxiliumLab.AiSandbox.Domain.csproj           
 COPY AuxiliumLab.AiSandbox.GrpcHost/AuxiliumLab.AiSandbox.GrpcHost.csproj                                         AuxiliumLab.AiSandbox.GrpcHost/
 COPY AuxiliumLab.AiSandbox.Infrastructure/AuxiliumLab.AiSandbox.Infrastructure.csproj                             AuxiliumLab.AiSandbox.Infrastructure/
 COPY AuxiliumLab.AiSandbox.SharedBaseTypes/AuxiliumLab.AiSandbox.SharedBaseTypes.csproj                           AuxiliumLab.AiSandbox.SharedBaseTypes/
+COPY AuxiliumLab.AiSandbox.SharedContracts/AuxiliumLab.AiSandbox.SharedContracts.csproj                           AuxiliumLab.AiSandbox.SharedContracts/
 COPY AuxiliumLab.AiSandbox.Startup/AuxiliumLab.AiSandbox.Startup.csproj                                           AuxiliumLab.AiSandbox.Startup/
 COPY AuxiliumLab.AiSandbox.WebApi/AuxiliumLab.AiSandbox.WebApi.csproj                                             AuxiliumLab.AiSandbox.WebApi/
 COPY AuxiliumLab.Statistics/AuxiliumLab.AiSandbox.Statistics.csproj                                               AuxiliumLab.Statistics/

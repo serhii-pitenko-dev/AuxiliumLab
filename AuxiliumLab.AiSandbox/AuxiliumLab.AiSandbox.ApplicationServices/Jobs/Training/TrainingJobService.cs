@@ -5,9 +5,7 @@ using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Configuration;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
 using AuxiliumLab.AiSandbox.Common.MessageBroker;
 using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Training;
-using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Training.Dto;
 using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Training;
-using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Training.Dto;
 using AuxiliumLab.AiSandbox.ApplicationServices.Trainer;
 using AuxiliumLab.AiSandbox.Infrastructure.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -191,7 +189,7 @@ public sealed class TrainingJobService : ITrainingCommands, ITrainingQueries
             }
         });
 
-        return Task.FromResult(new TrainingJobStartedDto(jobId, algoName, experimentId, startedAt));
+        return Task.FromResult(new TrainingJobStartedDto { JobId = jobId, Algorithm = algoName, ExperimentId = experimentId, StartedAt = startedAt });
     }
 
     public Task<bool> StopTrainingAsync(Guid jobId, CancellationToken ct = default)

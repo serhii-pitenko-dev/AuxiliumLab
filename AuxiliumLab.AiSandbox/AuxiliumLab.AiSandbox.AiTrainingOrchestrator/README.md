@@ -33,7 +33,7 @@ ITraining
 └── DqnTraining   (BaseTraining)   — Deep Q-Network
 ```
 
-Each carries its `TrainingAlgorithmSettings` (hyperparameters loaded from `training-settings.json`).
+Each carries its `TrainingAlgorithmSettings` (hyperparameters loaded from `appsettings.json → TrainingSettings`).
 
 ### `IPolicyTrainerClient` / `PolicyTrainerClient`
 Thin gRPC client wrapper for the Python `PolicyTrainerService` (port 50051).
@@ -68,11 +68,11 @@ obs_dim   = ScalarFeatureCount + gridSize²
 Example: `sightRange = 5` → `gridSize = 11` → `obs_dim = 5 + 121 = 126`
 
 ### `Configuration/`
-- `TrainingSettings` — loaded from `Startup/training-settings.json`.  
+- `TrainingSettings` — loaded from `appsettings.json → TrainingSettings`.  
   Contains a list of `TrainingAlgorithmSettings` — one per algorithm type.
 - `TrainingAlgorithmSettings` — algorithm name + dictionary of hyperparameter key/value pairs.
 
-## `training-settings.json` Reference
+## `appsettings.json → TrainingSettings` Reference
 ```json
 {
   "Training": {
@@ -117,4 +117,4 @@ If step 4 or 5 fails, training is aborted before any GPU time is spent.
 3. Add `StartTrainingXxx` RPC to `policy_trainer.proto` and regenerate code.
 4. Add `XxxTrainingAsync` to `IPolicyTrainerClient` and implement in `PolicyTrainerClient`.
 5. Update the `switch` in `TrainingRunner.RunTrainingAsync()` to handle the new algorithm.
-6. Add an entry to `training-settings.json`.
+6. Add an entry to the `TrainingSettings.Algorithms` section of `appsettings.json`.

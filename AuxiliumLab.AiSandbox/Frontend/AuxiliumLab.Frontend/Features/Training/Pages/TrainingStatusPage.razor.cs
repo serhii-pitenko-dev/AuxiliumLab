@@ -1,4 +1,3 @@
-using AuxiliumLab.Frontend.Features.Training.Dto;
 
 namespace AuxiliumLab.Frontend.Features.Training.Pages;
 

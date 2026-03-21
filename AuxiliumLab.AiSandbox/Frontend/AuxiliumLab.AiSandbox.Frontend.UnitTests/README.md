@@ -22,7 +22,7 @@ dotnet test
 | Folder | Tests |
 |---|---|
 | `Training/` | `PpoTrainingPageTests`, `TrainingStatusPageTests` |
-| `Simulation/` | `MultipleRunPageTests`, `SimulationStatusPageTests` |
+| `Simulation/` | `MultipleRunPageTests`, `SimulationStatusPageTests`, `VisualizationPageTests`, `VisualizationPage_StaticHelperTests` |
 | `AggregationRun/` | `AggregationRunPageTests`, `AggregationStatusPageTests` |
 | `DataManagement/` | `AggregationVisualizationPageTests`, `MultipleRunVisualizationPageTests` |
 | `Services/` | `NotificationServiceTests` |

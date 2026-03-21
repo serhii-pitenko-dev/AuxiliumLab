@@ -5,6 +5,7 @@ public enum SandboxStatus
     InProgress,
     HeroWon,
     HeroLost,
-    TurnLimitReached
+    TurnLimitReached,
+    Failed
 }
 

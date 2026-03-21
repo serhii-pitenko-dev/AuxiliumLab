@@ -1,4 +1,3 @@
-using AuxiliumLab.Frontend.Features.Simulation.Dto;
 
 namespace AuxiliumLab.Frontend.Features.Simulation.Pages;
 
@@ -28,11 +27,13 @@ public partial class SimulationStatusPage
         await RefreshAsync();
     }
 
-    private MudBlazor.Color StateColor(SimulationJobState state) => state switch
+    private MudBlazor.Color StateColor(SandboxStatus state) => state switch
     {
-        SimulationJobState.Running   => MudBlazor.Color.Info,
-        SimulationJobState.Completed => MudBlazor.Color.Success,
-        SimulationJobState.Failed    => MudBlazor.Color.Error,
+        SandboxStatus.InProgress     => MudBlazor.Color.Info,
+        SandboxStatus.HeroWon        => MudBlazor.Color.Success,
+        SandboxStatus.HeroLost       => MudBlazor.Color.Warning,
+        SandboxStatus.TurnLimitReached => MudBlazor.Color.Success,
+        SandboxStatus.Failed         => MudBlazor.Color.Error,
         _                            => MudBlazor.Color.Default
     };
 

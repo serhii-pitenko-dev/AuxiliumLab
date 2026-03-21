@@ -7,7 +7,7 @@ Depends on: `Common`, `SharedBaseTypes`.
 ## Purpose
 During AI training, the Python `ExternalSimEnv` needs to call `reset()` and `step()` on a live simulation. This project hosts those calls as gRPC endpoints.
 
-The gRPC host listens on **port 50062** (Kestrel) and is started only when `ExecutionMode = Training`.
+The gRPC host listens on **port 50062** (Kestrel) alongside the REST API on port 5000.
 
 ## Architecture
 

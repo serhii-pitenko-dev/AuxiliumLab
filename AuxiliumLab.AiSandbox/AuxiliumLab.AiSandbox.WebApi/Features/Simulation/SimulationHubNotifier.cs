@@ -19,19 +19,20 @@ public sealed class SimulationHubNotifier : ISimulationHubNotifier
     public Task NotifyAgentMovedAsync(SimulationAgentMovedNotification n, CancellationToken ct = default)
         => _hub.Clients.Group(n.JobId)
                .SendAsync(SimulationHub.Methods.AgentMoved,
-                   new AgentMovedDto(n.JobId, n.AgentId, n.AgentType,
-                       n.FromX, n.FromY, n.ToX, n.ToY, n.IsSuccess, n.Agent, n.UpdatedCells), ct);
+                   new AgentMovedDto { JobId = n.JobId, AgentId = n.AgentId, AgentType = n.AgentType,
+                       From = n.From, To = n.To,
+                       IsSuccess = n.IsSuccess, Agent = n.Agent, UpdatedCells = n.UpdatedCells }, ct);
 
     public Task NotifyAgentToggledAsync(SimulationAgentToggledNotification n, CancellationToken ct = default)
         => _hub.Clients.Group(n.JobId)
                .SendAsync(SimulationHub.Methods.AgentToggled,
-                   new AgentToggledDto(n.JobId, n.AgentId, n.AgentType,
-                       n.Action, n.IsActivated, n.Agent), ct);
+                   new AgentToggledDto { JobId = n.JobId, AgentId = n.AgentId, AgentType = n.AgentType,
+                       Action = n.Action, IsActivated = n.IsActivated, Agent = n.Agent }, ct);
 
     public Task NotifyTurnCompletedAsync(SimulationTurnCompletedNotification n, CancellationToken ct = default)
         => _hub.Clients.Group(n.JobId)
                .SendAsync(SimulationHub.Methods.TurnCompleted,
-                   new TurnCompletedDto(n.JobId, n.TurnNumber, n.UpdatedCells), ct);
+                   new TurnCompletedDto { JobId = n.JobId, TurnNumber = n.TurnNumber, UpdatedCells = n.UpdatedCells }, ct);
 
     public Task NotifySimulationEndedAsync(SimulationEndedDto dto, CancellationToken ct = default)
         => _hub.Clients.Group(dto.JobId)

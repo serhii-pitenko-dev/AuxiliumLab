@@ -17,11 +17,15 @@ public class SingleRunner
 
     /// <summary>Runs a single simulation with the presentation executor (publishes events to UI).</summary>
     public async Task RunSingleAsync(IExecutorForPresentation executor)
-        => await executor.RunAsync();
+    {
+        await executor.RunAsync();
+    }
 
     /// <summary>Runs a single trained-model simulation.</summary>
     public async Task RunSingleTrainedAsync(IStandardExecutor executor)
-        => await executor.RunAsync();
+    {
+        await executor.RunAsync();
+    }
 
     /// <summary>Runs a simulation seeded from precondition test data.</summary>
     public async Task RunTestPreconditionsAsync(IExecutorForPresentation executor)

@@ -1,7 +1,7 @@
 namespace AuxiliumLab.AiSandbox.Infrastructure.Configuration;
 
 /// <summary>
-/// Top-level settings loaded from <c>aggregation-settings.json</c>.
+/// Top-level aggregation settings loaded from the <c>AggregationSettings</c> section of <c>appsettings.json</c>.
 /// Defines the ordered sequence of job steps that the AggregationRun executes.
 /// </summary>
 public class AggregationSettings

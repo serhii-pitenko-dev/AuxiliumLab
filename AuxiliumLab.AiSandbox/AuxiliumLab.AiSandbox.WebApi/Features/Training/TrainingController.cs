@@ -1,5 +1,4 @@
 using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Training;
-using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Training.Dto;
 using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Training;
 using Microsoft.AspNetCore.Mvc;
 

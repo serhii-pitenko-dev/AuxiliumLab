@@ -1,4 +1,3 @@
-using AuxiliumLab.Frontend.Features.Training.Dto;
 using AuxiliumLab.Frontend.Http;
 
 namespace AuxiliumLab.Frontend.Features.Training.Services;

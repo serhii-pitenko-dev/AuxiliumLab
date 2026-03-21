@@ -6,7 +6,7 @@ namespace AuxiliumLab.AiSandbox.ApplicationServices.Executors;
 
 public interface IExecutor
 {
-    Task RunAsync(Guid sandboxId = default, SandBoxConfiguration sandBoxConfiguration = default, CancellationToken cancellationToken = default);
+    Task<SandboxStatus> RunAsync(Guid sandboxId = default, SandBoxConfiguration sandBoxConfiguration = default, CancellationToken cancellationToken = default);
 
     Task TestRunWithPreconditionsAsync();
 }

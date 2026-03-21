@@ -1,4 +1,3 @@
-using AuxiliumLab.Frontend.Features.Simulation.Dto;
 using AuxiliumLab.Frontend.Services;
 using Microsoft.AspNetCore.SignalR.Client;
 
@@ -55,7 +54,7 @@ public sealed class SimulationHubClient : ISimulationHubClient
         });
         _connection.On<AgentMovedDto>("AgentMoved", dto =>
         {
-            try { OnDebugMessage?.Invoke($"[raw] AgentMoved {dto?.AgentId?[..Math.Min(6, dto.AgentId?.Length ?? 0)]} ({dto?.ToX},{dto?.ToY})"); OnAgentMoved?.Invoke(dto!); }
+            try { OnDebugMessage?.Invoke($"[raw] AgentMoved {dto?.AgentId?[..Math.Min(6, dto.AgentId?.Length ?? 0)]} ({dto?.To?.X},{dto?.To?.Y})"); OnAgentMoved?.Invoke(dto!); }
             catch (Exception ex) { OnDebugMessage?.Invoke($"[raw] AgentMoved ERROR: {ex.Message}"); }
         });
         _connection.On<AgentToggledDto>("AgentToggled", dto =>

@@ -5,9 +5,7 @@ using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Configuration;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.PolicyTrainer;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Trainers;
-using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Training.Dto;
 using AuxiliumLab.AiSandbox.ApplicationServices.Executors;
-using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Training.Dto;
 using AuxiliumLab.AiSandbox.ApplicationServices.Runner.LogsDto;
 using AuxiliumLab.AiSandbox.ApplicationServices.Runner.LogsDto.Performance;
 using AuxiliumLab.AiSandbox.ApplicationServices.Runner.TestPreconditionSet;
@@ -65,7 +63,7 @@ public class TrainingRunner
         var baseAlgoSettings = _trainingSettings.Algorithms
             .FirstOrDefault(a => a.Algorithm.Equals(algorithmName, StringComparison.OrdinalIgnoreCase))
             ?? throw new InvalidOperationException(
-                $"No training settings found for algorithm '{algorithmName}' in training-settings.json.");
+                $"No training settings found for algorithm '{algorithmName}' in appsettings.json → TrainingSettings.Algorithms.");
 
         // Apply any web-request hyperparameter overrides
         var algoSettings = ApplyHyperparameterOverrides(baseAlgoSettings, overrides?.Hyperparameters);
@@ -151,7 +149,7 @@ public class TrainingRunner
                 testPreconditionData);
 
             // Set the episode callback so Sb3Actions can restart episodes
-            sb3.SetEpisodeCallback(() => CreateEpisodeExecutor().RunAsync());
+            sb3.SetEpisodeCallback(async () => await CreateEpisodeExecutor().RunAsync());
 
             // Cancel when Python closes this gym's connection (signals training complete). 
             var gymCloseCts = new CancellationTokenSource();

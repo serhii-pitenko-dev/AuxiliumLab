@@ -32,7 +32,7 @@ Classes run in alphabetical order: `AggregationRun` → `Simulation` → `Statis
 A custom `WebApplicationFactory<Program>` that:
 
 1. **Redirects file storage** to a fresh `%TEMP%\AiSandboxTests_{guid}\` folder so tests never touch production data.
-2. **Replaces the `TrainingSettings` singleton** with lightweight test defaults (`total_timesteps=100, n_envs=1, n_steps=16`) so all training tests complete in ~1 second regardless of `training-settings.json`.
+2. **Replaces the `TrainingSettings` singleton** with lightweight test defaults (`total_timesteps=100, n_envs=1, n_steps=16`) so all training tests complete in ~1 second regardless of `appsettings.json`.
 3. **Starts a real Kestrel gRPC listener on port 50062** (HTTP/2) so the Python RL service can call back into the C# gym service during training tests.
 
 ### `CleanArtifacts()`

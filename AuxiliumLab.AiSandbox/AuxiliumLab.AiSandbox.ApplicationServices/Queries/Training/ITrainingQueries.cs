@@ -1,5 +1,3 @@
-using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Training.Dto;
-
 namespace AuxiliumLab.AiSandbox.ApplicationServices.Queries.Training;
 
 /// <summary>

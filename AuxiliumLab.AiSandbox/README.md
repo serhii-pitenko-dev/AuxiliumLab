@@ -50,7 +50,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full dependency graph.
 | `AuxiliumLab.AiSandbox.ConsolePresentation` | Presentation | Real-time Spectre.Console terminal renderer |
 | `AuxiliumLab.AiSandbox.GrpcHost` | Presentation | gRPC server exposing simulation as a gym |
 | `AuxiliumLab.AiSandbox.WebApi` | Presentation | ASP.NET Core REST API with Training, Simulation, Aggregation and Statistic endpoints |
-| `AuxiliumLab.AiSandbox.Startup` | Composition Root | DI wiring, entry point, menu |
+| `AuxiliumLab.AiSandbox.Startup` | Composition Root | DI wiring, entry point |
 | `AuxiliumLab.Frontend` | Frontend | Blazor WebAssembly SPA (MudBlazor, SignalR, ApexCharts) |
 | `AuxiliumLab.AiSandbox.UnitTests` | Tests | MSTest unit test suite |
 | `AuxiliumLab.AiSandbox.IntegrationTests` | Tests | MSTest end-to-end integration tests (WebApplicationFactory + live gRPC) |
@@ -62,7 +62,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full dependency graph.
 # Build everything
 dotnet build AuxiliumLab.AiSandbox.sln
 
-# Run (interactive menu will appear)
+# Run (REST API on :5000, gRPC gym on :50062)
 dotnet run --project AuxiliumLab.AiSandbox.Startup
 ```
 
@@ -96,7 +96,7 @@ By default all three constants are **disabled** in every configuration. To enabl
 
 ## REST API
 
-When `IsWebApiEnabled = true` (set in `appsettings.json`) an ASP.NET Core API starts on `http://localhost:5000`. All routes are under `/ai-sandbox/`.
+The REST API runs on `http://localhost:5000`. All routes are under `/ai-sandbox/`.
 
 | Controller | Verb | Route | Description |
 |---|---|---|---|

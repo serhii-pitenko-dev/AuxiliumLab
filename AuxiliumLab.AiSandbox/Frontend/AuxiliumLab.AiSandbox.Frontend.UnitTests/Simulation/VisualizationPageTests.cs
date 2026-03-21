@@ -1,3 +1,5 @@
+using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects;
+using AuxiliumLab.AiSandbox.SharedContracts;
 using AuxiliumLab.Frontend.Configuration;
 using AuxiliumLab.Frontend.Features.Simulation.Pages;
 using AuxiliumLab.Frontend.Features.Simulation.Services;
@@ -57,9 +59,8 @@ public class VisualizationPageTests
             new InitialAgentDto
             {
                 AgentId   = agentId,
-                AgentType = "Hero",
-                X         = x,
-                Y         = y
+                AgentType = ObjectType.Hero,
+                Position  = new Coordinates(x, y)
             }
         ]
     };
@@ -67,9 +68,13 @@ public class VisualizationPageTests
     /// <summary>Creates a cell DTO; defaults to Empty with no effects.</summary>
     private static SimulationCellDto MakeCell(
         int x, int y,
-        string objectType = "Empty",
-        string[]? effects = null) =>
-        new() { X = x, Y = y, ObjectType = objectType, Effects = effects ?? [] };
+        ObjectType objectType = ObjectType.Empty,
+        AgentEffectDto[]? effects = null) =>
+        new() { Position = new Coordinates(x, y), ObjectType = objectType, Effects = effects ?? [] };
+
+    /// <summary>Helper to create a single agent effect.</summary>
+    private static AgentEffectDto MakeEffect(ObjectType agentType, params EEffect[] effects) =>
+        new() { AgentId = Guid.NewGuid(), AgentType = agentType, Effects = effects };
 
     /// <summary>Builds a minimal SimulationStartedDto with the given cells and no agents.</summary>
     private static SimulationStartedDto MakeStartedWithCells(params SimulationCellDto[] cells) => new()
@@ -97,9 +102,9 @@ public class VisualizationPageTests
             hub.FireAgentMoved(new AgentMovedDto
             {
                 AgentId   = "agent-01",
-                AgentType = "Hero",
-                FromX     = 2, FromY = 3,
-                ToX       = 4, ToY   = 5,
+                AgentType = ObjectType.Hero,
+                From      = new Coordinates(2, 3),
+                To        = new Coordinates(4, 5),
                 IsSuccess = true
             });
 
@@ -124,9 +129,9 @@ public class VisualizationPageTests
             hub.FireAgentMoved(new AgentMovedDto
             {
                 AgentId   = "agent-01",
-                AgentType = "Hero",
-                FromX     = 2, FromY = 3,
-                ToX       = 4, ToY   = 5,
+                AgentType = ObjectType.Hero,
+                From      = new Coordinates(2, 3),
+                To        = new Coordinates(4, 5),
                 IsSuccess = false
             });
 
@@ -153,9 +158,9 @@ public class VisualizationPageTests
             hub.FireAgentMoved(new AgentMovedDto
             {
                 AgentId   = "agent-01",
-                AgentType = "Hero",
-                FromX     = 2, FromY = 3,
-                ToX       = 4, ToY   = 5,
+                AgentType = ObjectType.Hero,
+                From      = new Coordinates(2, 3),
+                To        = new Coordinates(4, 5),
                 IsSuccess = false
             });
 
@@ -181,9 +186,9 @@ public class VisualizationPageTests
             hub.FireAgentMoved(new AgentMovedDto
             {
                 AgentId   = "agent-01",
-                AgentType = "Hero",
-                FromX     = 2, FromY = 3,
-                ToX       = 4, ToY   = 5,
+                AgentType = ObjectType.Hero,
+                From      = new Coordinates(2, 3),
+                To        = new Coordinates(4, 5),
                 IsSuccess = false,
                 Agent     = new AgentSnapshotDto { Stamina = 80, MaxStamina = 100 }
             });
@@ -204,7 +209,7 @@ public class VisualizationPageTests
             var cut = ctx.RenderComponent<VisualizationPage>();
 
             hub.FireSimulationStarted(MakeStartedWithCells(
-                MakeCell(3, 4, effects: ["Hero:Path"])));
+                MakeCell(3, 4, effects: [MakeEffect(ObjectType.Hero, EEffect.Path)])));
 
             cut.WaitForAssertion(() =>
                 cut.Markup.Should().Contain("class=\"hero-path\""));
@@ -220,7 +225,7 @@ public class VisualizationPageTests
             var cut = ctx.RenderComponent<VisualizationPage>();
 
             hub.FireSimulationStarted(MakeStartedWithCells(
-                MakeCell(5, 2, effects: ["Enemy:Path"])));
+                MakeCell(5, 2, effects: [MakeEffect(ObjectType.Enemy, EEffect.Path)])));
 
             cut.WaitForAssertion(() =>
                 cut.Markup.Should().Contain("class=\"enemy-path\""));
@@ -236,7 +241,7 @@ public class VisualizationPageTests
             var cut = ctx.RenderComponent<VisualizationPage>();
 
             hub.FireSimulationStarted(MakeStartedWithCells(
-                MakeCell(1, 1, effects: ["Hero:Vision"])));
+                MakeCell(1, 1, effects: [MakeEffect(ObjectType.Hero, EEffect.Vision)])));
 
             cut.WaitForAssertion(() =>
                 cut.Markup.Should().Contain("class=\"hero-vision\""));
@@ -252,7 +257,7 @@ public class VisualizationPageTests
             var cut = ctx.RenderComponent<VisualizationPage>();
 
             hub.FireSimulationStarted(MakeStartedWithCells(
-                MakeCell(7, 7, effects: ["Enemy:Vision"])));
+                MakeCell(7, 7, effects: [MakeEffect(ObjectType.Enemy, EEffect.Vision)])));
 
             cut.WaitForAssertion(() =>
                 cut.Markup.Should().Contain("class=\"enemy-vision\""));
@@ -268,7 +273,7 @@ public class VisualizationPageTests
             var cut = ctx.RenderComponent<VisualizationPage>();
 
             hub.FireSimulationStarted(MakeStartedWithCells(
-                MakeCell(4, 4, effects: ["Hero:Path", "Enemy:Path"])));
+                MakeCell(4, 4, effects: [MakeEffect(ObjectType.Hero, EEffect.Path), MakeEffect(ObjectType.Enemy, EEffect.Path)])));
 
             cut.WaitForAssertion(() =>
                 cut.Markup.Should().Contain("class=\"hero-path\""));
@@ -285,7 +290,7 @@ public class VisualizationPageTests
             var cut = ctx.RenderComponent<VisualizationPage>();
 
             hub.FireSimulationStarted(MakeStartedWithCells(
-                MakeCell(2, 6, effects: ["Hero:Vision", "Hero:Path"])));
+                MakeCell(2, 6, effects: [MakeEffect(ObjectType.Hero, EEffect.Vision), MakeEffect(ObjectType.Hero, EEffect.Path)])));
 
             cut.WaitForAssertion(() =>
                 cut.Markup.Should().Contain("class=\"hero-path\""));
@@ -303,7 +308,7 @@ public class VisualizationPageTests
 
             // Only cell is a Block — effect overlay must be suppressed.
             hub.FireSimulationStarted(MakeStartedWithCells(
-                MakeCell(3, 3, objectType: "Block", effects: ["Hero:Path"])));
+                MakeCell(3, 3, objectType: ObjectType.Block, effects: [MakeEffect(ObjectType.Hero, EEffect.Path)])));
 
             cut.WaitForAssertion(() => cut.Markup.Should().Contain("<svg"));
             cut.Markup.Should().NotContain("class=\"hero-path\"");
@@ -327,11 +332,214 @@ public class VisualizationPageTests
             hub.FireTurnCompleted(new TurnCompletedDto
             {
                 TurnNumber   = 1,
-                UpdatedCells = [MakeCell(0, 0, effects: ["Enemy:Vision"])]
+                UpdatedCells = [MakeCell(0, 0, effects: [MakeEffect(ObjectType.Enemy, EEffect.Vision)])]
             });
 
             cut.WaitForAssertion(() =>
                 cut.Markup.Should().Contain("class=\"enemy-vision\""));
         }
+    }
+}
+
+[TestClass]
+public class VisualizationPage_StaticHelperTests
+{
+    private static AgentEffectDto MakeEffect(ObjectType agentType, params EEffect[] effects) =>
+        new() { AgentId = Guid.NewGuid(), AgentType = agentType, Effects = effects };
+
+    private static SimulationCellDto MakeCell(
+        ObjectType objectType = ObjectType.Empty,
+        params AgentEffectDto[] effects) =>
+        new() { Position = new Coordinates(0, 0), ObjectType = objectType, Effects = effects };
+
+    // ── CellFill ─────────────────────────────────────────────────────────
+
+    [TestMethod]
+    [DataRow(ObjectType.Block,       "#616161")]
+    [DataRow(ObjectType.BorderBlock, "#424242")]
+    [DataRow(ObjectType.Exit,        "#43a047")]
+    [DataRow(ObjectType.Empty,       "#fafafa")]
+    public void CellFill_ReturnsCorrectColor(ObjectType type, string expected)
+        => VisualizationPage.CellFill(type).Should().Be(expected);
+
+    [TestMethod]
+    public void CellFill_UnknownType_ReturnsFallbackColor()
+        => VisualizationPage.CellFill(ObjectType.Hero).Should().Be("#fafafa");
+
+    // ── AgentFill ────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public void AgentFill_Hero_ReturnsBlue()
+        => VisualizationPage.AgentFill(ObjectType.Hero).Should().Be("#1e88e5");
+
+    [TestMethod]
+    public void AgentFill_Enemy_ReturnsRed()
+        => VisualizationPage.AgentFill(ObjectType.Enemy).Should().Be("#e53935");
+
+    [TestMethod]
+    public void AgentFill_OtherType_ReturnsPurple()
+        => VisualizationPage.AgentFill(ObjectType.Empty).Should().Be("#9c27b0");
+
+    // ── HasEffect ────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public void HasEffect_ReturnsTrueWhenMatchingEffectPresent()
+    {
+        var cell = MakeCell(effects: MakeEffect(ObjectType.Hero, EEffect.Path));
+        VisualizationPage.HasEffect(cell, ObjectType.Hero, EEffect.Path).Should().BeTrue();
+    }
+
+    [TestMethod]
+    public void HasEffect_ReturnsFalseWhenAgentTypeMismatches()
+    {
+        var cell = MakeCell(effects: MakeEffect(ObjectType.Hero, EEffect.Path));
+        VisualizationPage.HasEffect(cell, ObjectType.Enemy, EEffect.Path).Should().BeFalse();
+    }
+
+    [TestMethod]
+    public void HasEffect_ReturnsFalseWhenEffectTypeMismatches()
+    {
+        var cell = MakeCell(effects: MakeEffect(ObjectType.Hero, EEffect.Path));
+        VisualizationPage.HasEffect(cell, ObjectType.Hero, EEffect.Vision).Should().BeFalse();
+    }
+
+    [TestMethod]
+    public void HasEffect_ReturnsFalseWhenNoEffects()
+    {
+        var cell = MakeCell();
+        VisualizationPage.HasEffect(cell, ObjectType.Hero, EEffect.Path).Should().BeFalse();
+    }
+
+    [TestMethod]
+    public void HasEffect_HandlesMixedEffectsOnSameAgent()
+    {
+        var cell = MakeCell(effects: MakeEffect(ObjectType.Hero, EEffect.Path, EEffect.Vision));
+        VisualizationPage.HasEffect(cell, ObjectType.Hero, EEffect.Path).Should().BeTrue();
+        VisualizationPage.HasEffect(cell, ObjectType.Hero, EEffect.Vision).Should().BeTrue();
+        VisualizationPage.HasEffect(cell, ObjectType.Hero, EEffect.Run).Should().BeFalse();
+    }
+
+    // ── GetEffectFill ────────────────────────────────────────────────────
+
+    [TestMethod]
+    public void GetEffectFill_ReturnsNull_ForBlockCell()
+    {
+        var cell = MakeCell(ObjectType.Block, MakeEffect(ObjectType.Hero, EEffect.Path));
+        VisualizationPage.GetEffectFill(cell).Should().BeNull();
+    }
+
+    [TestMethod]
+    public void GetEffectFill_ReturnsNull_ForBorderBlockCell()
+    {
+        var cell = MakeCell(ObjectType.BorderBlock, MakeEffect(ObjectType.Hero, EEffect.Path));
+        VisualizationPage.GetEffectFill(cell).Should().BeNull();
+    }
+
+    [TestMethod]
+    public void GetEffectFill_ReturnsNull_ForEmptyCellWithNoEffects()
+    {
+        var cell = MakeCell();
+        VisualizationPage.GetEffectFill(cell).Should().BeNull();
+    }
+
+    [TestMethod]
+    public void GetEffectFill_HeroPath_ReturnsBlue60()
+    {
+        var cell = MakeCell(effects: MakeEffect(ObjectType.Hero, EEffect.Path));
+        VisualizationPage.GetEffectFill(cell).Should().Be("rgba(30,136,229,0.60)");
+    }
+
+    [TestMethod]
+    public void GetEffectFill_EnemyPath_ReturnsRed60()
+    {
+        var cell = MakeCell(effects: MakeEffect(ObjectType.Enemy, EEffect.Path));
+        VisualizationPage.GetEffectFill(cell).Should().Be("rgba(229,57,53,0.60)");
+    }
+
+    [TestMethod]
+    public void GetEffectFill_HeroVision_ReturnsBlue20()
+    {
+        var cell = MakeCell(effects: MakeEffect(ObjectType.Hero, EEffect.Vision));
+        VisualizationPage.GetEffectFill(cell).Should().Be("rgba(30,136,229,0.20)");
+    }
+
+    [TestMethod]
+    public void GetEffectFill_EnemyVision_ReturnsRed20()
+    {
+        var cell = MakeCell(effects: MakeEffect(ObjectType.Enemy, EEffect.Vision));
+        VisualizationPage.GetEffectFill(cell).Should().Be("rgba(229,57,53,0.20)");
+    }
+
+    [TestMethod]
+    public void GetEffectFill_HeroPathTakesPriorityOverEnemyPath()
+    {
+        var cell = MakeCell(effects: [
+            MakeEffect(ObjectType.Enemy, EEffect.Path),
+            MakeEffect(ObjectType.Hero,  EEffect.Path)]);
+        VisualizationPage.GetEffectFill(cell).Should().Be("rgba(30,136,229,0.60)");
+    }
+
+    [TestMethod]
+    public void GetEffectFill_PathTakesPriorityOverVision()
+    {
+        var cell = MakeCell(effects: [
+            MakeEffect(ObjectType.Hero, EEffect.Vision),
+            MakeEffect(ObjectType.Enemy, EEffect.Path)]);
+        VisualizationPage.GetEffectFill(cell).Should().Be("rgba(229,57,53,0.60)");
+    }
+
+    [TestMethod]
+    public void GetEffectFill_HeroVisionTakesPriorityOverEnemyVision()
+    {
+        var cell = MakeCell(effects: [
+            MakeEffect(ObjectType.Enemy, EEffect.Vision),
+            MakeEffect(ObjectType.Hero,  EEffect.Vision)]);
+        VisualizationPage.GetEffectFill(cell).Should().Be("rgba(30,136,229,0.20)");
+    }
+
+    // ── GetEffectClass ───────────────────────────────────────────────────
+
+    [TestMethod]
+    public void GetEffectClass_HeroPath_ReturnsHeroPath()
+    {
+        var cell = MakeCell(effects: MakeEffect(ObjectType.Hero, EEffect.Path));
+        VisualizationPage.GetEffectClass(cell).Should().Be("hero-path");
+    }
+
+    [TestMethod]
+    public void GetEffectClass_EnemyPath_ReturnsEnemyPath()
+    {
+        var cell = MakeCell(effects: MakeEffect(ObjectType.Enemy, EEffect.Path));
+        VisualizationPage.GetEffectClass(cell).Should().Be("enemy-path");
+    }
+
+    [TestMethod]
+    public void GetEffectClass_HeroVision_ReturnsHeroVision()
+    {
+        var cell = MakeCell(effects: MakeEffect(ObjectType.Hero, EEffect.Vision));
+        VisualizationPage.GetEffectClass(cell).Should().Be("hero-vision");
+    }
+
+    [TestMethod]
+    public void GetEffectClass_EnemyVision_ReturnsEnemyVision()
+    {
+        var cell = MakeCell(effects: MakeEffect(ObjectType.Enemy, EEffect.Vision));
+        VisualizationPage.GetEffectClass(cell).Should().Be("enemy-vision");
+    }
+
+    [TestMethod]
+    public void GetEffectClass_NoEffects_ReturnsEmptyString()
+    {
+        var cell = MakeCell();
+        VisualizationPage.GetEffectClass(cell).Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public void GetEffectClass_PrioritizesHeroPathOverEnemyVision()
+    {
+        var cell = MakeCell(effects: [
+            MakeEffect(ObjectType.Enemy, EEffect.Vision),
+            MakeEffect(ObjectType.Hero,  EEffect.Path)]);
+        VisualizationPage.GetEffectClass(cell).Should().Be("hero-path");
     }
 }

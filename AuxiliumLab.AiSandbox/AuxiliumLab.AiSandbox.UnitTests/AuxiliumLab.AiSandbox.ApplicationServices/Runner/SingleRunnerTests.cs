@@ -1,6 +1,7 @@
 using AuxiliumLab.AiSandbox.ApplicationServices.Executors;
 using AuxiliumLab.AiSandbox.ApplicationServices.Runner.SingleRunner;
 using AuxiliumLab.AiSandbox.Infrastructure.Configuration.Preconditions;
+using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -68,7 +69,7 @@ public class SingleRunnerTests
     {
         var mockExecutor = new Mock<IExecutorForPresentation>();
         mockExecutor.Setup(e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>(), It.IsAny<CancellationToken>()))
-                    .Returns(Task.CompletedTask);
+                    .Returns(Task.FromResult(SandboxStatus.InProgress));
 
         await new SingleRunner(_config).RunSingleAsync(mockExecutor.Object);
 
@@ -87,7 +88,7 @@ public class SingleRunnerTests
     {
         var mockExecutor = new Mock<IExecutorForPresentation>(MockBehavior.Strict);
         mockExecutor.Setup(e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>(), It.IsAny<CancellationToken>()))
-                    .Returns(Task.CompletedTask);
+                    .Returns(Task.FromResult(SandboxStatus.InProgress));
 
         await new SingleRunner(_config).RunSingleAsync(mockExecutor.Object);
 
@@ -109,7 +110,7 @@ public class SingleRunnerTests
     {
         var mockExecutor = new Mock<IStandardExecutor>();
         mockExecutor.Setup(e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>(), It.IsAny<CancellationToken>()))
-                    .Returns(Task.CompletedTask);
+                    .Returns(Task.FromResult(SandboxStatus.InProgress));
 
         await new SingleRunner(_config).RunSingleTrainedAsync(mockExecutor.Object);
 
@@ -167,7 +168,7 @@ public class SingleRunnerTests
         // Console path — IExecutorForPresentation (shared broker, ConsoleRunner receives events)
         var consoleMock = new Mock<IExecutorForPresentation>();
         consoleMock.Setup(e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>(), It.IsAny<CancellationToken>()))
-                   .Returns(Task.CompletedTask);
+                   .Returns(Task.FromResult(SandboxStatus.InProgress));
 
         await new SingleRunner(_config).RunSingleAsync(consoleMock.Object);
 
@@ -179,7 +180,7 @@ public class SingleRunnerTests
         // Non-console path — IStandardExecutor (private broker, no console rendering)
         var standardMock = new Mock<IStandardExecutor>();
         standardMock.Setup(e => e.RunAsync(It.IsAny<Guid>(), It.IsAny<SandBoxConfiguration>(), It.IsAny<CancellationToken>()))
-                    .Returns(Task.CompletedTask);
+                    .Returns(Task.FromResult(SandboxStatus.InProgress));
 
         await new SingleRunner(_config).RunSingleTrainedAsync(standardMock.Object);
 

@@ -5,16 +5,11 @@ ASP.NET Core REST API that runs alongside the simulation engine.
 Depends on: `SharedBaseTypes`, `ApplicationServices`.
 
 ## Purpose
-Provides an HTTP REST API entry point for external clients to trigger training runs, simulations, aggregation pipelines, and query results — all without gRPC or the console interface.  
-Enabled via `IsWebApiEnabled = true` in `appsettings.json` → `StartupSettings`.
+Provides an HTTP REST API entry point for the Blazor Frontend to trigger training runs, simulations, aggregation pipelines, and query results.
 
 ## Running
-The Web API is hosted as a background task launched from `Startup/Program.cs`:
-```csharp
-if (isWebEnabled)
-    _ = WebApiHost.RunAsync(args, cancellationToken);
-```
-It does **not** block the rest of the application — simulation and Web API run concurrently.
+The Web API is hosted via `GrpcTrainingHost.Build()` in `Startup/Program.cs`, running on port 5000.
+Controllers are registered via `AddWebApiPresentationServices()` and mapped with `app.MapControllers()`.
 
 ## `WebApiHost`
 Static entry point that builds and runs the `WebApplication`:
@@ -50,7 +45,7 @@ Every write operation returns **202 Accepted** immediately (fire-and-forget job 
 | GET | `/models` | — | `TrainedModelInfoDto[]` | List all trained models on disk |
 | GET | `/status` | — | `TrainingJobStatusDto[]` | Status of all training jobs |
 
-**`StartPpoTrainingCommand`** fields (all optional — fall back to `training-settings.json`):
+**`StartPpoTrainingCommand`** fields (all optional — fall back to `appsettings.json → TrainingSettings` defaults):
 
 | Field | Type | Description |
 |---|---|---|
@@ -104,7 +99,7 @@ Every write operation returns **202 Accepted** immediately (fire-and-forget job 
 
 | Field | Type | Description |
 |---|---|---|
-| `Steps` | `AggregationStepDto[]` | Ordered steps; empty = use `aggregation-settings.json` |
+| `Steps` | `AggregationStepDto[]` | Ordered steps; empty = use `appsettings.json → AggregationSettings` |
 | `StandardSimulationCount` | `int` | Runs per mass-run step |
 | `Algorithm` | `ModelType` | Algorithm for training/trained steps |
 | `PolicyType` | `AiPolicy` | Policy network type (e.g. `MLP`) |
