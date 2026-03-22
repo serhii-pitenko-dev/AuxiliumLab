@@ -14,6 +14,7 @@ using AuxiliumLab.AiSandbox.Statistics.StatisticDataManager;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
+using System.Text.Json;
 
 namespace AuxiliumLab.AiSandbox.ApplicationServices.Commands.Simulation;
 
@@ -82,10 +83,13 @@ public sealed class SimulationCommandService : ISimulationCommands
 
                 var executor = executorFactory.CreateExecutorForPresentation(
                     command.ActionDelayMs, pauseGate);
+                var effectiveConfig = ApplySandboxOverrides(_sandboxConfig, command.SandboxSettings);
                 _visualizationBridge?.Attach(jobId);
                 try
                 {
-                    status.State = await executor.RunAsync(cancellationToken: cts.Token);
+                    status.State = await executor.RunAsync(
+                        sandBoxConfiguration: effectiveConfig,
+                        cancellationToken: cts.Token);
                 }
                 finally
                 {
@@ -255,6 +259,42 @@ public sealed class SimulationCommandService : ISimulationCommands
         };
 
         return () => baseFactory.CreateInferenceExecutor(_policyTrainerClient, modelPath, aiConfig);
+    }
+
+    internal static SandBoxConfiguration? ApplySandboxOverrides(
+        IOptions<SandBoxConfiguration> original,
+        SimulationSandboxOverrideDto? overrides)
+    {
+        if (overrides is null)
+            return null;
+
+        var json = JsonSerializer.Serialize(original.Value);
+        var cfg  = JsonSerializer.Deserialize<SandBoxConfiguration>(json)!;
+
+        if (overrides.MaxTurns.HasValue) cfg.MaxTurns = cfg.MaxTurns.WithCurrent(overrides.MaxTurns.Value);
+
+        var mapSettings = cfg.MapSettings;
+        var size = mapSettings.Size;
+        if (overrides.MapWidth.HasValue)  size.Width  = size.Width.WithCurrent(overrides.MapWidth.Value);
+        if (overrides.MapHeight.HasValue) size.Height = size.Height.WithCurrent(overrides.MapHeight.Value);
+        mapSettings.Size = size;
+        var elemPerc = mapSettings.ElementsPercentages;
+        if (overrides.BlocksPercent.HasValue)  elemPerc.BlocksPercent    = elemPerc.BlocksPercent.WithCurrent((int)overrides.BlocksPercent.Value);
+        if (overrides.EnemiesPercent.HasValue) elemPerc.PercentOfEnemies = elemPerc.PercentOfEnemies.WithCurrent((int)overrides.EnemiesPercent.Value);
+        mapSettings.ElementsPercentages = elemPerc;
+        cfg.MapSettings = mapSettings;
+
+        var hero = cfg.Hero;
+        if (overrides.HeroSpeed.HasValue)      hero.Speed      = hero.Speed.WithCurrent(overrides.HeroSpeed.Value);
+        if (overrides.HeroSightRange.HasValue) hero.SightRange = hero.SightRange.WithCurrent(overrides.HeroSightRange.Value);
+        if (overrides.HeroStamina.HasValue)    hero.Stamina    = hero.Stamina.WithCurrent(overrides.HeroStamina.Value);
+        cfg.Hero = hero;
+
+        var enemy = cfg.Enemy;
+        if (overrides.EnemySpeed.HasValue) enemy.Speed = enemy.Speed.WithCurrent(overrides.EnemySpeed.Value);
+        cfg.Enemy = enemy;
+
+        return cfg;
     }
 
     private static SimulationStartupSettings BuildSimulationStartupSettings(IncrementalSweeperDto? sweep)

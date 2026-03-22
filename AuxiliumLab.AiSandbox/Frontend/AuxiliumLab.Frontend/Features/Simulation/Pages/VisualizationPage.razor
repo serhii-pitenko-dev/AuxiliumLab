@@ -56,7 +56,10 @@
             <MudText Typo="Typo.subtitle2" Class="mb-1">Agents</MudText>
             @foreach (var (id, a) in _agents)
             {
-                <MudText Typo="Typo.caption">@a.Type @id[..Math.Min(6, id.Length)]: spd=@a.Speed stm=@a.Stamina/@a.MaxStamina</MudText>
+                <MudText Typo="Typo.caption">@a.Type #@id[..Math.Min(6, id.Length)]: spd=@a.Speed stm=@a.Stamina/@a.MaxStamina</MudText>
+                <MudText Typo="Typo.caption" Style="margin-left:12px;color:#757575">
+                    Run: @(a.IsRun ? "Active" : "Inactive")
+                </MudText>
             }
         }
     </MudItem>
@@ -66,35 +69,51 @@
         @if (_gridWidth > 0 && _gridHeight > 0)
         {
             <div style="overflow:auto">
-                <svg width="@(_gridWidth * CellSize)" height="@(_gridHeight * CellSize)"
+                <svg width="@(AxisMargin + _gridWidth * CellSize)" height="@(_gridHeight * CellSize + AxisMargin)"
                      style="display:block;border:1px solid #ccc">
-                    @* Layer 1 – base cells (blocks, exits, empty background) *@
-                    @foreach (var cell in _cells.Values)
+                    @* Axis labels – X (bottom), capped at 99 *@
+                    @for (var i = 0; i < _gridWidth && i < 100; i++)
                     {
-                        <rect x="@(cell.Position.X * CellSize)" y="@(cell.Position.Y * CellSize)"
-                              width="@CellSize" height="@CellSize"
-                              fill="@CellFill(cell.ObjectType)" stroke="#e0e0e0" stroke-width="0.5" />
+                        @((MarkupString)$"<text x=\"{AxisMargin + i * CellSize + CellSize / 2}\" y=\"{_gridHeight * CellSize + AxisMargin - 4}\" text-anchor=\"middle\" font-size=\"10\" fill=\"#616161\">{i}</text>")
                     }
-                    @* Layer 2 – effect overlays (path / sight) on non-block cells *@
-                    @foreach (var cell in _cells.Values)
+                    @* Axis labels – Y (left), bottom-to-top, capped at 99 *@
+                    @for (var i = 0; i < _gridHeight; i++)
                     {
-                        var effectFill = GetEffectFill(cell);
-                        if (effectFill is not null)
+                        var yLabel = _gridHeight - 1 - i;
+                        if (yLabel < 100)
+                        {
+                            @((MarkupString)$"<text x=\"{AxisMargin - 3}\" y=\"{i * CellSize + CellSize / 2 + 4}\" text-anchor=\"end\" font-size=\"10\" fill=\"#616161\">{yLabel}</text>")
+                        }
+                    }
+                    <g transform="translate(@(AxisMargin), 0)">
+                        @* Layer 1 – base cells (blocks, exits, empty background) *@
+                        @foreach (var cell in _cells.Values)
                         {
                             <rect x="@(cell.Position.X * CellSize)" y="@(cell.Position.Y * CellSize)"
                                   width="@CellSize" height="@CellSize"
-                                  class="@GetEffectClass(cell)"
-                                  fill="@effectFill" />
+                                  fill="@CellFill(cell.ObjectType)" stroke="#e0e0e0" stroke-width="0.5" />
                         }
-                    }
-                    @* Layer 3 – agent circles (always on top) *@
-                    @foreach (var (_, agent) in _agentPositions)
-                    {
-                        <circle cx="@(agent.Position.X * CellSize + CellSize / 2)"
-                                cy="@(agent.Position.Y * CellSize + CellSize / 2)"
-                                r="@(CellSize / 2 - 2)"
-                                fill="@AgentFill(agent.Type)" opacity="0.85" />
-                    }
+                        @* Layer 2 – effect overlays (path / sight) on non-block cells *@
+                        @foreach (var cell in _cells.Values)
+                        {
+                            var effectFill = GetEffectFill(cell);
+                            if (effectFill is not null)
+                            {
+                                <rect x="@(cell.Position.X * CellSize)" y="@(cell.Position.Y * CellSize)"
+                                      width="@CellSize" height="@CellSize"
+                                      class="@GetEffectClass(cell)"
+                                      fill="@effectFill" />
+                            }
+                        }
+                        @* Layer 3 – agent circles (always on top) *@
+                        @foreach (var (_, agent) in _agentPositions)
+                        {
+                            <circle cx="@(agent.Position.X * CellSize + CellSize / 2)"
+                                    cy="@(agent.Position.Y * CellSize + CellSize / 2)"
+                                    r="@(CellSize / 2 - 2)"
+                                    fill="@AgentFill(agent.Type)" opacity="0.85" />
+                        }
+                    </g>
                 </svg>
             </div>
             @* Legend *@

@@ -17,8 +17,6 @@ public class PlaygroundBuilder(
     private Guid? _playgroundId;
     private int? _turn;
 
-    public int Test { get; set; } = 0;
-
     public StandardPlayground Playground
     {
         get
@@ -79,7 +77,6 @@ public class PlaygroundBuilder(
 
     public IPlaygroundBuilder PlaceBlocks(int blocksCount)
     {
-        Test++;
         var random = new Random();
 
         // Pre-seed with all coordinates that are already occupied (includes border blocks

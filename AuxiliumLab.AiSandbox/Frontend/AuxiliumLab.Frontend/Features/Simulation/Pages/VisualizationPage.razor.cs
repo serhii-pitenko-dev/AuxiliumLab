@@ -5,8 +5,9 @@ namespace AuxiliumLab.Frontend.Features.Simulation.Pages;
 
 public partial class VisualizationPage : IAsyncDisposable
 {
-    private const int CellSize = 16;
-    private const int MaxLogs  = 200;
+    private const int CellSize   = 16;
+    private const int AxisMargin = 18;
+    private const int MaxLogs    = 200;
 
     private readonly StartSingleSimulationCommand _cmd = new()
     {
@@ -102,13 +103,13 @@ public partial class VisualizationPage : IAsyncDisposable
         {
             await SimulationApi.ResumeSimulationAsync(_jobId);
             _paused = false;
-            AddLog("Resumed");
+            AddRawLog("---Resumed---");
         }
         else
         {
             await SimulationApi.PauseSimulationAsync(_jobId);
             _paused = true;
-            AddLog("Paused");
+            AddRawLog("---Paused---");
         }
     }
 
@@ -116,7 +117,7 @@ public partial class VisualizationPage : IAsyncDisposable
     {
         await SimulationApi.StopSimulationAsync(_jobId);
         _running = false;
-        AddLog("Stop requested");
+        AddRawLog("---Stop Requested---");
         Notifications.Notify("Simulation stop requested");
     }
 
@@ -142,7 +143,9 @@ public partial class VisualizationPage : IAsyncDisposable
             _agents[a.AgentId] = a.Snapshot;
         }
 
-        AddLog($"Grid {e.Width}x{e.Height}, max turns={e.MaxTurns}, agents={e.Agents.Length} [{string.Join(", ", e.Agents.Select(a => $"{a.AgentType}@({a.Position.X},{a.Position.Y})"))}]");
+        AddLog($"Grid {e.Width}x{e.Height}, max turns={e.MaxTurns}, agents={e.Agents.Length}");
+        foreach (var a in e.Agents)
+            AddLog($"  {a.AgentType} @ ({a.Position.X},{a.Position.Y})");
         InvokeAsync(StateHasChanged);
     }
 
@@ -157,7 +160,9 @@ public partial class VisualizationPage : IAsyncDisposable
             foreach (var cell in e.UpdatedCells)
                 _cells[$"{cell.Position.X},{cell.Position.Y}"] = cell;
 
-            AddLog($"AgentMoved T{_currentTurn}: {e.AgentType} {e.AgentId[..Math.Min(6, e.AgentId.Length)]} ({e.From.X},{e.From.Y}) → ({e.To.X},{e.To.Y})");
+            var action = e.Agent?.IsRun == true ? "Run" : "Move";
+            var status = e.IsSuccess ? "" : " FAILED";
+            AddRawLog($"{e.AgentType} #{e.AgentId[..Math.Min(6, e.AgentId.Length)]} {action}: ({e.From.X},{e.From.Y}) → ({e.To.X},{e.To.Y}){status}");
             InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
@@ -169,7 +174,8 @@ public partial class VisualizationPage : IAsyncDisposable
     private void HandleAgentToggled(AgentToggledDto e)
     {
         _agents[e.AgentId] = e.Agent;
-        AddLog($"{e.AgentType} {e.AgentId[..Math.Min(6, e.AgentId.Length)]} {e.Action} ({(e.IsActivated ? "on" : "off")})");
+        var state = e.IsActivated ? "Activated" : "Deactivated";
+        AddRawLog($"{e.AgentType} #{e.AgentId[..Math.Min(6, e.AgentId.Length)]} {e.Action} ability: {state}");
         InvokeAsync(StateHasChanged);
     }
 
@@ -178,7 +184,7 @@ public partial class VisualizationPage : IAsyncDisposable
         _currentTurn = e.TurnNumber;
         foreach (var cell in e.UpdatedCells)
             _cells[$"{cell.Position.X},{cell.Position.Y}"] = cell;
-        AddLog($"TurnCompleted: turn={e.TurnNumber} cells={e.UpdatedCells.Length}");
+        AddRawLog($"--------Turn {e.TurnNumber}--------");
         InvokeAsync(StateHasChanged);
     }
 
@@ -187,7 +193,7 @@ public partial class VisualizationPage : IAsyncDisposable
         _outcome = e.Outcome;
         _reason  = e.Reason;
         _running = false;
-        AddLog($"Ended: {e.Outcome} at turn {e.FinalTurn}");
+        AddRawLog($"========{e.Outcome} at turn {e.FinalTurn}========");
         Notifications.Notify($"Simulation ended: {e.Outcome}");
         InvokeAsync(StateHasChanged);
     }
@@ -197,6 +203,12 @@ public partial class VisualizationPage : IAsyncDisposable
     private void AddLog(string msg)
     {
         _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {msg}");
+        if (_logs.Count > MaxLogs) _logs.RemoveAt(_logs.Count - 1);
+    }
+
+    private void AddRawLog(string msg)
+    {
+        _logs.Insert(0, msg);
         if (_logs.Count > MaxLogs) _logs.RemoveAt(_logs.Count - 1);
     }
 

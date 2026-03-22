@@ -49,28 +49,28 @@ public sealed class SimulationHubClient : ISimulationHubClient
 
         _connection.On<SimulationStartedDto>("SimulationStarted", dto =>
         {
-            try { OnSimulationStarted?.Invoke(dto); OnDebugMessage?.Invoke("[raw] SimulationStarted ok"); }
-            catch (Exception ex) { OnDebugMessage?.Invoke($"[raw] SimulationStarted ERROR: {ex.Message}"); }
+            try { OnSimulationStarted?.Invoke(dto); }
+            catch (Exception ex) { OnDebugMessage?.Invoke($"SimulationStarted ERROR: {ex.Message}"); }
         });
         _connection.On<AgentMovedDto>("AgentMoved", dto =>
         {
-            try { OnDebugMessage?.Invoke($"[raw] AgentMoved {dto?.AgentId?[..Math.Min(6, dto.AgentId?.Length ?? 0)]} ({dto?.From?.X},{dto?.From?.Y})→({dto?.To?.X},{dto?.To?.Y})"); OnAgentMoved?.Invoke(dto!); }
-            catch (Exception ex) { OnDebugMessage?.Invoke($"[raw] AgentMoved ERROR: {ex.Message}"); }
+            try { OnAgentMoved?.Invoke(dto!); }
+            catch (Exception ex) { OnDebugMessage?.Invoke($"AgentMoved ERROR: {ex.Message}"); }
         });
         _connection.On<AgentToggledDto>("AgentToggled", dto =>
         {
             try { OnAgentToggled?.Invoke(dto); }
-            catch (Exception ex) { OnDebugMessage?.Invoke($"[raw] AgentToggled ERROR: {ex.Message}"); }
+            catch (Exception ex) { OnDebugMessage?.Invoke($"AgentToggled ERROR: {ex.Message}"); }
         });
         _connection.On<TurnCompletedDto>("TurnCompleted", dto =>
         {
-            try { OnDebugMessage?.Invoke($"[raw] TurnCompleted turn={dto?.TurnNumber} cells={dto?.UpdatedCells?.Length}"); OnTurnCompleted?.Invoke(dto!); }
-            catch (Exception ex) { OnDebugMessage?.Invoke($"[raw] TurnCompleted ERROR: {ex.Message}"); }
+            try { OnTurnCompleted?.Invoke(dto!); }
+            catch (Exception ex) { OnDebugMessage?.Invoke($"TurnCompleted ERROR: {ex.Message}"); }
         });
         _connection.On<SimulationEndedDto>("SimulationEnded", dto =>
         {
-            try { OnSimulationEnded?.Invoke(dto); OnDebugMessage?.Invoke("[raw] SimulationEnded ok"); }
-            catch (Exception ex) { OnDebugMessage?.Invoke($"[raw] SimulationEnded ERROR: {ex.Message}"); }
+            try { OnSimulationEnded?.Invoke(dto); }
+            catch (Exception ex) { OnDebugMessage?.Invoke($"SimulationEnded ERROR: {ex.Message}"); }
         });
 
         await _connection.StartAsync(ct);

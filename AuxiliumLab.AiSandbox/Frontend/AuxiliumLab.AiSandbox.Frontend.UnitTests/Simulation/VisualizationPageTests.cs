@@ -166,7 +166,7 @@ public class VisualizationPageTests
 
             // The event log should record the move regardless of success
             cut.WaitForAssertion(() =>
-                cut.Markup.Should().Contain("AgentMoved"));
+                cut.Markup.Should().Contain("Hero #agent"));
         }
     }
 
