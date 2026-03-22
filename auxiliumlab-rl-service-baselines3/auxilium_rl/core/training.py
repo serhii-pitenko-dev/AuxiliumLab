@@ -120,11 +120,14 @@ class TrainingOrchestrator:
         run_id = str(uuid.uuid4())
         
         # Create run info
+        gym_ids_raw = config.hyperparameters.get("gym_ids", "")
+        num_envs = len([g for g in gym_ids_raw.split(";") if g]) or 1
         run_info = RunInfo(
             run_id=run_id,
             config=config,
             status=RunStatus.PENDING,
-            total_timesteps=config.total_timesteps
+            total_timesteps=config.total_timesteps,
+            num_envs=num_envs
         )
         
         # Register the run

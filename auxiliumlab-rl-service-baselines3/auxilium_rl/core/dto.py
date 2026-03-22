@@ -60,6 +60,7 @@ class RunInfo:
     status: RunStatus
     timesteps_done: int = 0
     total_timesteps: int = 0
+    num_envs: int = 1
     last_checkpoint_path: Optional[str] = None
     final_model_path: Optional[str] = None
     error_message: Optional[str] = None

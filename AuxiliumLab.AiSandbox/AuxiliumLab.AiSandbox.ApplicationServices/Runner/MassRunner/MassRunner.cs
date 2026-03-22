@@ -6,8 +6,6 @@ using AuxiliumLab.AiSandbox.Infrastructure.FileManager;
 using AuxiliumLab.AiSandbox.Statistics.Converters;
 using AuxiliumLab.AiSandbox.Statistics.Preconditions;
 using AuxiliumLab.AiSandbox.Statistics.StatisticDataManager;
-using Microsoft.Extensions.Options;
-
 namespace AuxiliumLab.AiSandbox.ApplicationServices.Runner.MassRunner;
 
 /// <summary>
@@ -21,10 +19,10 @@ public class MassRunner
     public MassRunner(
         IFileDataManager<GeneralBatchRunInformation> batchResultFileManager,
         IStatisticFileDataManager statisticFileManager,
-        IOptions<SandBoxConfiguration> configuration)
+        SandBoxConfiguration configuration)
     {
         _statisticFileManager   = statisticFileManager;
-        _configuration          = configuration.Value;
+        _configuration          = configuration;
     }
 
     /// <summary>

@@ -8,7 +8,7 @@ namespace AuxiliumLab.AiSandbox.Common.SimulationVisualizationBridge;
 public interface ISimulationVisualizationBridge
 {
     /// <summary>Register a job that is about to start executing.</summary>
-    void Attach(Guid jobId);
+    void Attach(Guid jobId, int maxTurns);
 
     /// <summary>Unregister a job that has finished (or failed).</summary>
     void Detach(Guid jobId);

@@ -91,6 +91,8 @@ message StatusResponse {
   bool is_done = 2;
   string last_checkpoint_path = 3;
   string error_message = 4;
+  int32 total_timesteps = 5;
+  int32 num_envs = 6;
 }
 
 // Request message for action inference

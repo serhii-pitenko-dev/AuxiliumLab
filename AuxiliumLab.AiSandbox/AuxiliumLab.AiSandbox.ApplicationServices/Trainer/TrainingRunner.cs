@@ -29,20 +29,17 @@ namespace AuxiliumLab.AiSandbox.ApplicationServices.Trainer;
 public class TrainingRunner
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly TrainingSettings _trainingSettings;
     private readonly Sb3AlgorithmTypeProvider _algorithmTypeProvider;
     private readonly IPolicyTrainerClient _policyTrainerClient;
     private readonly GymBrokerRegistry _gymBrokerRegistry;
 
     public TrainingRunner(
         IServiceProvider serviceProvider,
-        TrainingSettings trainingSettings,
         Sb3AlgorithmTypeProvider algorithmTypeProvider,
         IPolicyTrainerClient policyTrainerClient,
         GymBrokerRegistry gymBrokerRegistry)
     {
         _serviceProvider = serviceProvider;
-        _trainingSettings = trainingSettings;
         _algorithmTypeProvider = algorithmTypeProvider;
         _policyTrainerClient = policyTrainerClient;
         _gymBrokerRegistry = gymBrokerRegistry;
@@ -55,21 +52,41 @@ public class TrainingRunner
     /// </summary>
     public async Task<TrainingRunInfo> RunTrainingAsync(
         ModelType algorithmType,
-        StartPpoTrainingCommand? overrides = null,
+        StartPpoTrainingCommand overrides,
+        TrainingJobStatusDto? jobStatus = null,
+        SandBoxConfiguration? sandboxConfig = null,
         CancellationToken cancellationToken = default)
     {
-        // 1. Find the settings for the selected algorithm (merged with overrides)
+        // 1. Build algorithm settings directly from the web-request DTO
         string algorithmName = algorithmType.ToString().ToUpper();
-        var baseAlgoSettings = _trainingSettings.Algorithms
-            .FirstOrDefault(a => a.Algorithm.Equals(algorithmName, StringComparison.OrdinalIgnoreCase))
-            ?? throw new InvalidOperationException(
-                $"No training settings found for algorithm '{algorithmName}' in appsettings.json → TrainingSettings.Algorithms.");
+        var hp = overrides.Hyperparameters;
+        var algoSettings = new TrainingAlgorithmSettings
+        {
+            Algorithm = algorithmName,
+            Parameters =
+            [
+                new TrainingParameter("total_timesteps", hp.TotalTimesteps.ToString()),
+                new TrainingParameter("n_envs",          hp.NEnvs.ToString()),
+                new TrainingParameter("learning_rate",   hp.LearningRate.ToString("G")),
+                new TrainingParameter("n_steps",         hp.NSteps.ToString()),
+                new TrainingParameter("batch_size",      hp.BatchSize.ToString()),
+                new TrainingParameter("n_epochs",        hp.NEpochs.ToString()),
+                new TrainingParameter("gamma",           hp.Gamma.ToString("G")),
+                new TrainingParameter("gae_lambda",      hp.GaeLambda.ToString("G")),
+                new TrainingParameter("clip_range",      hp.ClipRange.ToString("G")),
+                new TrainingParameter("ent_coef",        hp.EntCoef.ToString("G")),
+                new TrainingParameter("seed",            hp.Seed.ToString()),
+            ]
+        };
 
-        // Apply any web-request hyperparameter overrides
-        var algoSettings = ApplyHyperparameterOverrides(baseAlgoSettings, overrides?.Hyperparameters);
-
-        // Apply reward overrides
-        var rewards = ApplyRewardOverrides(_trainingSettings.Rewards, overrides?.RewardSettings);
+        // Build reward settings from the web-request DTO
+        var rw = overrides.RewardSettings;
+        var rewards = new RewardSettings
+        {
+            StepPenalty = rw.StepPenalty,
+            WinReward   = rw.WinReward,
+            LossReward  = rw.LossReward
+        };
 
         // 2. Instantiate the correct Training class
         ITraining training = algorithmType switch
@@ -88,16 +105,18 @@ public class TrainingRunner
         var turnPerfRepo = _serviceProvider.GetRequiredService<IFileDataManager<TurnExecutionPerformance>>();
         var sbxPerfRepo = _serviceProvider.GetRequiredService<IFileDataManager<SandboxExecutionPerformance>>();
         var testPreconditionData = _serviceProvider.GetRequiredService<ITestPreconditionData>();
-        var sandboxConfig = _serviceProvider.GetRequiredService<IOptions<SandBoxConfiguration>>();
         var fileSourceConfig = _serviceProvider.GetRequiredService<IOptions<FileSourceConfiguration>>();
 
-        // Apply sandbox overrides if provided
-        var effectiveSandboxConfig = ApplySandboxOverrides(sandboxConfig, overrides?.SandboxSettings);
+        // Build sandbox configuration from the DTO (prefer overrides DTO, then explicit config)
+        var sb = overrides.SandboxSettings;
+        var effectiveSandboxConfig = sandboxConfig
+            ?? SandBoxConfiguration.CreateFromValues(
+                sb.MaxTurns, sb.MapWidth, sb.MapHeight,
+                sb.BlocksPercent, sb.EnemiesPercent,
+                sb.HeroSpeed, sb.HeroSightRange, sb.HeroStamina, sb.EnemySpeed);
 
         // 4. Create one executor + Sb3Actions pair per physical core (or the override count).
-        int nEnvs = overrides?.Hyperparameters?.NEnvs.HasValue == true
-            ? Math.Max(1, overrides.Hyperparameters.NEnvs.Value)
-            : Math.Max(1, training.PhysicalCores);
+        int nEnvs = Math.Max(1, hp.NEnvs);
         var executorTasks = new List<Task>();
         var gymIds = new List<Guid>();
         var gymCtsList    = new List<CancellationTokenSource>();
@@ -184,7 +203,7 @@ public class TrainingRunner
         //    This replaces the old silent coupling where obs_dim was hard-coded
         //    on both sides. Any mismatch is now a hard error here.
         string experimentId = training.BuildExperimentId();
-        var spec = EnvironmentSpecBuilder.Build(effectiveSandboxConfig.Value, experimentId);
+        var spec = EnvironmentSpecBuilder.Build(effectiveSandboxConfig, experimentId);
         var negotiationCt = new CancellationTokenSource(TimeSpan.FromSeconds(30)).Token;
         NegotiateEnvironmentResponse negotiation;
         try
@@ -214,11 +233,23 @@ public class TrainingRunner
         Console.WriteLine($"[Training] Starting {algorithmType} training with {nEnvs} gym(s)...");
         Console.WriteLine($"[Training] Experiment: {experimentId}");
         Console.WriteLine($"[Training] Gym IDs: {string.Join(", ", gymIds.Select(g => g.ToString("N")[..8]))}");
-        await training.Run(
+        var runId = await training.Run(
             _policyTrainerClient,
             gymIds,
             fileSourceConfig.Value.FileStorage.BasePath,
             fileSourceConfig.Value.FileStorage.TrainedAlgorithms);
+
+        // Populate job status with progress metadata
+        if (jobStatus is not null)
+        {
+            jobStatus.RunId           = runId;
+            jobStatus.TotalTimesteps  = training.BuildTrainingRequest(algoSettings, nEnvs, gymIds).TotalTimesteps;
+            jobStatus.NumEnvironments = nEnvs;
+        }
+
+        // 6b. Poll Python for training progress while waiting for gyms to close
+        using var pollCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var pollTask = PollTrainingProgressAsync(runId, jobStatus, pollCts.Token);
 
         // 7. Wait until all gyms close (Python training complete) or app is stopped.
         try
@@ -232,6 +263,10 @@ public class TrainingRunner
         }
         finally
         {
+            // Stop the progress-polling loop
+            await pollCts.CancelAsync();
+            try { await pollTask.ConfigureAwait(false); } catch (OperationCanceledException) { }
+
             // Clean up broker registrations so stale gym IDs don't linger
             foreach (var id in gymIds)
                 _gymBrokerRegistry.Unregister(id);
@@ -250,7 +285,7 @@ public class TrainingRunner
             algorithmType,
             experimentId,
             parameterDict,
-            effectiveSandboxConfig.Value,
+            effectiveSandboxConfig,
             rewards,
             fileSourceConfig.Value);
 
@@ -258,98 +293,6 @@ public class TrainingRunner
     }
 
     // ── Helper Methods ──────────────────────────────────────────────────────────
-
-    /// <summary>Applies web-request hyperparameter overrides on top of settings-file defaults.</summary>
-    private static TrainingAlgorithmSettings ApplyHyperparameterOverrides(
-        TrainingAlgorithmSettings baseSettings,
-        PpoHyperparametersDto? overrides)
-    {
-        if (overrides is null)
-            return baseSettings;
-
-        var merged = new TrainingAlgorithmSettings
-        {
-            Algorithm = baseSettings.Algorithm,
-            Parameters = new List<TrainingParameter>(baseSettings.Parameters)
-        };
-
-        void SetOrAdd(string name, string? value)
-        {
-            if (value is null) return;
-            var idx = merged.Parameters.FindIndex(p => p.Name == name);
-            if (idx >= 0)
-                merged.Parameters[idx] = merged.Parameters[idx] with { Value = value };
-            else
-                merged.Parameters.Add(new TrainingParameter(name, value));
-        }
-
-        if (overrides.TotalTimesteps.HasValue) SetOrAdd("total_timesteps", overrides.TotalTimesteps.Value.ToString());
-        if (overrides.LearningRate.HasValue)   SetOrAdd("learning_rate",   overrides.LearningRate.Value.ToString("G"));
-        if (overrides.NSteps.HasValue)         SetOrAdd("n_steps",         overrides.NSteps.Value.ToString());
-        if (overrides.BatchSize.HasValue)      SetOrAdd("batch_size",      overrides.BatchSize.Value.ToString());
-        if (overrides.NEpochs.HasValue)        SetOrAdd("n_epochs",        overrides.NEpochs.Value.ToString());
-        if (overrides.Gamma.HasValue)          SetOrAdd("gamma",           overrides.Gamma.Value.ToString("G"));
-        if (overrides.GaeLambda.HasValue)      SetOrAdd("gae_lambda",      overrides.GaeLambda.Value.ToString("G"));
-        if (overrides.ClipRange.HasValue)      SetOrAdd("clip_range",      overrides.ClipRange.Value.ToString("G"));
-        if (overrides.EntCoef.HasValue)        SetOrAdd("ent_coef",        overrides.EntCoef.Value.ToString("G"));
-        if (overrides.Seed.HasValue)           SetOrAdd("seed",            overrides.Seed.Value.ToString());
-        if (overrides.NEnvs.HasValue)          SetOrAdd("n_envs",          overrides.NEnvs.Value.ToString());
-
-        return merged;
-    }
-
-    /// <summary>Applies web-request reward overrides on top of settings-file defaults.</summary>
-    private static RewardSettings ApplyRewardOverrides(RewardSettings baseRewards, RewardSettingsDto? overrides)
-    {
-        if (overrides is null)
-            return baseRewards;
-
-        return new RewardSettings
-        {
-            StepPenalty = overrides.StepPenalty ?? baseRewards.StepPenalty,
-            WinReward   = overrides.WinReward   ?? baseRewards.WinReward,
-            LossReward  = overrides.LossReward  ?? baseRewards.LossReward
-        };
-    }
-
-    /// <summary>Creates a new IOptions wrapper with sandbox overrides applied.</summary>
-    private static IOptions<SandBoxConfiguration> ApplySandboxOverrides(
-        IOptions<SandBoxConfiguration> original,
-        TrainingSandboxSettingsDto? overrides)
-    {
-        if (overrides is null)
-            return original;
-
-        // Deep-clone via JSON round-trip then apply overrides
-        var json = JsonSerializer.Serialize(original.Value);
-        var cfg  = JsonSerializer.Deserialize<SandBoxConfiguration>(json)!;
-
-        if (overrides.MaxTurns.HasValue) cfg.MaxTurns = cfg.MaxTurns.WithCurrent(overrides.MaxTurns.Value);
-
-        // Structs must be copied out, mutated, then assigned back
-        var mapSettings = cfg.MapSettings;
-        var size = mapSettings.Size;
-        if (overrides.MapWidth.HasValue)  size.Width  = size.Width.WithCurrent(overrides.MapWidth.Value);
-        if (overrides.MapHeight.HasValue) size.Height = size.Height.WithCurrent(overrides.MapHeight.Value);
-        mapSettings.Size = size;
-        var elemPerc = mapSettings.ElementsPercentages;
-        if (overrides.BlocksPercent.HasValue)  elemPerc.BlocksPercent      = elemPerc.BlocksPercent.WithCurrent((int)overrides.BlocksPercent.Value);
-        if (overrides.EnemiesPercent.HasValue) elemPerc.PercentOfEnemies   = elemPerc.PercentOfEnemies.WithCurrent((int)overrides.EnemiesPercent.Value);
-        mapSettings.ElementsPercentages = elemPerc;
-        cfg.MapSettings = mapSettings;
-
-        var hero = cfg.Hero;
-        if (overrides.HeroSpeed.HasValue)      hero.Speed      = hero.Speed.WithCurrent(overrides.HeroSpeed.Value);
-        if (overrides.HeroSightRange.HasValue) hero.SightRange = hero.SightRange.WithCurrent(overrides.HeroSightRange.Value);
-        if (overrides.HeroStamina.HasValue)    hero.Stamina    = hero.Stamina.WithCurrent(overrides.HeroStamina.Value);
-        cfg.Hero = hero;
-
-        var enemy = cfg.Enemy;
-        if (overrides.EnemySpeed.HasValue) enemy.Speed = enemy.Speed.WithCurrent(overrides.EnemySpeed.Value);
-        cfg.Enemy = enemy;
-
-        return Options.Create(cfg);
-    }
 
     /// <summary>
     /// Saves preconditions.json to the experiment folder so the trained model
@@ -394,6 +337,36 @@ public class TrainingRunner
         catch (Exception ex)
         {
             Console.WriteLine($"[Training] WARNING: Failed to save preconditions.json: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Polls Python's GetTrainingStatus RPC every 3 seconds and updates the job status DTO.
+    /// Runs until cancelled (when training completes or is stopped).
+    /// </summary>
+    private async Task PollTrainingProgressAsync(
+        string runId, TrainingJobStatusDto? jobStatus, CancellationToken ct)
+    {
+        if (jobStatus is null || string.IsNullOrEmpty(runId)) return;
+
+        var request = new StatusRequest { RunId = runId };
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(3), ct).ConfigureAwait(false);
+                var response = await _policyTrainerClient.GetTrainingStatusAsync(request, ct);
+                jobStatus.TimestepsDone = response.TimestepsDone;
+                if (response.TotalTimesteps > 0)
+                    jobStatus.TotalTimesteps = response.TotalTimesteps;
+                if (response.NumEnvs > 0)
+                    jobStatus.NumEnvironments = response.NumEnvs;
+            }
+            catch (OperationCanceledException) { break; }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Training] Progress poll failed: {ex.Message}");
+            }
         }
     }
 }

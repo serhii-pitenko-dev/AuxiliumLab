@@ -1,7 +1,6 @@
 using AuxiliumLab.AiSandbox.Ai;
 using AuxiliumLab.AiSandbox.Ai.Configuration;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Configuration;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
 using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Training.Dto;
 using AuxiliumLab.AiSandbox.ApplicationServices.Executors;
@@ -16,7 +15,6 @@ using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects.StartupSettings;
 using AuxiliumLab.AiSandbox.Statistics.Preconditions;
 using AuxiliumLab.AiSandbox.Statistics.StatisticDataManager;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 namespace AuxiliumLab.AiSandbox.ApplicationServices.Runner.AggregationRunner;
 
@@ -35,26 +33,23 @@ public record AggregationStepConfiguration(string Name, ExecutionMode Mode);
 public class AggregationRunner
 {
     private readonly IServiceProvider          _serviceProvider;
-    private readonly TrainingSettings          _trainingSettings;
     private readonly Sb3AlgorithmTypeProvider  _algorithmTypeProvider;
     private readonly IPolicyTrainerClient      _policyTrainerClient;
     private readonly GymBrokerRegistry         _gymBrokerRegistry;
     private readonly IStatisticFileDataManager _statisticFileManager;
-    private readonly IOptions<SandBoxConfiguration> _sandboxConfig;
+    private readonly SandBoxConfiguration      _sandboxConfig;
     private readonly string                    _algorithmsFolderPath;
 
     public AggregationRunner(
         IServiceProvider          serviceProvider,
-        TrainingSettings          trainingSettings,
         Sb3AlgorithmTypeProvider  algorithmTypeProvider,
         IPolicyTrainerClient      policyTrainerClient,
         GymBrokerRegistry         gymBrokerRegistry,
         IStatisticFileDataManager statisticFileManager,
-        IOptions<SandBoxConfiguration> sandboxConfig,
+        SandBoxConfiguration      sandboxConfig,
         string algorithmsFolderPath)
     {
         _serviceProvider       = serviceProvider;
-        _trainingSettings      = trainingSettings;
         _algorithmTypeProvider = algorithmTypeProvider;
         _policyTrainerClient   = policyTrainerClient;
         _gymBrokerRegistry     = gymBrokerRegistry;
@@ -79,7 +74,7 @@ public class AggregationRunner
         SimulationIncrementalPropertiesSettings incrementalProperties,
         ModelType algorithmType,
         AiPolicy policyType,
-        StartPpoTrainingCommand? trainingOverrides = null,
+        StartPpoTrainingCommand trainingOverrides,
         CancellationToken cancellationToken = default)
     {
         var startDate   = DateTime.Now;
@@ -105,12 +100,11 @@ public class AggregationRunner
                 {
                     var trainingRunner = new TrainingRunner(
                         _serviceProvider,
-                        _trainingSettings,
                         _algorithmTypeProvider,
                         _policyTrainerClient,
                         _gymBrokerRegistry);
 
-                    lastTrainingInfo = await trainingRunner.RunTrainingAsync(algorithmType, trainingOverrides, cancellationToken);
+                    lastTrainingInfo = await trainingRunner.RunTrainingAsync(algorithmType, trainingOverrides, sandboxConfig: _sandboxConfig, cancellationToken: cancellationToken);
 
                     stepResults.Add(new AggregationStepResult(
                         step.Name,
@@ -164,7 +158,7 @@ public class AggregationRunner
                         string.IsNullOrEmpty(modelPath)
                             ? null
                             : factory => factory.CreateInferenceExecutor(
-                                _policyTrainerClient, modelPath, aiConfig);
+                                _sandboxConfig, _policyTrainerClient, modelPath, aiConfig);
 
                     var result = await RunMassStepAsync(
                         step,
@@ -215,7 +209,7 @@ public class AggregationRunner
 
         Func<IStandardExecutor> createExecutor = createExecutorOverride is not null
             ? () => createExecutorOverride(executorFactory)
-            : executorFactory.CreateStandardExecutor;
+            : () => executorFactory.CreateStandardExecutor(_sandboxConfig);
 
         var simulationSettings = new SimulationStartupSettings
         {

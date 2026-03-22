@@ -9,47 +9,47 @@ public partial class SandboxSettingsForm
 
     private bool _expanded;
 
-    private int? MaxTurns
+    private int MaxTurns
     {
         get => Override.MaxTurns;
         set { Override.MaxTurns = value; OverrideChanged.InvokeAsync(Override); }
     }
-    private int? MapWidth
+    private int MapWidth
     {
         get => Override.MapWidth;
         set { Override.MapWidth = value; OverrideChanged.InvokeAsync(Override); }
     }
-    private int? MapHeight
+    private int MapHeight
     {
         get => Override.MapHeight;
         set { Override.MapHeight = value; OverrideChanged.InvokeAsync(Override); }
     }
-    private double? BlocksPercent
+    private double BlocksPercent
     {
         get => Override.BlocksPercent;
         set { Override.BlocksPercent = value; OverrideChanged.InvokeAsync(Override); }
     }
-    private double? EnemiesPercent
+    private double EnemiesPercent
     {
         get => Override.EnemiesPercent;
         set { Override.EnemiesPercent = value; OverrideChanged.InvokeAsync(Override); }
     }
-    private int? HeroSpeed
+    private int HeroSpeed
     {
         get => Override.HeroSpeed;
         set { Override.HeroSpeed = value; OverrideChanged.InvokeAsync(Override); }
     }
-    private int? HeroSightRange
+    private int HeroSightRange
     {
         get => Override.HeroSightRange;
         set { Override.HeroSightRange = value; OverrideChanged.InvokeAsync(Override); }
     }
-    private int? HeroStamina
+    private int HeroStamina
     {
         get => Override.HeroStamina;
         set { Override.HeroStamina = value; OverrideChanged.InvokeAsync(Override); }
     }
-    private int? EnemySpeed
+    private int EnemySpeed
     {
         get => Override.EnemySpeed;
         set { Override.EnemySpeed = value; OverrideChanged.InvokeAsync(Override); }

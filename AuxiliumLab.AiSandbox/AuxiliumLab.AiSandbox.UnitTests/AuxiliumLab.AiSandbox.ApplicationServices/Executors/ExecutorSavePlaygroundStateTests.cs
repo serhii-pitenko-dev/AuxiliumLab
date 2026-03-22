@@ -19,7 +19,6 @@ using AuxiliumLab.AiSandbox.Infrastructure.MemoryManager;
 using AuxiliumLab.AiSandbox.SharedBaseTypes.AiContract.Dto;
 using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects;
 using FluentAssertions;
-using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -50,7 +49,7 @@ public class ExecutorSavePlaygroundStateTests
     private Mock<IFileDataManager<TurnExecutionPerformance>> _mockTurnPerfRepo = null!;
     private Mock<IFileDataManager<SandboxExecutionPerformance>> _mockSandboxPerfRepo = null!;
     private Mock<ITestPreconditionData> _mockTestPreconditionData = null!;
-    private IOptions<SandBoxConfiguration> _configuration = null!;
+    private SandBoxConfiguration _configuration = null!;
     private IMessageBroker _messageBroker = null!;
 
     private StandardPlayground _playground = null!;
@@ -108,10 +107,10 @@ public class ExecutorSavePlaygroundStateTests
         _mockTestPreconditionData = new Mock<ITestPreconditionData>();
 
         // MaxTurns.Current = 0 â†’ simulation loop exits on first check (Turn 0 >= 0)
-        _configuration = Options.Create(new SandBoxConfiguration
+        _configuration = new SandBoxConfiguration
         {
             MaxTurns = new IncrementalRange { Current = 0 }
-        });
+        };
     }
 
     // â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

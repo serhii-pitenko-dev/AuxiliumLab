@@ -10,7 +10,6 @@ public interface ISimulationApiClient
     Task<bool> StopSimulationAsync(Guid jobId, CancellationToken ct = default);
     Task<bool> PauseSimulationAsync(Guid jobId, CancellationToken ct = default);
     Task<bool> ResumeSimulationAsync(Guid jobId, CancellationToken ct = default);
-    Task<SandboxDefaultsDto?> GetSandboxDefaultsAsync(CancellationToken ct = default);
 }
 
 public sealed class SimulationApiClient : ApiClientBase, ISimulationApiClient
@@ -34,7 +33,4 @@ public sealed class SimulationApiClient : ApiClientBase, ISimulationApiClient
 
     public Task<bool> ResumeSimulationAsync(Guid jobId, CancellationToken ct = default)
         => PostVoidAsync($"ai-sandbox/simulation/{jobId}/resume", ct);
-
-    public Task<SandboxDefaultsDto?> GetSandboxDefaultsAsync(CancellationToken ct = default)
-        => GetAsync<SandboxDefaultsDto>("ai-sandbox/simulation/settings/defaults", ct);
 }

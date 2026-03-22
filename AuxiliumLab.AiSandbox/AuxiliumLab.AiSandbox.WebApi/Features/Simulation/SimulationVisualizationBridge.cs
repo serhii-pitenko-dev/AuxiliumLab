@@ -6,11 +6,9 @@ using AuxiliumLab.AiSandbox.Common.MessageBroker.Contracts.GlobalMessagesContrac
 using AuxiliumLab.AiSandbox.Common.MessageBroker.Contracts.GlobalMessagesContract.Events.Win;
 using AuxiliumLab.AiSandbox.Common.SimulationVisualizationBridge;
 using AuxiliumLab.AiSandbox.Domain.Playgrounds;
-using AuxiliumLab.AiSandbox.Infrastructure.Configuration.Preconditions;
 using AuxiliumLab.AiSandbox.Infrastructure.MemoryManager;
 using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 
 namespace AuxiliumLab.AiSandbox.WebApi.Features.Simulation;
@@ -25,8 +23,8 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
     private readonly IMessageBroker _broker;
     private readonly ISimulationHubNotifier _notifier;
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly IOptions<SandBoxConfiguration> _sandboxConfig;
     private readonly IMemoryDataManager<StandardPlayground> _playgroundMemory;
+    private readonly ConcurrentDictionary<Guid, int> _maxTurnsPerJob = new();
 
     // Jobs waiting for their first GameStartedEvent to fire
     private readonly ConcurrentQueue<Guid> _pendingAttachments = new();
@@ -55,13 +53,11 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
         IMessageBroker broker,
         ISimulationHubNotifier notifier,
         IServiceScopeFactory scopeFactory,
-        IOptions<SandBoxConfiguration> sandboxConfig,
         IMemoryDataManager<StandardPlayground> playgroundMemory)
     {
         _broker          = broker;
         _notifier        = notifier;
         _scopeFactory    = scopeFactory;
-        _sandboxConfig   = sandboxConfig;
         _playgroundMemory = playgroundMemory;
 
         _onGameStarted  = HandleGameStarted;
@@ -74,8 +70,9 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
 
     // ── ISimulationVisualizationBridge ──────────────────────────────────────
 
-    public void Attach(Guid jobId)
+    public void Attach(Guid jobId, int maxTurns)
     {
+        _maxTurnsPerJob[jobId] = maxTurns;
         _pendingAttachments.Enqueue(jobId);
         if (Interlocked.Increment(ref _attachedCount) == 1)
         {
@@ -98,6 +95,7 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
         {
             _playgroundToJob.TryRemove(key, out _);
         }
+        _maxTurnsPerJob.TryRemove(jobId, out _);
         // Do NOT clear _initialStates or _finalStates here — late-joining clients
         // may call JoinSimulation after the simulation ends and still need the
         // cached snapshots to reconstruct the grid and final outcome.
@@ -133,7 +131,7 @@ public sealed class SimulationVisualizationBridge : ISimulationVisualizationBrid
             JobId    = jobId.ToString(),
             Width    = layout.Cells.GetLength(0),
             Height   = layout.Cells.GetLength(1),
-            MaxTurns = _sandboxConfig.Value.MaxTurns.Current,
+            MaxTurns = _maxTurnsPerJob.TryGetValue(jobId, out var mt) ? mt : 100,
             Cells    = cells,
             Agents   = agents
         };

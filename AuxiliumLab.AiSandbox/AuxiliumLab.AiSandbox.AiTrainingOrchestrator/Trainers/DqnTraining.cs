@@ -46,12 +46,13 @@ public class DqnTraining : BaseTraining, ITraining
         return request;
     }
 
-    public async Task Run(IPolicyTrainerClient policyTrainerClient, IReadOnlyList<Guid> gymIds,
+    public async Task<string> Run(IPolicyTrainerClient policyTrainerClient, IReadOnlyList<Guid> gymIds,
         string? basePath = null, string? trainedAlgorithmsFolder = null)
     {
         int nEnvs = Math.Max(1, gymIds.Count);
         var request = BuildTrainingRequest(_settings, nEnvs, gymIds, basePath, trainedAlgorithmsFolder);
         CancellationToken cancellationToken = new CancellationTokenSource(TimeSpan.FromHours(2)).Token;
-        await policyTrainerClient.StartTrainingDQNAsync(request, cancellationToken);
+        var response = await policyTrainerClient.StartTrainingDQNAsync(request, cancellationToken);
+        return response.RunId;
     }
 }

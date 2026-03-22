@@ -8,22 +8,22 @@ public enum SimulationKind { RandomAI, TrainedAI }
 
 public class SimulationSandboxOverrideDto
 {
-    public int?    MaxTurns       { get; set; }
-    public int?    MapWidth       { get; set; }
-    public int?    MapHeight      { get; set; }
-    public double? BlocksPercent  { get; set; }
-    public double? EnemiesPercent { get; set; }
-    public int?    HeroSpeed      { get; set; }
-    public int?    HeroSightRange { get; set; }
-    public int?    HeroStamina    { get; set; }
-    public int?    EnemySpeed     { get; set; }
+    public int    MaxTurns       { get; set; }
+    public int    MapWidth       { get; set; }
+    public int    MapHeight      { get; set; }
+    public double BlocksPercent  { get; set; }
+    public double EnemiesPercent { get; set; }
+    public int    HeroSpeed      { get; set; }
+    public int    HeroSightRange { get; set; }
+    public int    HeroStamina    { get; set; }
+    public int    EnemySpeed     { get; set; }
 }
 
 public class StartSingleSimulationCommand
 {
     public SimulationKind                Kind            { get; set; } = SimulationKind.RandomAI;
     public ModelType                     Algorithm       { get; set; } = ModelType.PPO;
-    public SimulationSandboxOverrideDto? SandboxSettings { get; set; }
+    public SimulationSandboxOverrideDto  SandboxSettings { get; set; } = new();
     /// <summary>Delay in milliseconds applied between each agent action during presentation.</summary>
     public int                           ActionDelayMs   { get; set; } = 500;
 }
@@ -33,7 +33,7 @@ public class StartMassSimulationCommand
     public SimulationKind                Kind             { get; set; } = SimulationKind.RandomAI;
     public int                           SimulationCount  { get; set; } = 100;
     public ModelType                     Algorithm        { get; set; } = ModelType.PPO;
-    public SimulationSandboxOverrideDto? SandboxSettings  { get; set; }
+    public SimulationSandboxOverrideDto  SandboxSettings  { get; set; } = new();
     public IncrementalSweeperDto?        IncrementalSweep { get; set; }
 }
 

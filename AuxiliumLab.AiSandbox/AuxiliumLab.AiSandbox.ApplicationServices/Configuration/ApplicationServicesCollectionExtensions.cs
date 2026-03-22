@@ -68,12 +68,6 @@ public static class ApplicationServicesCollectionExtensions
         // ── Domain utilities ─────────────────────────────────────────────────
         services.AddSingleton<IStandardPlaygroundMapper, StandardPlaygroundMapper>();
         services.AddTransient<IExecutorFactory, ExecutorFactory>();
-        services.AddTransient<IExecutorForPresentation>(
-            sp => sp.GetRequiredService<IExecutorFactory>().CreateExecutorForPresentation());
-        // Note: DI-resolved IExecutorForPresentation uses default ActionDelayMs=0 and PauseGate=null.
-        // For customized values, use IExecutorFactory.CreateExecutorForPresentation(actionDelayMs, pauseGate).
-        services.AddTransient<IStandardExecutor>(
-            sp => sp.GetRequiredService<IExecutorFactory>().CreateStandardExecutor());
         services.AddSingleton<ITestPreconditionData, TestPreconditionData>();
 
         // ── Feature command services (singleton: own background-job state) ────

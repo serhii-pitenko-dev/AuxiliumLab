@@ -1,4 +1,3 @@
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Configuration;
 using AuxiliumLab.AiSandbox.GrpcHost.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -38,12 +37,6 @@ public static class GrpcTrainingHost
 
         // ── Caller registers core + presentation services ─────────────────────
         configure?.Invoke(builder);
-
-        // ── Training-specific: settings ───────────────────────────────────────
-        var trainingSettings =
-            builder.Configuration.GetSection("TrainingSettings").Get<TrainingSettings>()
-            ?? new TrainingSettings();
-        builder.Services.AddSingleton(trainingSettings);
 
         // ── gRPC server (Python → C# gym) on port 50062 ───────────────────────
         builder.Services.AddGrpc();

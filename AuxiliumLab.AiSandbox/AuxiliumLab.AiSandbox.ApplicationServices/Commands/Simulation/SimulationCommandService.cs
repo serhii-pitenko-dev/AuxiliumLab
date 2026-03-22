@@ -14,7 +14,6 @@ using AuxiliumLab.AiSandbox.Statistics.StatisticDataManager;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
-using System.Text.Json;
 
 namespace AuxiliumLab.AiSandbox.ApplicationServices.Commands.Simulation;
 
@@ -25,7 +24,6 @@ namespace AuxiliumLab.AiSandbox.ApplicationServices.Commands.Simulation;
 public sealed class SimulationCommandService : ISimulationCommands
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly IOptions<SandBoxConfiguration> _sandboxConfig;
     private readonly IOptions<FileSourceConfiguration> _fileSourceConfig;
     private readonly IPolicyTrainerClient _policyTrainerClient;
     private readonly IStatisticFileDataManager _statisticFileManager;
@@ -37,14 +35,12 @@ public sealed class SimulationCommandService : ISimulationCommands
 
     public SimulationCommandService(
         IServiceProvider serviceProvider,
-        IOptions<SandBoxConfiguration> sandboxConfig,
         IOptions<FileSourceConfiguration> fileSourceConfig,
         IPolicyTrainerClient policyTrainerClient,
         IStatisticFileDataManager statisticFileManager,
         ISimulationVisualizationBridge? visualizationBridge = null)
     {
         _serviceProvider      = serviceProvider;
-        _sandboxConfig        = sandboxConfig;
         _fileSourceConfig     = fileSourceConfig;
         _policyTrainerClient  = policyTrainerClient;
         _statisticFileManager = statisticFileManager;
@@ -81,14 +77,19 @@ public sealed class SimulationCommandService : ISimulationCommands
                 using var scope = _serviceProvider.CreateScope();
                 var executorFactory = scope.ServiceProvider.GetRequiredService<IExecutorFactory>();
 
+                var s = command.SandboxSettings;
+                var sandboxConfig = SandBoxConfiguration.CreateFromValues(
+                    s.MaxTurns, s.MapWidth, s.MapHeight,
+                    s.BlocksPercent, s.EnemiesPercent,
+                    s.HeroSpeed, s.HeroSightRange, s.HeroStamina, s.EnemySpeed);
+
                 var executor = executorFactory.CreateExecutorForPresentation(
-                    command.ActionDelayMs, pauseGate);
-                var effectiveConfig = ApplySandboxOverrides(_sandboxConfig, command.SandboxSettings);
-                _visualizationBridge?.Attach(jobId);
+                    sandboxConfig, command.ActionDelayMs, pauseGate);
+                _visualizationBridge?.Attach(jobId, sandboxConfig.MaxTurns.Current);
                 try
                 {
                     status.State = await executor.RunAsync(
-                        sandBoxConfiguration: effectiveConfig,
+                        sandBoxConfiguration: sandboxConfig,
                         cancellationToken: cts.Token);
                 }
                 finally
@@ -147,10 +148,16 @@ public sealed class SimulationCommandService : ISimulationCommands
                 var executorFactory  = scope.ServiceProvider.GetRequiredService<IExecutorFactory>();
                 var batchFileManager = scope.ServiceProvider.GetRequiredService<IFileDataManager<GeneralBatchRunInformation>>();
 
-                Func<IStandardExecutor> createExecutor = BuildExecutorCreator(command.Kind, command.Algorithm, executorFactory);
+                var ms = command.SandboxSettings;
+                var sandboxConfig = SandBoxConfiguration.CreateFromValues(
+                    ms.MaxTurns, ms.MapWidth, ms.MapHeight,
+                    ms.BlocksPercent, ms.EnemiesPercent,
+                    ms.HeroSpeed, ms.HeroSightRange, ms.HeroStamina, ms.EnemySpeed);
+
+                Func<IStandardExecutor> createExecutor = BuildExecutorCreator(command.Kind, command.Algorithm, executorFactory, sandboxConfig);
 
                 var startupSettings = BuildSimulationStartupSettings(command.IncrementalSweep);
-                var massRunner = new MassRunner(batchFileManager, _statisticFileManager, _sandboxConfig);
+                var massRunner = new MassRunner(batchFileManager, _statisticFileManager, sandboxConfig);
                 var result = await massRunner.RunManyAsync(createExecutor, command.SimulationCount, startupSettings: startupSettings);
 
                 status.CompletedRuns = result.StandardBatch.TotalRuns;
@@ -226,10 +233,10 @@ public sealed class SimulationCommandService : ISimulationCommands
     // ── Private helpers ──────────────────────────────────────────────────────
 
     private Func<IStandardExecutor> BuildExecutorCreator(
-        SimulationKind kind, ModelType algorithm, IExecutorFactory baseFactory)
+        SimulationKind kind, ModelType algorithm, IExecutorFactory baseFactory, SandBoxConfiguration configuration)
     {
         if (kind != SimulationKind.TrainedAI)
-            return baseFactory.CreateStandardExecutor;
+            return () => baseFactory.CreateStandardExecutor(configuration);
 
         if (algorithm != ModelType.PPO)
             throw new NotImplementedException($"Trained AI simulation for '{algorithm}' is not yet implemented.");
@@ -258,43 +265,7 @@ public sealed class SimulationCommandService : ISimulationCommands
             PolicyType = AiPolicy.MLP
         };
 
-        return () => baseFactory.CreateInferenceExecutor(_policyTrainerClient, modelPath, aiConfig);
-    }
-
-    internal static SandBoxConfiguration? ApplySandboxOverrides(
-        IOptions<SandBoxConfiguration> original,
-        SimulationSandboxOverrideDto? overrides)
-    {
-        if (overrides is null)
-            return null;
-
-        var json = JsonSerializer.Serialize(original.Value);
-        var cfg  = JsonSerializer.Deserialize<SandBoxConfiguration>(json)!;
-
-        if (overrides.MaxTurns.HasValue) cfg.MaxTurns = cfg.MaxTurns.WithCurrent(overrides.MaxTurns.Value);
-
-        var mapSettings = cfg.MapSettings;
-        var size = mapSettings.Size;
-        if (overrides.MapWidth.HasValue)  size.Width  = size.Width.WithCurrent(overrides.MapWidth.Value);
-        if (overrides.MapHeight.HasValue) size.Height = size.Height.WithCurrent(overrides.MapHeight.Value);
-        mapSettings.Size = size;
-        var elemPerc = mapSettings.ElementsPercentages;
-        if (overrides.BlocksPercent.HasValue)  elemPerc.BlocksPercent    = elemPerc.BlocksPercent.WithCurrent((int)overrides.BlocksPercent.Value);
-        if (overrides.EnemiesPercent.HasValue) elemPerc.PercentOfEnemies = elemPerc.PercentOfEnemies.WithCurrent((int)overrides.EnemiesPercent.Value);
-        mapSettings.ElementsPercentages = elemPerc;
-        cfg.MapSettings = mapSettings;
-
-        var hero = cfg.Hero;
-        if (overrides.HeroSpeed.HasValue)      hero.Speed      = hero.Speed.WithCurrent(overrides.HeroSpeed.Value);
-        if (overrides.HeroSightRange.HasValue) hero.SightRange = hero.SightRange.WithCurrent(overrides.HeroSightRange.Value);
-        if (overrides.HeroStamina.HasValue)    hero.Stamina    = hero.Stamina.WithCurrent(overrides.HeroStamina.Value);
-        cfg.Hero = hero;
-
-        var enemy = cfg.Enemy;
-        if (overrides.EnemySpeed.HasValue) enemy.Speed = enemy.Speed.WithCurrent(overrides.EnemySpeed.Value);
-        cfg.Enemy = enemy;
-
-        return cfg;
+        return () => baseFactory.CreateInferenceExecutor(configuration, _policyTrainerClient, modelPath, aiConfig);
     }
 
     private static SimulationStartupSettings BuildSimulationStartupSettings(IncrementalSweeperDto? sweep)

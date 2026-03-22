@@ -1,7 +1,6 @@
 using AuxiliumLab.AiSandbox.Ai;
 using AuxiliumLab.AiSandbox.Ai.Configuration;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Configuration;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
 using AuxiliumLab.AiSandbox.Common.MessageBroker;
 using AuxiliumLab.AiSandbox.ApplicationServices.Queries.AggregationRun;
@@ -23,13 +22,10 @@ namespace AuxiliumLab.AiSandbox.ApplicationServices.Commands.AggregationRun;
 public sealed class AggregationRunCommandService : IAggregationRunCommands
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly TrainingSettings _trainingSettings;
     private readonly Sb3AlgorithmTypeProvider _algorithmTypeProvider;
     private readonly IPolicyTrainerClient _policyTrainerClient;
     private readonly GymBrokerRegistry _gymBrokerRegistry;
-    private readonly IOptions<SandBoxConfiguration> _sandboxConfig;
     private readonly IOptions<FileSourceConfiguration> _fileSourceConfig;
-    private readonly IOptions<AggregationSettings> _aggregationSettings;
     private readonly IStatisticFileDataManager _statisticFileManager;
 
     private readonly ConcurrentDictionary<Guid, AggregationJobStatusDto> _jobs = new();
@@ -37,23 +33,17 @@ public sealed class AggregationRunCommandService : IAggregationRunCommands
 
     public AggregationRunCommandService(
         IServiceProvider serviceProvider,
-        TrainingSettings trainingSettings,
         Sb3AlgorithmTypeProvider algorithmTypeProvider,
         IPolicyTrainerClient policyTrainerClient,
         GymBrokerRegistry gymBrokerRegistry,
-        IOptions<SandBoxConfiguration> sandboxConfig,
         IOptions<FileSourceConfiguration> fileSourceConfig,
-        IOptions<AggregationSettings> aggregationSettings,
         IStatisticFileDataManager statisticFileManager)
     {
         _serviceProvider      = serviceProvider;
-        _trainingSettings     = trainingSettings;
         _algorithmTypeProvider = algorithmTypeProvider;
         _policyTrainerClient  = policyTrainerClient;
         _gymBrokerRegistry    = gymBrokerRegistry;
-        _sandboxConfig        = sandboxConfig;
         _fileSourceConfig     = fileSourceConfig;
-        _aggregationSettings  = aggregationSettings;
         _statisticFileManager = statisticFileManager;
     }
 
@@ -88,14 +78,20 @@ public sealed class AggregationRunCommandService : IAggregationRunCommands
                     _fileSourceConfig.Value.FileStorage.BasePath,
                     _fileSourceConfig.Value.FileStorage.TrainedAlgorithms);
 
+                var sb = command.SandboxSettings;
+                var sandboxConfig = SandBoxConfiguration.CreateFromValues(
+                    sb.MaxTurns, sb.MapWidth, sb.MapHeight,
+                    sb.BlocksPercent, sb.EnemiesPercent,
+                    sb.HeroSpeed, sb.HeroSightRange, sb.HeroStamina,
+                    sb.EnemySpeed);
+
                 var runner = new AggregationRunner(
                     _serviceProvider,
-                    _trainingSettings,
                     _algorithmTypeProvider,
                     _policyTrainerClient,
                     _gymBrokerRegistry,
                     _statisticFileManager,
-                    _sandboxConfig,
+                    sandboxConfig,
                     algorithmsFolderPath);
 
                 var incrementalProperties = new SimulationIncrementalPropertiesSettings
@@ -173,11 +169,10 @@ public sealed class AggregationRunCommandService : IAggregationRunCommands
 
     private IReadOnlyList<AggregationStepConfiguration> ResolveSteps(StartAggregationCommand command)
     {
-        IEnumerable<(string Name, string Mode)> source = command.Steps.Count > 0
-            ? command.Steps.Select(s => (s.Name, s.Mode))
-            : _aggregationSettings.Value.Steps.Select(s => (s.Name, s.Mode));
+        if (command.Steps.Count == 0)
+            throw new ArgumentException("At least one aggregation step must be provided.");
 
-        return source
+        return command.Steps
             .Select(s => new AggregationStepConfiguration(
                 s.Name,
                 Enum.TryParse<ExecutionMode>(s.Mode, out var mode)

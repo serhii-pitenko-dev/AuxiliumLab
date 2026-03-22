@@ -20,7 +20,6 @@ using AuxiliumLab.AiSandbox.Infrastructure.FileManager;
 using AuxiliumLab.AiSandbox.Infrastructure.MemoryManager;
 using AuxiliumLab.AiSandbox.SharedBaseTypes.AiContract.Dto;
 using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects;
-using Microsoft.Extensions.Options;
 
 #if CONSOLE_PRESENTATION_DEBUG
 #warning CONSOLE_PRESENTATION_DEBUG is ON
@@ -78,7 +77,7 @@ public abstract class Executor : IExecutor
         IPlaygroundCommandsHandleService playgroundCommandsHandleService,
         IMemoryDataManager<StandardPlayground> sandboxRepository,
         IAiActions aiActions,
-        IOptions<SandBoxConfiguration> configuration,
+        SandBoxConfiguration configuration,
         IFileDataManager<StandardPlaygroundState> playgroundStateFileRepository,
         IMemoryDataManager<AgentStateForAIDecision> agentStateMemoryRepository,
         IMessageBroker messageBroker,
@@ -91,7 +90,7 @@ public abstract class Executor : IExecutor
     {
         _playgroundCommands = playgroundCommandsHandleService;
         _playgroundRepository = sandboxRepository;
-        _configuration = configuration.Value;
+        _configuration = configuration;
         _activeConfiguration = _configuration;
         _agentStateMemoryRepository = agentStateMemoryRepository;
         _messageBroker = messageBroker;

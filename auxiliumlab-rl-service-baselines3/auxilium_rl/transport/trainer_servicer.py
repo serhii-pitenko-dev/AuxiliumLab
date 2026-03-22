@@ -199,7 +199,9 @@ class PolicyTrainerServicer(policy_trainer_pb2_grpc.PolicyTrainerServiceServicer
             timesteps_done=run_info.timesteps_done,
             is_done=is_done,
             last_checkpoint_path=run_info.last_checkpoint_path or "",
-            error_message=run_info.error_message or ""
+            error_message=run_info.error_message or "",
+            total_timesteps=run_info.total_timesteps,
+            num_envs=run_info.num_envs
         )
     
     def Act(

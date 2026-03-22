@@ -10,38 +10,92 @@
     Refresh
 </MudButton>
 
-<MudTable Items="_jobs" Dense="true" Striped="true" Loading="_loading" LoadingProgressColor="Color.Primary">
-    <HeaderContent>
-        <MudTh>Job ID</MudTh>
-        <MudTh>Algorithm</MudTh>
-        <MudTh>Experiment</MudTh>
-        <MudTh>State</MudTh>
-        <MudTh>Started At</MudTh>
-        <MudTh>Completed At</MudTh>
-        <MudTh>Actions</MudTh>
-    </HeaderContent>
-    <RowTemplate>
-        <MudTd DataLabel="Job ID">
-            <MudText Style="font-family:monospace;font-size:0.8rem">@context.JobId.ToString()[..8]…</MudText>
-        </MudTd>
-        <MudTd DataLabel="Algorithm">@context.Algorithm</MudTd>
-        <MudTd DataLabel="Experiment">@context.ExperimentId</MudTd>
-        <MudTd DataLabel="State">
-            <MudChip T="string" Color="@StateColor(context.State)" Size="Size.Small">@context.State</MudChip>
-        </MudTd>
-        <MudTd DataLabel="Started At">@context.StartedAt.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
-        <MudTd DataLabel="Completed At">@(context.CompletedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "—")</MudTd>
-        <MudTd DataLabel="Actions">
-            @if (context.State == TrainingJobState.Running)
-            {
-                <MudIconButton Icon="@Icons.Material.Filled.Stop" Color="Color.Error" Size="Size.Small"
-                               aria-label="Stop"
-                               OnClick="@(() => StopAsync(context.JobId))" />
-            }
-        </MudTd>
-    </RowTemplate>
-    <NoRecordsContent>
-        <MudText>No training jobs found.</MudText>
-    </NoRecordsContent>
-</MudTable>
+@if (!_jobs.Any())
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">No training jobs found.</MudAlert>
+}
+else
+{
+    @foreach (var job in _jobs)
+    {
+        <MudCard Class="mb-4" Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <div class="d-flex align-center gap-3">
+                        <MudChip T="string" Color="@StateColor(job.State)" Size="Size.Small">@job.State</MudChip>
+                        <MudText Typo="Typo.h6">@job.Algorithm</MudText>
+                        <MudText Typo="Typo.body2" Style="color:var(--mud-palette-text-secondary)">@job.ExperimentId</MudText>
+                    </div>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    @if (job.State == TrainingJobState.Running)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Stop" Color="Color.Error"
+                                       aria-label="Stop" OnClick="@(() => StopAsync(job.JobId))" />
+                    }
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent>
+                @if (job.State == TrainingJobState.Running && job.TotalTimesteps > 0)
+                {
+                    <div class="mb-3">
+                        <div class="d-flex justify-space-between align-center mb-1">
+                            <MudText Typo="Typo.body2">
+                                <b>@job.TimestepsDone.ToString("N0")</b> / @job.TotalTimesteps.ToString("N0") timesteps
+                            </MudText>
+                            <MudText Typo="Typo.body2">@ProgressPercent(job).ToString("F1")%</MudText>
+                        </div>
+                        <MudProgressLinear Value="@ProgressPercent(job)" Color="Color.Primary"
+                                           Rounded="true" Size="Size.Medium" />
+                    </div>
+                }
+
+                <MudSimpleTable Dense="true" Bordered="true" Style="max-width:600px">
+                    <tbody>
+                        <tr>
+                            <td><b>Job ID</b></td>
+                            <td style="font-family:monospace;font-size:0.85rem">@job.JobId.ToString()[..8]…</td>
+                        </tr>
+                        <tr>
+                            <td><b>Started</b></td>
+                            <td>@job.StartedAt.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        </tr>
+                        @if (job.CompletedAt.HasValue)
+                        {
+                            <tr>
+                                <td><b>Completed</b></td>
+                                <td>@job.CompletedAt.Value.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            </tr>
+                        }
+                        <tr>
+                            <td><b>Elapsed</b></td>
+                            <td>@FormatElapsed(job)</td>
+                        </tr>
+                        @if (job.State == TrainingJobState.Running && job.TimestepsDone > 0 && job.TotalTimesteps > 0)
+                        {
+                            <tr>
+                                <td><b>ETA</b></td>
+                                <td>@FormatEta(job)</td>
+                            </tr>
+                        }
+                        @if (job.NumEnvironments > 0)
+                        {
+                            <tr>
+                                <td><b>Parallel Environments</b></td>
+                                <td>@job.NumEnvironments</td>
+                            </tr>
+                        }
+                        @if (job.State == TrainingJobState.Failed && !string.IsNullOrEmpty(job.ErrorMessage))
+                        {
+                            <tr>
+                                <td><b>Error</b></td>
+                                <td style="color:var(--mud-palette-error)">@job.ErrorMessage</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudCardContent>
+        </MudCard>
+    }
+}
 

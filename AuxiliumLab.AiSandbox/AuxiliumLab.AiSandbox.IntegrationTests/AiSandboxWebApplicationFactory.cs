@@ -3,9 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Configuration;
 using AuxiliumLab.AiSandbox.Common.MessageBroker;
 using AuxiliumLab.AiSandbox.GrpcHost.Services;
 using AuxiliumLab.AiSandbox.Infrastructure.Configuration;
@@ -37,77 +35,6 @@ public sealed class AiSandboxWebApplicationFactory : WebApplicationFactory<Progr
                 cfg.FileStorage.PrecreatedPlaygrounds = "playgrounds";
                 cfg.FileStorage.SavedSimulations      = "simulations";
             });
-
-            // Replace the TrainingSettings singleton with lightweight test defaults so that
-            // training integration tests always complete in seconds regardless of whether
-            // explicit hyperparameter overrides are provided in the test body.
-            services.Replace(ServiceDescriptor.Singleton(new TrainingSettings
-            {
-                Algorithms =
-                [
-                    new TrainingAlgorithmSettings
-                    {
-                        Algorithm  = "PPO",
-                        Parameters =
-                        [
-                            new TrainingParameter("total_timesteps", "100"),
-                            new TrainingParameter("n_envs",          "1"),
-                            new TrainingParameter("learning_rate",   "0.0003"),
-                            new TrainingParameter("n_steps",         "16"),
-                            new TrainingParameter("batch_size",      "16"),
-                            new TrainingParameter("n_epochs",        "1"),
-                            new TrainingParameter("gamma",           "0.90"),
-                            new TrainingParameter("gae_lambda",      "0.95"),
-                            new TrainingParameter("clip_range",      "0.2"),
-                            new TrainingParameter("ent_coef",        "0.1"),
-                            new TrainingParameter("seed",            "42"),
-                        ]
-                    },
-                    new TrainingAlgorithmSettings
-                    {
-                        Algorithm  = "A2C",
-                        Parameters =
-                        [
-                            new TrainingParameter("total_timesteps", "100"),
-                            new TrainingParameter("n_envs",          "1"),
-                            new TrainingParameter("learning_rate",   "0.0007"),
-                            new TrainingParameter("n_steps",         "16"),
-                            new TrainingParameter("gamma",           "0.99"),
-                            new TrainingParameter("gae_lambda",      "1.0"),
-                            new TrainingParameter("ent_coef",        "0.0"),
-                            new TrainingParameter("vf_coef",         "0.5"),
-                            new TrainingParameter("max_grad_norm",   "0.5"),
-                            new TrainingParameter("seed",            "42"),
-                        ]
-                    },
-                    new TrainingAlgorithmSettings
-                    {
-                        Algorithm  = "DQN",
-                        Parameters =
-                        [
-                            new TrainingParameter("total_timesteps",        "100"),
-                            new TrainingParameter("learning_rate",          "0.0001"),
-                            new TrainingParameter("buffer_size",            "1000"),
-                            new TrainingParameter("learning_starts",        "100"),
-                            new TrainingParameter("batch_size",             "32"),
-                            new TrainingParameter("tau",                    "1.0"),
-                            new TrainingParameter("gamma",                  "0.99"),
-                            new TrainingParameter("train_freq",             "4"),
-                            new TrainingParameter("gradient_steps",         "1"),
-                            new TrainingParameter("target_update_interval", "100"),
-                            new TrainingParameter("exploration_fraction",   "0.1"),
-                            new TrainingParameter("exploration_final_eps",  "0.05"),
-                            new TrainingParameter("seed",                   "42"),
-                        ]
-                    },
-                ],
-                Rewards = new RewardSettings
-                {
-                    StepPenalty = -0.1f,
-                    WinReward   = 10.0f,
-                    LossReward  = -10.0f,
-                }
-            }));
         });
 
         var testServerHost = base.CreateHost(builder);

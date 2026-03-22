@@ -12,9 +12,7 @@ public static class InfrastructureServiceCollectionExtensions
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
-        services.Configure<SandBoxConfiguration>(configuration.GetSection("SandBox"));
         services.Configure<FileSourceConfiguration>(configuration.GetSection(FileSourceConfiguration.SectionName));
-        services.Configure<AggregationSettings>(configuration.GetSection(AggregationSettings.SectionName));
 
         // Changed from Map to Sandbox
         services.AddSingleton<IMemoryDataManager<StandardPlayground>, MemoryDataManager<StandardPlayground>>();

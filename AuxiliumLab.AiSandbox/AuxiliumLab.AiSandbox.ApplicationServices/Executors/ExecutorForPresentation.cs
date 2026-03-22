@@ -14,7 +14,6 @@ using AuxiliumLab.AiSandbox.Infrastructure.FileManager;
 using AuxiliumLab.AiSandbox.Infrastructure.MemoryManager;
 using AuxiliumLab.AiSandbox.SharedBaseTypes.AiContract.Dto;
 using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects;
-using Microsoft.Extensions.Options;
 
 namespace AuxiliumLab.AiSandbox.ApplicationServices.Executors;
 
@@ -36,7 +35,7 @@ public class ExecutorForPresentation : Executor, IExecutorForPresentation
         IPlaygroundCommandsHandleService mapCommands,
         IMemoryDataManager<StandardPlayground> sandboxRepository,
         IAiActions aiActions,
-        IOptions<SandBoxConfiguration> configuration,
+        SandBoxConfiguration configuration,
         IFileDataManager<StandardPlaygroundState> playgroundStateFileRepository,
         IMemoryDataManager<AgentStateForAIDecision> agentStateMemoryRepository,
         IMessageBroker messageBroker,

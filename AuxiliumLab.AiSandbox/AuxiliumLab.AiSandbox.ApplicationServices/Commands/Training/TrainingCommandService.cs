@@ -1,13 +1,11 @@
 using AuxiliumLab.AiSandbox.Ai;
 using AuxiliumLab.AiSandbox.Ai.Configuration;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Configuration;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
 using AuxiliumLab.AiSandbox.Common.MessageBroker;
 using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Training;
 using AuxiliumLab.AiSandbox.ApplicationServices.Trainer;
 using AuxiliumLab.AiSandbox.Infrastructure.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 
@@ -20,7 +18,6 @@ namespace AuxiliumLab.AiSandbox.ApplicationServices.Commands.Training;
 public sealed class TrainingCommandService : ITrainingCommands
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly TrainingSettings _trainingSettings;
     private readonly Sb3AlgorithmTypeProvider _algorithmTypeProvider;
     private readonly IPolicyTrainerClient _policyTrainerClient;
     private readonly GymBrokerRegistry _gymBrokerRegistry;
@@ -31,14 +28,12 @@ public sealed class TrainingCommandService : ITrainingCommands
 
     public TrainingCommandService(
         IServiceProvider serviceProvider,
-        TrainingSettings trainingSettings,
         Sb3AlgorithmTypeProvider algorithmTypeProvider,
         IPolicyTrainerClient policyTrainerClient,
         GymBrokerRegistry gymBrokerRegistry,
         IOptions<FileSourceConfiguration> fileSourceConfig)
     {
         _serviceProvider       = serviceProvider;
-        _trainingSettings      = trainingSettings;
         _algorithmTypeProvider = algorithmTypeProvider;
         _policyTrainerClient   = policyTrainerClient;
         _gymBrokerRegistry     = gymBrokerRegistry;
@@ -93,7 +88,7 @@ public sealed class TrainingCommandService : ITrainingCommands
 
     private Task<TrainingJobStartedDto> StartTrainingBackgroundAsync(
         ModelType algorithmType,
-        StartPpoTrainingCommand? overrides)
+        StartPpoTrainingCommand overrides)
     {
         var jobId     = Guid.NewGuid();
         var startedAt = DateTime.UtcNow;
@@ -122,12 +117,11 @@ public sealed class TrainingCommandService : ITrainingCommands
             {
                 var runner = new TrainingRunner(
                     _serviceProvider,
-                    _trainingSettings,
                     _algorithmTypeProvider,
                     _policyTrainerClient,
                     _gymBrokerRegistry);
 
-                var info = await runner.RunTrainingAsync(algorithmType, overrides);
+                var info = await runner.RunTrainingAsync(algorithmType, overrides, status);
 
                 status.State        = TrainingJobState.Completed;
                 status.CompletedAt  = DateTime.UtcNow;

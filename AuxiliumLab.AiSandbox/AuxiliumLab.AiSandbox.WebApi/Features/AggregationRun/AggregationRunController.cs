@@ -26,7 +26,7 @@ public sealed class AggregationRunController : ControllerBase
 
     /// <summary>Starts a full aggregation run in the background.</summary>
     /// <remarks>
-    /// When <c>Steps</c> is empty the steps from <c>appsettings.json → AggregationSettings</c> are used.<br/>
+    /// <c>Steps</c> must contain at least one aggregation step.<br/>
     /// Returns 202 Accepted immediately with the job descriptor.
     /// </remarks>
     [HttpPost("run")]
