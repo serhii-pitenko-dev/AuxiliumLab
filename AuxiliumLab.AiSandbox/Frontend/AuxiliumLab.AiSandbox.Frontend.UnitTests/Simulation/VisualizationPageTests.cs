@@ -34,18 +34,23 @@ public class VisualizationPageTests
         public void FireTurnCompleted(TurnCompletedDto dto)         => OnTurnCompleted?.Invoke(dto);
     }
 
-    private static (TestContext ctx, FakeHubClient hub) BuildCtx()
+    private static (TestContext ctx, FakeHubClient hub, Mock<ITrainingApiClient> trainingMock) BuildCtx()
     {
         var ctx = new TestContext();
         ctx.SetupWithMudServices();
 
         var hub = new FakeHubClient();
+        var trainingMock = new Mock<ITrainingApiClient>();
+        trainingMock.Setup(t => t.GetTrainedModelsAsync(It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(new List<TrainedModelInfoDto>());
+
         ctx.Services.AddSingleton<ISimulationHubClient>(hub);
         ctx.Services.AddSingleton(new Mock<ISimulationApiClient>().Object);
+        ctx.Services.AddSingleton<ITrainingApiClient>(trainingMock.Object);
         ctx.Services.AddSingleton(new Mock<INotificationService>().Object);
         ctx.Services.AddSingleton<IOptions<SandboxSettings>>(Options.Create(new SandboxSettings()));
 
-        return (ctx, hub);
+        return (ctx, hub, trainingMock);
     }
 
     private static SimulationStartedDto MakeStartedWithAgent(string agentId, int x, int y) => new()
@@ -91,7 +96,7 @@ public class VisualizationPageTests
     [TestMethod]
     public void HandleAgentMoved_WhenIsSuccessTrue_MovesAgentCircleToNewCell()
     {
-        var (ctx, hub) = BuildCtx();
+        var (ctx, hub, _) = BuildCtx();
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
@@ -118,7 +123,7 @@ public class VisualizationPageTests
     [TestMethod]
     public void HandleAgentMoved_WhenIsSuccessFalse_KeepsAgentCircleAtOriginalCell()
     {
-        var (ctx, hub) = BuildCtx();
+        var (ctx, hub, _) = BuildCtx();
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
@@ -148,7 +153,7 @@ public class VisualizationPageTests
     [TestMethod]
     public void HandleAgentMoved_WhenIsSuccessFalse_StillAppearsInEventLog()
     {
-        var (ctx, hub) = BuildCtx();
+        var (ctx, hub, _) = BuildCtx();
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
@@ -173,7 +178,7 @@ public class VisualizationPageTests
     [TestMethod]
     public void HandleAgentMoved_WhenIsSuccessFalse_StillUpdatesAgentSnapshot()
     {
-        var (ctx, hub) = BuildCtx();
+        var (ctx, hub, _) = BuildCtx();
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
@@ -203,7 +208,7 @@ public class VisualizationPageTests
     [TestMethod]
     public void HeroPathCell_IsRenderedWithHeroPathClass()
     {
-        var (ctx, hub) = BuildCtx();
+        var (ctx, hub, _) = BuildCtx();
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
@@ -219,7 +224,7 @@ public class VisualizationPageTests
     [TestMethod]
     public void EnemyPathCell_IsRenderedWithEnemyPathClass()
     {
-        var (ctx, hub) = BuildCtx();
+        var (ctx, hub, _) = BuildCtx();
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
@@ -235,7 +240,7 @@ public class VisualizationPageTests
     [TestMethod]
     public void HeroVisionCell_IsRenderedWithHeroVisionClass()
     {
-        var (ctx, hub) = BuildCtx();
+        var (ctx, hub, _) = BuildCtx();
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
@@ -251,7 +256,7 @@ public class VisualizationPageTests
     [TestMethod]
     public void EnemyVisionCell_IsRenderedWithEnemyVisionClass()
     {
-        var (ctx, hub) = BuildCtx();
+        var (ctx, hub, _) = BuildCtx();
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
@@ -267,7 +272,7 @@ public class VisualizationPageTests
     [TestMethod]
     public void HeroPath_TakesPriorityOverEnemyPath_WhenBothEffectsPresent()
     {
-        var (ctx, hub) = BuildCtx();
+        var (ctx, hub, _) = BuildCtx();
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
@@ -284,7 +289,7 @@ public class VisualizationPageTests
     [TestMethod]
     public void HeroPath_TakesPriorityOverHeroVision_WhenBothEffectsPresent()
     {
-        var (ctx, hub) = BuildCtx();
+        var (ctx, hub, _) = BuildCtx();
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
@@ -301,7 +306,7 @@ public class VisualizationPageTests
     [TestMethod]
     public void BlockCell_WithEffects_DoesNotRenderEffectOverlay()
     {
-        var (ctx, hub) = BuildCtx();
+        var (ctx, hub, _) = BuildCtx();
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
@@ -318,7 +323,7 @@ public class VisualizationPageTests
     [TestMethod]
     public void TurnCompleted_WithEffectCells_RendersEffectOverlays()
     {
-        var (ctx, hub) = BuildCtx();
+        var (ctx, hub, _) = BuildCtx();
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
@@ -337,6 +342,192 @@ public class VisualizationPageTests
 
             cut.WaitForAssertion(() =>
                 cut.Markup.Should().Contain("class=\"enemy-vision\""));
+        }
+    }
+
+    // ── Trained-model selection tests ────────────────────────────────────────
+
+    private static (TestContext ctx, FakeHubClient hub, Mock<ITrainingApiClient> trainingMock) BuildCtxWithModels(
+        List<TrainedModelInfoDto> models)
+    {
+        var (ctx, hub, trainingMock) = BuildCtx();
+        trainingMock.Setup(t => t.GetTrainedModelsAsync(It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(models);
+        return (ctx, hub, trainingMock);
+    }
+
+    private static List<TrainedModelInfoDto> MakeSampleModels() =>
+    [
+        new TrainedModelInfoDto
+        {
+            Algorithm     = "PPO",
+            ExperimentId  = "exp-001",
+            ModelFilePath = @"C:\models\PPO\exp-001\model.zip",
+            TrainedAt     = new DateTime(2025, 1, 15, 10, 0, 0),
+            Preconditions = new TrainingPreconditionsDto
+            {
+                Algorithm       = "PPO",
+                ExperimentId    = "exp-001",
+                MaxTurns        = 200,
+                MapWidth        = 10,
+                MapHeight       = 10,
+                StepPenalty     = -0.01f,
+                WinReward       = 1.0f,
+                LossReward      = -1.0f,
+                Hyperparameters = new() { ["learning_rate"] = "0.0003", ["n_steps"] = "2048" }
+            }
+        },
+        new TrainedModelInfoDto
+        {
+            Algorithm     = "PPO",
+            ExperimentId  = "exp-002",
+            ModelFilePath = @"C:\models\PPO\exp-002\model.zip",
+            TrainedAt     = new DateTime(2025, 1, 20, 14, 0, 0),
+            Preconditions = new TrainingPreconditionsDto
+            {
+                Algorithm       = "PPO",
+                ExperimentId    = "exp-002",
+                MaxTurns        = 300,
+                MapWidth        = 15,
+                MapHeight       = 15,
+                StepPenalty     = -0.02f,
+                WinReward       = 2.0f,
+                LossReward      = -2.0f,
+                Hyperparameters = new() { ["learning_rate"] = "0.001" }
+            }
+        },
+        new TrainedModelInfoDto
+        {
+            Algorithm     = "A2C",
+            ExperimentId  = "exp-a2c-01",
+            ModelFilePath = @"C:\models\A2C\exp-a2c-01\model.zip",
+            TrainedAt     = new DateTime(2025, 2, 1, 8, 0, 0),
+            Preconditions = null
+        }
+    ];
+
+    [TestMethod]
+    public void WhenRandomAI_ModelTableIsNotShown()
+    {
+        var (ctx, _, _) = BuildCtxWithModels(MakeSampleModels());
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            cut.Markup.Should().NotContain("Trained Models");
+            cut.Markup.Should().NotContain("exp-001");
+        }
+    }
+
+    [TestMethod]
+    public void WhenTrainedAI_NoModels_ShowsInfoAlert()
+    {
+        var (ctx, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+
+            // Switch to TrainedAI via the Kind select
+            var kindSelect = cut.FindComponents<MudSelect<SimulationKind>>().First();
+            kindSelect.Find("div.mud-input-control").Click();
+            cut.WaitForAssertion(() => cut.Markup.Should().Contain("Trained AI"));
+            var trainedItem = cut.FindAll(".mud-list-item").First(el => el.TextContent.Contains("Trained AI"));
+            trainedItem.Click();
+
+            cut.WaitForAssertion(() =>
+                cut.Markup.Should().Contain("No trained models found"));
+        }
+    }
+
+    [TestMethod]
+    public void WhenTrainedAI_WithModels_ShowsFilteredModelTable()
+    {
+        var (ctx, _, _) = BuildCtxWithModels(MakeSampleModels());
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+
+            // Switch to TrainedAI
+            var kindSelect = cut.FindComponents<MudSelect<SimulationKind>>().First();
+            kindSelect.Find("div.mud-input-control").Click();
+            cut.WaitForAssertion(() => cut.Markup.Should().Contain("Trained AI"));
+            var trainedItem = cut.FindAll(".mud-list-item").First(el => el.TextContent.Contains("Trained AI"));
+            trainedItem.Click();
+
+            // Should show PPO models (default algorithm), not A2C
+            cut.WaitForAssertion(() =>
+            {
+                cut.Markup.Should().Contain("Trained Models");
+                cut.Markup.Should().Contain("exp-001");
+                cut.Markup.Should().Contain("exp-002");
+                cut.Markup.Should().NotContain("exp-a2c-01");
+            });
+        }
+    }
+
+    [TestMethod]
+    public void WhenModelSelected_ShowsPreconditions()
+    {
+        var (ctx, _, _) = BuildCtxWithModels(MakeSampleModels());
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+
+            // Switch to TrainedAI
+            var kindSelect = cut.FindComponents<MudSelect<SimulationKind>>().First();
+            kindSelect.Find("div.mud-input-control").Click();
+            cut.WaitForAssertion(() => cut.Markup.Should().Contain("Trained AI"));
+            cut.FindAll(".mud-list-item").First(el => el.TextContent.Contains("Trained AI")).Click();
+
+            // Wait for model table and click the first row (exp-002 should be first since ordered by TrainedAt desc)
+            cut.WaitForAssertion(() => cut.Markup.Should().Contain("exp-002"));
+            var firstRow = cut.FindAll("tbody tr").First();
+            firstRow.Click();
+
+            // Should show preconditions for exp-002
+            cut.WaitForAssertion(() =>
+            {
+                cut.Markup.Should().Contain("Training Preconditions");
+                cut.Markup.Should().Contain("15 x 15"); // MapWidth x MapHeight
+                cut.Markup.Should().Contain("300");      // MaxTurns
+                cut.Markup.Should().Contain("learning_rate");
+                cut.Markup.Should().Contain("0.001");
+            });
+        }
+    }
+
+    [TestMethod]
+    public void WhenTrainedAI_StartButtonDisabled_UntilModelSelected()
+    {
+        var (ctx, _, _) = BuildCtxWithModels(MakeSampleModels());
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+
+            // Switch to TrainedAI
+            var kindSelect = cut.FindComponents<MudSelect<SimulationKind>>().First();
+            kindSelect.Find("div.mud-input-control").Click();
+            cut.WaitForAssertion(() => cut.Markup.Should().Contain("Trained AI"));
+            cut.FindAll(".mud-list-item").First(el => el.TextContent.Contains("Trained AI")).Click();
+
+            // Start button should be disabled (no model selected)
+            cut.WaitForAssertion(() =>
+            {
+                var startBtn = cut.FindComponents<MudButton>()
+                    .First(b => b.Markup.Contains("Start"));
+                startBtn.Instance.Disabled.Should().BeTrue();
+            });
+
+            // Select a model
+            cut.WaitForAssertion(() => cut.Markup.Should().Contain("exp-002"));
+            cut.FindAll("tbody tr").First().Click();
+
+            // Start button should now be enabled
+            cut.WaitForAssertion(() =>
+            {
+                var startBtn = cut.FindComponents<MudButton>()
+                    .First(b => b.Markup.Contains("Start"));
+                startBtn.Instance.Disabled.Should().BeFalse();
+            });
         }
     }
 }

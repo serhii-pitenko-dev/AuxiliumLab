@@ -81,10 +81,28 @@ public sealed class SimulationCommandService : ISimulationCommands
                 var sandboxConfig = SandBoxConfiguration.CreateFromValues(
                     s.MaxTurns, s.MapWidth, s.MapHeight,
                     s.BlocksPercent, s.EnemiesPercent,
-                    s.HeroSpeed, s.HeroSightRange, s.HeroStamina, s.EnemySpeed);
+                    s.HeroSpeed, s.HeroSightRange, s.HeroStamina,
+                    s.EnemySpeed, s.EnemySightRange, s.EnemyStamina);
 
-                var executor = executorFactory.CreateExecutorForPresentation(
-                    sandboxConfig, command.ActionDelayMs, pauseGate);
+                IExecutorForPresentation executor;
+                if (command.Kind == SimulationKind.TrainedAI)
+                {
+                    var modelPath = ResolveModelPath(command.Algorithm, command.ExperimentId);
+                    var aiConfig = new AiConfiguration
+                    {
+                        ModelType  = command.Algorithm,
+                        Version    = "1.0",
+                        PolicyType = AiPolicy.MLP
+                    };
+                    executor = executorFactory.CreateInferenceExecutorForPresentation(
+                        sandboxConfig, _policyTrainerClient, modelPath, aiConfig,
+                        command.ActionDelayMs, pauseGate);
+                }
+                else
+                {
+                    executor = executorFactory.CreateExecutorForPresentation(
+                        sandboxConfig, command.ActionDelayMs, pauseGate);
+                }
                 _visualizationBridge?.Attach(jobId, sandboxConfig.MaxTurns.Current);
                 try
                 {
@@ -152,9 +170,10 @@ public sealed class SimulationCommandService : ISimulationCommands
                 var sandboxConfig = SandBoxConfiguration.CreateFromValues(
                     ms.MaxTurns, ms.MapWidth, ms.MapHeight,
                     ms.BlocksPercent, ms.EnemiesPercent,
-                    ms.HeroSpeed, ms.HeroSightRange, ms.HeroStamina, ms.EnemySpeed);
+                    ms.HeroSpeed, ms.HeroSightRange, ms.HeroStamina,
+                    ms.EnemySpeed, ms.EnemySightRange, ms.EnemyStamina);
 
-                Func<IStandardExecutor> createExecutor = BuildExecutorCreator(command.Kind, command.Algorithm, executorFactory, sandboxConfig);
+                Func<IStandardExecutor> createExecutor = BuildExecutorCreator(command.Kind, command.Algorithm, command.ExperimentId, executorFactory, sandboxConfig);
 
                 var startupSettings = BuildSimulationStartupSettings(command.IncrementalSweep);
                 var massRunner = new MassRunner(batchFileManager, _statisticFileManager, sandboxConfig);
@@ -233,7 +252,8 @@ public sealed class SimulationCommandService : ISimulationCommands
     // ── Private helpers ──────────────────────────────────────────────────────
 
     private Func<IStandardExecutor> BuildExecutorCreator(
-        SimulationKind kind, ModelType algorithm, IExecutorFactory baseFactory, SandBoxConfiguration configuration)
+        SimulationKind kind, ModelType algorithm, string? experimentId,
+        IExecutorFactory baseFactory, SandBoxConfiguration configuration)
     {
         if (kind != SimulationKind.TrainedAI)
             return () => baseFactory.CreateStandardExecutor(configuration);
@@ -241,22 +261,7 @@ public sealed class SimulationCommandService : ISimulationCommands
         if (algorithm != ModelType.PPO)
             throw new NotImplementedException($"Trained AI simulation for '{algorithm}' is not yet implemented.");
 
-        string algoFolder = Path.Combine(
-            _fileSourceConfig.Value.FileStorage.BasePath,
-            _fileSourceConfig.Value.FileStorage.TrainedAlgorithms,
-            algorithm.ToString());
-
-        string modelPath = Directory.Exists(algoFolder)
-            ? Directory.EnumerateDirectories(algoFolder)
-                .SelectMany(expDir => new[] { Path.Combine(expDir, "model.zip") })
-                .Where(File.Exists)
-                .OrderByDescending(File.GetLastWriteTime)
-                .FirstOrDefault() ?? string.Empty
-            : string.Empty;
-
-        if (string.IsNullOrEmpty(modelPath))
-            throw new InvalidOperationException(
-                $"No trained PPO model found under '{algoFolder}'. Train a model first.");
+        var modelPath = ResolveModelPath(algorithm, experimentId);
 
         var aiConfig = new AiConfiguration
         {
@@ -280,5 +285,40 @@ public sealed class SimulationCommandService : ISimulationCommands
                 Properties      = sweep?.Properties ?? [],
             },
         };
+    }
+
+    /// <summary>
+    /// Resolves the physical path to <c>model.zip</c> for the given algorithm and optional experiment.
+    /// When <paramref name="experimentId"/> is <c>null</c> the most recent model is used.
+    /// </summary>
+    private string ResolveModelPath(ModelType algorithm, string? experimentId)
+    {
+        string algoFolder = Path.Combine(
+            _fileSourceConfig.Value.FileStorage.BasePath,
+            _fileSourceConfig.Value.FileStorage.TrainedAlgorithms,
+            algorithm.ToString());
+
+        if (!string.IsNullOrEmpty(experimentId))
+        {
+            var path = Path.Combine(algoFolder, experimentId, "model.zip");
+            if (!File.Exists(path))
+                throw new InvalidOperationException(
+                    $"Trained model not found at '{path}'. The experiment '{experimentId}' may have been deleted.");
+            return path;
+        }
+
+        var modelPath = Directory.Exists(algoFolder)
+            ? Directory.EnumerateDirectories(algoFolder)
+                .SelectMany(expDir => new[] { Path.Combine(expDir, "model.zip") })
+                .Where(File.Exists)
+                .OrderByDescending(File.GetLastWriteTime)
+                .FirstOrDefault() ?? string.Empty
+            : string.Empty;
+
+        if (string.IsNullOrEmpty(modelPath))
+            throw new InvalidOperationException(
+                $"No trained {algorithm} model found under '{algoFolder}'. Train a model first.");
+
+        return modelPath;
     }
 }

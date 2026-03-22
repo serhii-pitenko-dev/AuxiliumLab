@@ -22,6 +22,7 @@ services:
   rl-service:
     build:
       context: ./auxiliumlab-rl-service-baselines3
+    user: root
     ports:
       - "50051:50051"
     environment:
@@ -30,6 +31,7 @@ services:
     volumes:
       - rl-models:/app/trained_models
       - rl-checkpoints:/app/checkpoints
+      - C:/FILE_STORAGE:/file-storage
     healthcheck:
       test: ["CMD", "python", "healthcheck.py", "--host", "localhost", "--port", "50051"]
       interval: 10s

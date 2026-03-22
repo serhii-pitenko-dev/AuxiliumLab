@@ -54,4 +54,14 @@ public partial class SandboxSettingsForm
         get => Override.EnemySpeed;
         set { Override.EnemySpeed = value; OverrideChanged.InvokeAsync(Override); }
     }
+    private int EnemySightRange
+    {
+        get => Override.EnemySightRange;
+        set { Override.EnemySightRange = value; OverrideChanged.InvokeAsync(Override); }
+    }
+    private int EnemyStamina
+    {
+        get => Override.EnemyStamina;
+        set { Override.EnemyStamina = value; OverrideChanged.InvokeAsync(Override); }
+    }
 }

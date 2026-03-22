@@ -1,5 +1,6 @@
 
 using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects;
+using AuxiliumLab.AiSandbox.SharedContracts;
 
 namespace AuxiliumLab.Frontend.Features.Simulation.Pages;
 
@@ -33,6 +34,12 @@ public partial class VisualizationPage : IAsyncDisposable
     private Dictionary<string, AgentSnapshotDto> _agents          = [];
     private readonly List<string> _logs = [];
 
+    // ── Trained-model selection ───────────────────────────────────────────────
+    private List<TrainedModelInfoDto> _allModels = [];
+    private List<TrainedModelInfoDto> _filteredModels = [];
+    private TrainedModelInfoDto? _selectedModel;
+    private bool _loadingModels;
+
     protected override async Task OnInitializedAsync()
     {
         HubClient.OnSimulationStarted  += HandleStarted;
@@ -53,9 +60,60 @@ public partial class VisualizationPage : IAsyncDisposable
             HeroSpeed      = sb.Hero.Speed.Current,
             HeroSightRange = sb.Hero.SightRange.Current,
             HeroStamina    = sb.Hero.Stamina.Current,
-            EnemySpeed     = sb.Enemy.Speed.Current
+            EnemySpeed       = sb.Enemy.Speed.Current,
+            EnemySightRange  = sb.Enemy.SightRange.Current,
+            EnemyStamina     = sb.Enemy.Stamina.Current
         };
         _cmd.SandboxSettings = _override;
+    }
+
+    private async Task OnKindChanged(SimulationKind kind)
+    {
+        _cmd.Kind = kind;
+        _selectedModel = null;
+        _cmd.ExperimentId = null;
+
+        if (kind == SimulationKind.TrainedAI)
+            await LoadModelsAsync();
+        else
+            _filteredModels = [];
+    }
+
+    private async Task OnAlgorithmChanged(ModelType algorithm)
+    {
+        _cmd.Algorithm = algorithm;
+        _selectedModel = null;
+        _cmd.ExperimentId = null;
+        await LoadModelsAsync();
+    }
+
+    private async Task LoadModelsAsync()
+    {
+        _loadingModels = true;
+        try
+        {
+            if (_allModels.Count == 0)
+                _allModels = await TrainingApi.GetTrainedModelsAsync();
+
+            _filteredModels = _allModels
+                .Where(m => string.Equals(m.Algorithm, _cmd.Algorithm.ToString(), StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(m => m.TrainedAt)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Notify($"Error loading models: {ex.Message}");
+        }
+        finally
+        {
+            _loadingModels = false;
+        }
+    }
+
+    private void OnModelSelected(TrainedModelInfoDto model)
+    {
+        _selectedModel = model;
+        _cmd.ExperimentId = model.ExperimentId;
     }
 
     private void OnOverrideChanged(SimulationSandboxOverrideDto dto)

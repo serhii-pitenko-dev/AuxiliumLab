@@ -50,7 +50,7 @@ else
                     </div>
                 }
 
-                <MudSimpleTable Dense="true" Bordered="true" Style="max-width:600px">
+                <MudSimpleTable Dense="true" Bordered="true">
                     <tbody>
                         <tr>
                             <td><b>Job ID</b></td>
@@ -89,7 +89,7 @@ else
                         {
                             <tr>
                                 <td><b>Error</b></td>
-                                <td style="color:var(--mud-palette-error)">@job.ErrorMessage</td>
+                                <td style="color:var(--mud-palette-error);word-break:break-all">@job.ErrorMessage</td>
                             </tr>
                         }
                     </tbody>

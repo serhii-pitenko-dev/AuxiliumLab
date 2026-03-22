@@ -23,4 +23,16 @@ public interface IExecutorFactory
         IPolicyTrainerClient policyTrainerClient,
         string modelPath,
         AiConfiguration aiConfig);
+
+    /// <summary>
+    /// Creates a presentation executor (with action delay and pause gate) whose AI
+    /// decisions are driven by a pre-trained model via <c>InferenceActions</c>.
+    /// </summary>
+    IExecutorForPresentation CreateInferenceExecutorForPresentation(
+        SandBoxConfiguration configuration,
+        IPolicyTrainerClient policyTrainerClient,
+        string modelPath,
+        AiConfiguration aiConfig,
+        int actionDelayMs = 0,
+        SemaphoreSlim? pauseGate = null);
 }

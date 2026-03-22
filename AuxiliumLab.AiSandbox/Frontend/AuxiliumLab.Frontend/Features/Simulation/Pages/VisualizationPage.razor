@@ -1,6 +1,7 @@
 ﻿@page "/simulation/visualization"
 @using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects
 @inject ISimulationApiClient SimulationApi
+@inject ITrainingApiClient TrainingApi
 @inject ISimulationHubClient HubClient
 @inject INotificationService Notifications
 @inject IOptions<SandboxSettings> SandboxConfig
@@ -12,24 +13,76 @@
     <MudItem xs="12" md="3">
         <MudCard Class="mb-3">
             <MudCardContent>
-                <MudSelect @bind-Value="_cmd.Kind" Label="Kind" Variant="Variant.Outlined" Class="mb-2">
+                <MudSelect Value="_cmd.Kind" ValueChanged="@((SimulationKind v) => OnKindChanged(v))" Label="Kind" Variant="Variant.Outlined" Class="mb-2">
                     <MudSelectItem Value="SimulationKind.RandomAI">Random AI</MudSelectItem>
                     <MudSelectItem Value="SimulationKind.TrainedAI">Trained AI</MudSelectItem>
                 </MudSelect>
 
                 @if (_cmd.Kind == SimulationKind.TrainedAI)
                 {
-                    <MudSelect @bind-Value="_cmd.Algorithm" Label="Algorithm" Variant="Variant.Outlined" Class="mb-2">
+                    <MudSelect Value="_cmd.Algorithm" ValueChanged="@((ModelType v) => OnAlgorithmChanged(v))" Label="Algorithm" Variant="Variant.Outlined" Class="mb-2">
                         <MudSelectItem Value="ModelType.PPO">PPO</MudSelectItem>
                         <MudSelectItem Value="ModelType.A2C">A2C</MudSelectItem>
                         <MudSelectItem Value="ModelType.DQN">DQN</MudSelectItem>
                     </MudSelect>
+
+                    @if (_loadingModels)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="my-2" />
+                    }
+                    else if (_filteredModels.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">No trained models found for @_cmd.Algorithm.</MudAlert>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">Trained Models</MudText>
+                        <MudSimpleTable Dense="true" Hover="true" Bordered="true" Class="mb-2" Style="font-size:0.8rem">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Experiment</th>
+                                    <th>Trained At</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var model in _filteredModels)
+                                {
+                                    var isSelected = _selectedModel?.ExperimentId == model.ExperimentId;
+                                    <tr @onclick="() => OnModelSelected(model)" style="cursor:pointer;@(isSelected ? "background:#e3f2fd" : "")">
+                                        <td><MudRadio Value="true" Checked="isSelected" Color="Color.Primary" Dense="true" /></td>
+                                        <td>@model.ExperimentId</td>
+                                        <td>@model.TrainedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    }
+
+                    @if (_selectedModel?.Preconditions is not null)
+                    {
+                        <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">Training Preconditions</MudText>
+                        <MudSimpleTable Dense="true" Bordered="true" Style="font-size:0.8rem" Class="mb-2">
+                            <tbody>
+                                <tr><td>Map</td><td>@_selectedModel.Preconditions.MapWidth x @_selectedModel.Preconditions.MapHeight</td></tr>
+                                <tr><td>Max Turns</td><td>@_selectedModel.Preconditions.MaxTurns</td></tr>
+                                <tr><td>Step Penalty</td><td>@_selectedModel.Preconditions.StepPenalty</td></tr>
+                                <tr><td>Win Reward</td><td>@_selectedModel.Preconditions.WinReward</td></tr>
+                                <tr><td>Loss Reward</td><td>@_selectedModel.Preconditions.LossReward</td></tr>
+                                @foreach (var hp in _selectedModel.Preconditions.Hyperparameters)
+                                {
+                                    <tr><td>@hp.Key</td><td>@hp.Value</td></tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    }
                 }
 
                 <SandboxSettingsForm Override="_override" OverrideChanged="OnOverrideChanged" />
             </MudCardContent>
             <MudCardActions>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="StartAsync" Disabled="_running || _starting">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="StartAsync"
+                           Disabled="_running || _starting || (_cmd.Kind == SimulationKind.TrainedAI && _selectedModel is null)">
                     @if (_starting) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" /> }
                     Start
                 </MudButton>

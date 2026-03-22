@@ -15,14 +15,18 @@ public class SimulationSandboxOverrideDto
     public double EnemiesPercent { get; set; }
     public int    HeroSpeed      { get; set; }
     public int    HeroSightRange { get; set; }
-    public int    HeroStamina    { get; set; }
-    public int    EnemySpeed     { get; set; }
+    public int    HeroStamina      { get; set; }
+    public int    EnemySpeed       { get; set; }
+    public int    EnemySightRange  { get; set; }
+    public int    EnemyStamina     { get; set; }
 }
 
 public class StartSingleSimulationCommand
 {
     public SimulationKind                Kind            { get; set; } = SimulationKind.RandomAI;
     public ModelType                     Algorithm       { get; set; } = ModelType.PPO;
+    /// <summary>Experiment folder name that identifies the trained model to use (e.g. "ppo_100000_4_…").</summary>
+    public string?                       ExperimentId    { get; set; }
     public SimulationSandboxOverrideDto  SandboxSettings { get; set; } = new();
     /// <summary>Delay in milliseconds applied between each agent action during presentation.</summary>
     public int                           ActionDelayMs   { get; set; } = 500;
@@ -33,6 +37,8 @@ public class StartMassSimulationCommand
     public SimulationKind                Kind             { get; set; } = SimulationKind.RandomAI;
     public int                           SimulationCount  { get; set; } = 100;
     public ModelType                     Algorithm        { get; set; } = ModelType.PPO;
+    /// <summary>Experiment folder name that identifies the trained model to use.</summary>
+    public string?                       ExperimentId     { get; set; }
     public SimulationSandboxOverrideDto  SandboxSettings  { get; set; } = new();
     public IncrementalSweeperDto?        IncrementalSweep { get; set; }
 }
@@ -73,5 +79,7 @@ public class SandboxDefaultsDto
     public int    HeroSpeed      { get; set; }
     public int    HeroSightRange { get; set; }
     public int    HeroStamina    { get; set; }
-    public int    EnemySpeed     { get; set; }
+    public int    EnemySpeed       { get; set; }
+    public int    EnemySightRange  { get; set; }
+    public int    EnemyStamina     { get; set; }
 }

@@ -113,7 +113,8 @@ public class TrainingRunner
             ?? SandBoxConfiguration.CreateFromValues(
                 sb.MaxTurns, sb.MapWidth, sb.MapHeight,
                 sb.BlocksPercent, sb.EnemiesPercent,
-                sb.HeroSpeed, sb.HeroSightRange, sb.HeroStamina, sb.EnemySpeed);
+                sb.HeroSpeed, sb.HeroSightRange, sb.HeroStamina,
+                sb.EnemySpeed, sb.EnemySightRange, sb.EnemyStamina);
 
         // 4. Create one executor + Sb3Actions pair per physical core (or the override count).
         int nEnvs = Math.Max(1, hp.NEnvs);
@@ -274,6 +275,24 @@ public class TrainingRunner
             // Dispose per-gym cancellation tokens
             foreach (var cts in linkedCtsList) cts.Dispose();
             foreach (var cts in gymCtsList)    cts.Dispose();
+        }
+
+        // 8. Verify Python-side training actually succeeded
+        try
+        {
+            var finalStatus = await _policyTrainerClient.GetTrainingStatusAsync(
+                new StatusRequest { RunId = runId }, CancellationToken.None);
+            if (!string.IsNullOrEmpty(finalStatus.ErrorMessage))
+                throw new InvalidOperationException(
+                    $"[Training] Python RL service reported failure: {finalStatus.ErrorMessage}");
+            if (finalStatus.TimestepsDone == 0)
+                throw new InvalidOperationException(
+                    "[Training] Training completed 0 timesteps — the simulation environment likely failed to start.");
+        }
+        catch (InvalidOperationException) { throw; }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Training] WARNING: Could not verify Python training status: {ex.Message}");
         }
 
         // Return training metadata so callers (e.g. AggregationRunner) can include it in reports.

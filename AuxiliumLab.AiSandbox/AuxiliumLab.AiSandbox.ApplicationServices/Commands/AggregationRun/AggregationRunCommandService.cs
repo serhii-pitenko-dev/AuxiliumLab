@@ -83,7 +83,7 @@ public sealed class AggregationRunCommandService : IAggregationRunCommands
                     sb.MaxTurns, sb.MapWidth, sb.MapHeight,
                     sb.BlocksPercent, sb.EnemiesPercent,
                     sb.HeroSpeed, sb.HeroSightRange, sb.HeroStamina,
-                    sb.EnemySpeed);
+                    sb.EnemySpeed, sb.EnemySightRange, sb.EnemyStamina);
 
                 var runner = new AggregationRunner(
                     _serviceProvider,

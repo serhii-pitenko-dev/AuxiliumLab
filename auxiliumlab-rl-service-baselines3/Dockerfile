@@ -76,7 +76,8 @@ ENV GRPC_HOST=0.0.0.0 \
 
 # Run as non-root for security
 RUN adduser --disabled-password --gecos "" appuser \
-    && chown -R appuser /app
+    && mkdir -p /app/checkpoints /app/trained_models /file-storage \
+    && chown -R appuser /app /file-storage
 USER appuser
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \

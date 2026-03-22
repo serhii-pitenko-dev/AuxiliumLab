@@ -151,4 +151,41 @@ public class ExecutorFactory : IExecutorFactory
             _sandboxExecutionPerformanceFileRepository,
             _testPreconditionData);
     }
+
+    /// <inheritdoc/>
+    public IExecutorForPresentation CreateInferenceExecutorForPresentation(
+        SandBoxConfiguration configuration,
+        IPolicyTrainerClient policyTrainerClient,
+        string modelPath,
+        AiConfiguration aiConfig,
+        int actionDelayMs = 0,
+        SemaphoreSlim? pauseGate = null)
+    {
+        var broker     = new AuxiliumLab.AiSandbox.Common.MessageBroker.MessageBroker();
+        var rpcClient  = new BrokerRpcClient(broker);
+        var agentStore = new MemoryDataManager<AgentStateForAIDecision>();
+        var aiActions  = new InferenceActions(
+            broker,
+            agentStore,
+            policyTrainerClient,
+            modelPath,
+            aiConfig);
+
+        return new ExecutorForPresentation(
+            _mapCommands,
+            _sandboxRepository,
+            aiActions,
+            configuration,
+            _playgroundStateFileRepository,
+            agentStore,
+            broker,
+            rpcClient,
+            _standardPlaygroundMapper,
+            _rawDataLogFileRepository,
+            _turnExecutionPerformanceFileRepository,
+            _sandboxExecutionPerformanceFileRepository,
+            _testPreconditionData,
+            actionDelayMs,
+            pauseGate);
+    }
 }

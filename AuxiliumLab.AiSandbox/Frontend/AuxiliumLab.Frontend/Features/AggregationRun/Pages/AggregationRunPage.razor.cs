@@ -49,7 +49,9 @@ public partial class AggregationRunPage
                     HeroSpeed      = sb.Hero.Speed.Current,
                     HeroSightRange = sb.Hero.SightRange.Current,
                     HeroStamina    = sb.Hero.Stamina.Current,
-                    EnemySpeed     = sb.Enemy.Speed.Current
+                    EnemySpeed       = sb.Enemy.Speed.Current,
+                    EnemySightRange  = sb.Enemy.SightRange.Current,
+                    EnemyStamina     = sb.Enemy.Stamina.Current
                 },
                 RewardSettings = new RewardSettingsDto
                 {

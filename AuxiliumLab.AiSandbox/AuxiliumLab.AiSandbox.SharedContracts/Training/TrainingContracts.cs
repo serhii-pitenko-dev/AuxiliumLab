@@ -25,8 +25,10 @@ public class TrainingSandboxSettingsDto
     public double EnemiesPercent { get; set; }
     public int    HeroSpeed      { get; set; }
     public int    HeroSightRange { get; set; }
-    public int    HeroStamina    { get; set; }
-    public int    EnemySpeed     { get; set; }
+    public int    HeroStamina      { get; set; }
+    public int    EnemySpeed       { get; set; }
+    public int    EnemySightRange  { get; set; }
+    public int    EnemyStamina     { get; set; }
 }
 
 public class RewardSettingsDto

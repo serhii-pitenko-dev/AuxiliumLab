@@ -1,3 +1,5 @@
+using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects;
+
 namespace AuxiliumLab.AiSandbox.Infrastructure.Configuration.Preconditions;
 
 public class SandBoxConfiguration
@@ -17,13 +19,15 @@ public class SandBoxConfiguration
     public static SandBoxConfiguration CreateFromValues(
         int maxTurns, int mapWidth, int mapHeight,
         double blocksPercent, double enemiesPercent,
-        int heroSpeed, int heroSightRange, int heroStamina, int enemySpeed)
+        int heroSpeed, int heroSightRange, int heroStamina,
+        int enemySpeed, int enemySightRange, int enemyStamina)
     {
         return new SandBoxConfiguration
         {
             MaxTurns = new IncrementalRange { Min = maxTurns, Current = maxTurns, Max = maxTurns, Step = 1 },
             MapSettings = new MapConfiguration
             {
+                Type = MapType.Standard,
                 Size = new Size
                 {
                     Width = new IncrementalRange { Min = mapWidth, Current = mapWidth, Max = mapWidth, Step = 1 },
@@ -44,6 +48,8 @@ public class SandBoxConfiguration
             Enemy = new EnemyConfiguration
             {
                 Speed = new IncrementalRange { Min = enemySpeed, Current = enemySpeed, Max = enemySpeed, Step = 1 },
+                SightRange = new IncrementalRange { Min = enemySightRange, Current = enemySightRange, Max = enemySightRange, Step = 1 },
+                Stamina = new IncrementalRange { Min = enemyStamina, Current = enemyStamina, Max = enemyStamina, Step = 1 },
             },
         };
     }
