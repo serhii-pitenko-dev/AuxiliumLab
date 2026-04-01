@@ -113,6 +113,7 @@ public sealed class SimulationCommandService : ISimulationCommands
                 finally
                 {
                     _visualizationBridge?.Detach(jobId);
+                    (executor as IDisposable)?.Dispose();
                 }
 
                 status.CompletedRuns = 1;

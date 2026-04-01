@@ -34,7 +34,7 @@ public class VisualizationPageTests
         public void FireTurnCompleted(TurnCompletedDto dto)         => OnTurnCompleted?.Invoke(dto);
     }
 
-    private static (TestContext ctx, FakeHubClient hub, Mock<ITrainingApiClient> trainingMock) BuildCtx()
+    private static (TestContext ctx, FakeHubClient hub, Mock<ITrainingApiClient> trainingMock, Mock<ISimulationApiClient> simMock) BuildCtx()
     {
         var ctx = new TestContext();
         ctx.SetupWithMudServices();
@@ -44,13 +44,26 @@ public class VisualizationPageTests
         trainingMock.Setup(t => t.GetTrainedModelsAsync(It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new List<TrainedModelInfoDto>());
 
+        var simMock = new Mock<ISimulationApiClient>();
+        simMock.Setup(s => s.StartSingleSimulationAsync(It.IsAny<StartSingleSimulationCommand>(), It.IsAny<CancellationToken>()))
+               .ReturnsAsync(new SimulationJobStartedDto { JobId = Guid.NewGuid(), StartedAt = DateTime.UtcNow });
+
         ctx.Services.AddSingleton<ISimulationHubClient>(hub);
-        ctx.Services.AddSingleton(new Mock<ISimulationApiClient>().Object);
+        ctx.Services.AddSingleton<ISimulationApiClient>(simMock.Object);
         ctx.Services.AddSingleton<ITrainingApiClient>(trainingMock.Object);
         ctx.Services.AddSingleton(new Mock<INotificationService>().Object);
         ctx.Services.AddSingleton<IOptions<SandboxSettings>>(Options.Create(new SandboxSettings()));
 
-        return (ctx, hub, trainingMock);
+        return (ctx, hub, trainingMock, simMock);
+    }
+
+    private static (TestContext ctx, FakeHubClient hub, Mock<ITrainingApiClient> trainingMock, Mock<ISimulationApiClient> simMock) BuildCtxWithModels(
+        List<TrainedModelInfoDto> models)
+    {
+        var (ctx, hub, trainingMock, simMock) = BuildCtx();
+        trainingMock.Setup(t => t.GetTrainedModelsAsync(It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(models);
+        return (ctx, hub, trainingMock, simMock);
     }
 
     private static SimulationStartedDto MakeStartedWithAgent(string agentId, int x, int y) => new()
@@ -90,271 +103,6 @@ public class VisualizationPageTests
         Cells    = cells,
         Agents   = []
     };
-
-    // ── Tests ────────────────────────────────────────────────────────────────
-
-    [TestMethod]
-    public void HandleAgentMoved_WhenIsSuccessTrue_MovesAgentCircleToNewCell()
-    {
-        var (ctx, hub, _) = BuildCtx();
-        using (ctx)
-        {
-            var cut = ctx.RenderComponent<VisualizationPage>();
-
-            hub.FireSimulationStarted(MakeStartedWithAgent("agent-01", x: 2, y: 3));
-            cut.WaitForAssertion(() => cut.Markup.Should().Contain("<svg"));
-
-            hub.FireAgentMoved(new AgentMovedDto
-            {
-                AgentId   = "agent-01",
-                AgentType = ObjectType.Hero,
-                From      = new Coordinates(2, 3),
-                To        = new Coordinates(4, 5),
-                IsSuccess = true
-            });
-
-            // Circle should have moved to (4,5) — cx = 4*16+8 = 72, cy = 5*16+8 = 88
-            cut.WaitForAssertion(() =>
-                cut.Markup.Should().Contain($"cx=\"{4 * CellSize + CellSize / 2}\""));
-            cut.Markup.Should().Contain($"cy=\"{5 * CellSize + CellSize / 2}\"");
-        }
-    }
-
-    [TestMethod]
-    public void HandleAgentMoved_WhenIsSuccessFalse_KeepsAgentCircleAtOriginalCell()
-    {
-        var (ctx, hub, _) = BuildCtx();
-        using (ctx)
-        {
-            var cut = ctx.RenderComponent<VisualizationPage>();
-
-            hub.FireSimulationStarted(MakeStartedWithAgent("agent-01", x: 2, y: 3));
-            cut.WaitForAssertion(() => cut.Markup.Should().Contain("<svg"));
-
-            hub.FireAgentMoved(new AgentMovedDto
-            {
-                AgentId   = "agent-01",
-                AgentType = ObjectType.Hero,
-                From      = new Coordinates(2, 3),
-                To        = new Coordinates(4, 5),
-                IsSuccess = false
-            });
-
-            // Circle must stay at (2,3) — cx = 2*16+8 = 40, cy = 3*16+8 = 56
-            cut.WaitForAssertion(() =>
-                cut.Markup.Should().Contain($"cx=\"{2 * CellSize + CellSize / 2}\""));
-            cut.Markup.Should().Contain($"cy=\"{3 * CellSize + CellSize / 2}\"");
-
-            // Must NOT have moved to (4,5) — cx = 72
-            cut.Markup.Should().NotContain($"cx=\"{4 * CellSize + CellSize / 2}\"");
-        }
-    }
-
-    [TestMethod]
-    public void HandleAgentMoved_WhenIsSuccessFalse_StillAppearsInEventLog()
-    {
-        var (ctx, hub, _) = BuildCtx();
-        using (ctx)
-        {
-            var cut = ctx.RenderComponent<VisualizationPage>();
-
-            hub.FireSimulationStarted(MakeStartedWithAgent("agent-01", x: 2, y: 3));
-
-            hub.FireAgentMoved(new AgentMovedDto
-            {
-                AgentId   = "agent-01",
-                AgentType = ObjectType.Hero,
-                From      = new Coordinates(2, 3),
-                To        = new Coordinates(4, 5),
-                IsSuccess = false
-            });
-
-            // The event log should record the move regardless of success
-            cut.WaitForAssertion(() =>
-                cut.Markup.Should().Contain("Hero #agent"));
-        }
-    }
-
-    [TestMethod]
-    public void HandleAgentMoved_WhenIsSuccessFalse_StillUpdatesAgentSnapshot()
-    {
-        var (ctx, hub, _) = BuildCtx();
-        using (ctx)
-        {
-            var cut = ctx.RenderComponent<VisualizationPage>();
-
-            hub.FireSimulationStarted(MakeStartedWithAgent("agent-01", x: 2, y: 3));
-            cut.WaitForAssertion(() => cut.Markup.Should().Contain("<svg"));
-
-            // _agents[agentId] is always updated; any exception from HandleAgentMoved would
-            // be caught and logged instead — verify the component doesn't log an error.
-            hub.FireAgentMoved(new AgentMovedDto
-            {
-                AgentId   = "agent-01",
-                AgentType = ObjectType.Hero,
-                From      = new Coordinates(2, 3),
-                To        = new Coordinates(4, 5),
-                IsSuccess = false,
-                Agent     = new AgentSnapshotDto { Stamina = 80, MaxStamina = 100 }
-            });
-
-            cut.WaitForAssertion(() =>
-                cut.Markup.Should().NotContain("HandleAgentMoved EXCEPTION"));
-        }
-    }
-
-    // ── Effect overlay rendering tests ──────────────────────────────────────
-
-    [TestMethod]
-    public void HeroPathCell_IsRenderedWithHeroPathClass()
-    {
-        var (ctx, hub, _) = BuildCtx();
-        using (ctx)
-        {
-            var cut = ctx.RenderComponent<VisualizationPage>();
-
-            hub.FireSimulationStarted(MakeStartedWithCells(
-                MakeCell(3, 4, effects: [MakeEffect(ObjectType.Hero, EEffect.Path)])));
-
-            cut.WaitForAssertion(() =>
-                cut.Markup.Should().Contain("class=\"hero-path\""));
-        }
-    }
-
-    [TestMethod]
-    public void EnemyPathCell_IsRenderedWithEnemyPathClass()
-    {
-        var (ctx, hub, _) = BuildCtx();
-        using (ctx)
-        {
-            var cut = ctx.RenderComponent<VisualizationPage>();
-
-            hub.FireSimulationStarted(MakeStartedWithCells(
-                MakeCell(5, 2, effects: [MakeEffect(ObjectType.Enemy, EEffect.Path)])));
-
-            cut.WaitForAssertion(() =>
-                cut.Markup.Should().Contain("class=\"enemy-path\""));
-        }
-    }
-
-    [TestMethod]
-    public void HeroVisionCell_IsRenderedWithHeroVisionClass()
-    {
-        var (ctx, hub, _) = BuildCtx();
-        using (ctx)
-        {
-            var cut = ctx.RenderComponent<VisualizationPage>();
-
-            hub.FireSimulationStarted(MakeStartedWithCells(
-                MakeCell(1, 1, effects: [MakeEffect(ObjectType.Hero, EEffect.Vision)])));
-
-            cut.WaitForAssertion(() =>
-                cut.Markup.Should().Contain("class=\"hero-vision\""));
-        }
-    }
-
-    [TestMethod]
-    public void EnemyVisionCell_IsRenderedWithEnemyVisionClass()
-    {
-        var (ctx, hub, _) = BuildCtx();
-        using (ctx)
-        {
-            var cut = ctx.RenderComponent<VisualizationPage>();
-
-            hub.FireSimulationStarted(MakeStartedWithCells(
-                MakeCell(7, 7, effects: [MakeEffect(ObjectType.Enemy, EEffect.Vision)])));
-
-            cut.WaitForAssertion(() =>
-                cut.Markup.Should().Contain("class=\"enemy-vision\""));
-        }
-    }
-
-    [TestMethod]
-    public void HeroPath_TakesPriorityOverEnemyPath_WhenBothEffectsPresent()
-    {
-        var (ctx, hub, _) = BuildCtx();
-        using (ctx)
-        {
-            var cut = ctx.RenderComponent<VisualizationPage>();
-
-            hub.FireSimulationStarted(MakeStartedWithCells(
-                MakeCell(4, 4, effects: [MakeEffect(ObjectType.Hero, EEffect.Path), MakeEffect(ObjectType.Enemy, EEffect.Path)])));
-
-            cut.WaitForAssertion(() =>
-                cut.Markup.Should().Contain("class=\"hero-path\""));
-            cut.Markup.Should().NotContain("class=\"enemy-path\"");
-        }
-    }
-
-    [TestMethod]
-    public void HeroPath_TakesPriorityOverHeroVision_WhenBothEffectsPresent()
-    {
-        var (ctx, hub, _) = BuildCtx();
-        using (ctx)
-        {
-            var cut = ctx.RenderComponent<VisualizationPage>();
-
-            hub.FireSimulationStarted(MakeStartedWithCells(
-                MakeCell(2, 6, effects: [MakeEffect(ObjectType.Hero, EEffect.Vision), MakeEffect(ObjectType.Hero, EEffect.Path)])));
-
-            cut.WaitForAssertion(() =>
-                cut.Markup.Should().Contain("class=\"hero-path\""));
-            cut.Markup.Should().NotContain("class=\"hero-vision\"");
-        }
-    }
-
-    [TestMethod]
-    public void BlockCell_WithEffects_DoesNotRenderEffectOverlay()
-    {
-        var (ctx, hub, _) = BuildCtx();
-        using (ctx)
-        {
-            var cut = ctx.RenderComponent<VisualizationPage>();
-
-            // Only cell is a Block — effect overlay must be suppressed.
-            hub.FireSimulationStarted(MakeStartedWithCells(
-                MakeCell(3, 3, objectType: ObjectType.Block, effects: [MakeEffect(ObjectType.Hero, EEffect.Path)])));
-
-            cut.WaitForAssertion(() => cut.Markup.Should().Contain("<svg"));
-            cut.Markup.Should().NotContain("class=\"hero-path\"");
-        }
-    }
-
-    [TestMethod]
-    public void TurnCompleted_WithEffectCells_RendersEffectOverlays()
-    {
-        var (ctx, hub, _) = BuildCtx();
-        using (ctx)
-        {
-            var cut = ctx.RenderComponent<VisualizationPage>();
-
-            // Start with a plain empty cell.
-            hub.FireSimulationStarted(MakeStartedWithCells(
-                MakeCell(0, 0)));
-            cut.WaitForAssertion(() => cut.Markup.Should().Contain("<svg"));
-
-            // Turn update replaces the cell with an enemy-vision effect.
-            hub.FireTurnCompleted(new TurnCompletedDto
-            {
-                TurnNumber   = 1,
-                UpdatedCells = [MakeCell(0, 0, effects: [MakeEffect(ObjectType.Enemy, EEffect.Vision)])]
-            });
-
-            cut.WaitForAssertion(() =>
-                cut.Markup.Should().Contain("class=\"enemy-vision\""));
-        }
-    }
-
-    // ── Trained-model selection tests ────────────────────────────────────────
-
-    private static (TestContext ctx, FakeHubClient hub, Mock<ITrainingApiClient> trainingMock) BuildCtxWithModels(
-        List<TrainedModelInfoDto> models)
-    {
-        var (ctx, hub, trainingMock) = BuildCtx();
-        trainingMock.Setup(t => t.GetTrainedModelsAsync(It.IsAny<CancellationToken>()))
-                    .ReturnsAsync(models);
-        return (ctx, hub, trainingMock);
-    }
 
     private static List<TrainedModelInfoDto> MakeSampleModels() =>
     [
@@ -406,127 +154,449 @@ public class VisualizationPageTests
         }
     ];
 
-    [TestMethod]
-    public void WhenRandomAI_ModelTableIsNotShown()
+    /// <summary>Activates the simulation view and fires a SimulationStarted event.</summary>
+    private static void ActivateSimulationView(IRenderedComponent<VisualizationPage> cut, FakeHubClient hub, SimulationStartedDto? startedDto = null)
     {
-        var (ctx, _, _) = BuildCtxWithModels(MakeSampleModels());
+        cut.InvokeAsync(() => cut.Instance._simulationActive = true);
+        hub.FireSimulationStarted(startedDto ?? MakeStartedWithCells());
+    }
+
+    // ── Configuration view tests ─────────────────────────────────────────────
+
+    [TestMethod]
+    public void DefaultState_ShowsConfigurationView()
+    {
+        var (ctx, _, _, _) = BuildCtx();
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
-            cut.Markup.Should().NotContain("Trained Models");
-            cut.Markup.Should().NotContain("exp-001");
+            cut.Markup.Should().Contain("Select Simulation Source");
+            cut.Markup.Should().Contain("Start Simulation");
         }
     }
 
     [TestMethod]
-    public void WhenTrainedAI_NoModels_ShowsInfoAlert()
+    public void DefaultState_RandomAiIsSelected()
     {
-        var (ctx, _, _) = BuildCtx();
+        var (ctx, _, _, _) = BuildCtx();
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
+            cut.Markup.Should().Contain("Random AI");
+            cut.Markup.Should().Contain("no training preconditions");
+        }
+    }
 
-            // Switch to TrainedAI via the Kind select
-            var kindSelect = cut.FindComponents<MudSelect<SimulationKind>>().First();
-            kindSelect.Find("div.mud-input-control").Click();
-            cut.WaitForAssertion(() => cut.Markup.Should().Contain("Trained AI"));
-            var trainedItem = cut.FindAll(".mud-list-item").First(el => el.TextContent.Contains("Trained AI"));
-            trainedItem.Click();
+    [TestMethod]
+    public void DefaultState_SimulationGridIsHidden()
+    {
+        var (ctx, _, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            cut.Markup.Should().NotContain("Event Log");
+            cut.Markup.Should().NotContain("Waiting for simulation data");
+            cut.Instance._simulationActive.Should().BeFalse();
+        }
+    }
 
+    [TestMethod]
+    public void ConfigView_DataGridShowsRandomAiRow()
+    {
+        var (ctx, _, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
             cut.WaitForAssertion(() =>
-                cut.Markup.Should().Contain("No trained models found"));
+                cut.Markup.Should().Contain("Random AI"));
         }
     }
 
     [TestMethod]
-    public void WhenTrainedAI_WithModels_ShowsFilteredModelTable()
+    public void ConfigView_WithModels_DataGridShowsGroupedRows()
     {
-        var (ctx, _, _) = BuildCtxWithModels(MakeSampleModels());
+        var (ctx, _, _, _) = BuildCtxWithModels(MakeSampleModels());
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
-
-            // Switch to TrainedAI
-            var kindSelect = cut.FindComponents<MudSelect<SimulationKind>>().First();
-            kindSelect.Find("div.mud-input-control").Click();
-            cut.WaitForAssertion(() => cut.Markup.Should().Contain("Trained AI"));
-            var trainedItem = cut.FindAll(".mud-list-item").First(el => el.TextContent.Contains("Trained AI"));
-            trainedItem.Click();
-
-            // Should show PPO models (default algorithm), not A2C
             cut.WaitForAssertion(() =>
             {
-                cut.Markup.Should().Contain("Trained Models");
-                cut.Markup.Should().Contain("exp-001");
-                cut.Markup.Should().Contain("exp-002");
-                cut.Markup.Should().NotContain("exp-a2c-01");
+                var rows = cut.Instance._rows;
+                rows.Should().HaveCount(4);
+                rows.Select(r => r.Name).Should().Contain("Random AI");
+                rows.Select(r => r.Name).Should().Contain("exp-001");
+                rows.Select(r => r.Name).Should().Contain("exp-002");
+                rows.Select(r => r.Name).Should().Contain("exp-a2c-01");
             });
         }
     }
 
     [TestMethod]
-    public void WhenModelSelected_ShowsPreconditions()
+    public void ConfigView_WithModels_ShowsGroupHeaders()
     {
-        var (ctx, _, _) = BuildCtxWithModels(MakeSampleModels());
+        var (ctx, _, _, _) = BuildCtxWithModels(MakeSampleModels());
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
-
-            // Switch to TrainedAI
-            var kindSelect = cut.FindComponents<MudSelect<SimulationKind>>().First();
-            kindSelect.Find("div.mud-input-control").Click();
-            cut.WaitForAssertion(() => cut.Markup.Should().Contain("Trained AI"));
-            cut.FindAll(".mud-list-item").First(el => el.TextContent.Contains("Trained AI")).Click();
-
-            // Wait for model table and click the first row (exp-002 should be first since ordered by TrainedAt desc)
-            cut.WaitForAssertion(() => cut.Markup.Should().Contain("exp-002"));
-            var firstRow = cut.FindAll("tbody tr").First();
-            firstRow.Click();
-
-            // Should show preconditions for exp-002
             cut.WaitForAssertion(() =>
             {
-                cut.Markup.Should().Contain("Training Preconditions");
-                cut.Markup.Should().Contain("15 x 15"); // MapWidth x MapHeight
-                cut.Markup.Should().Contain("300");      // MaxTurns
-                cut.Markup.Should().Contain("learning_rate");
-                cut.Markup.Should().Contain("0.001");
+                cut.Markup.Should().Contain("Non AI");
+                cut.Markup.Should().Contain("PPO");
+                cut.Markup.Should().Contain("A2C");
             });
         }
     }
 
     [TestMethod]
-    public void WhenTrainedAI_StartButtonDisabled_UntilModelSelected()
+    public void ConfigView_StartButtonEnabled_WhenRandomAiSelected()
     {
-        var (ctx, _, _) = BuildCtxWithModels(MakeSampleModels());
+        var (ctx, _, _, _) = BuildCtx();
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
-
-            // Switch to TrainedAI
-            var kindSelect = cut.FindComponents<MudSelect<SimulationKind>>().First();
-            kindSelect.Find("div.mud-input-control").Click();
-            cut.WaitForAssertion(() => cut.Markup.Should().Contain("Trained AI"));
-            cut.FindAll(".mud-list-item").First(el => el.TextContent.Contains("Trained AI")).Click();
-
-            // Start button should be disabled (no model selected)
             cut.WaitForAssertion(() =>
             {
                 var startBtn = cut.FindComponents<MudButton>()
-                    .First(b => b.Markup.Contains("Start"));
-                startBtn.Instance.Disabled.Should().BeTrue();
-            });
-
-            // Select a model
-            cut.WaitForAssertion(() => cut.Markup.Should().Contain("exp-002"));
-            cut.FindAll("tbody tr").First().Click();
-
-            // Start button should now be enabled
-            cut.WaitForAssertion(() =>
-            {
-                var startBtn = cut.FindComponents<MudButton>()
-                    .First(b => b.Markup.Contains("Start"));
+                    .First(b => b.Markup.Contains("Start Simulation"));
                 startBtn.Instance.Disabled.Should().BeFalse();
+            });
+        }
+    }
+
+    [TestMethod]
+    public void ConfigView_BackButtonNotShown()
+    {
+        var (ctx, _, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            cut.Markup.Should().NotContain("Back");
+        }
+    }
+
+    // ── Simulation view tests ────────────────────────────────────────────────
+
+    [TestMethod]
+    public void SimulationView_ShowsBackButton()
+    {
+        var (ctx, hub, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            ActivateSimulationView(cut, hub);
+
+            cut.WaitForAssertion(() =>
+                cut.Markup.Should().Contain("Back"));
+        }
+    }
+
+    [TestMethod]
+    public void SimulationView_HidesConfigPanel()
+    {
+        var (ctx, hub, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            ActivateSimulationView(cut, hub);
+
+            cut.WaitForAssertion(() =>
+            {
+                cut.Markup.Should().NotContain("Select Simulation Source");
+                cut.Markup.Should().NotContain("Start Simulation");
+                cut.Markup.Should().NotContain("Training Preconditions");
+            });
+        }
+    }
+
+    [TestMethod]
+    public void SimulationView_ShowsEventLog()
+    {
+        var (ctx, hub, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            ActivateSimulationView(cut, hub);
+
+            cut.WaitForAssertion(() =>
+                cut.Markup.Should().Contain("Event Log"));
+        }
+    }
+
+    // ── Agent movement tests (simulation view) ──────────────────────────────
+
+    [TestMethod]
+    public void HandleAgentMoved_WhenIsSuccessTrue_MovesAgentCircleToNewCell()
+    {
+        var (ctx, hub, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            ActivateSimulationView(cut, hub, MakeStartedWithAgent("agent-01", x: 2, y: 3));
+            cut.WaitForAssertion(() => cut.Markup.Should().Contain("<svg"));
+
+            hub.FireAgentMoved(new AgentMovedDto
+            {
+                AgentId   = "agent-01",
+                AgentType = ObjectType.Hero,
+                From      = new Coordinates(2, 3),
+                To        = new Coordinates(4, 5),
+                IsSuccess = true
+            });
+
+            // Circle should have moved to (4,5) — cx = 4*16+8 = 72, cy = 5*16+8 = 88
+            cut.WaitForAssertion(() =>
+                cut.Markup.Should().Contain($"cx=\"{4 * CellSize + CellSize / 2}\""));
+            cut.Markup.Should().Contain($"cy=\"{5 * CellSize + CellSize / 2}\"");
+        }
+    }
+
+    [TestMethod]
+    public void HandleAgentMoved_WhenIsSuccessFalse_KeepsAgentCircleAtOriginalCell()
+    {
+        var (ctx, hub, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            ActivateSimulationView(cut, hub, MakeStartedWithAgent("agent-01", x: 2, y: 3));
+            cut.WaitForAssertion(() => cut.Markup.Should().Contain("<svg"));
+
+            hub.FireAgentMoved(new AgentMovedDto
+            {
+                AgentId   = "agent-01",
+                AgentType = ObjectType.Hero,
+                From      = new Coordinates(2, 3),
+                To        = new Coordinates(4, 5),
+                IsSuccess = false
+            });
+
+            // Circle must stay at (2,3) — cx = 2*16+8 = 40, cy = 3*16+8 = 56
+            cut.WaitForAssertion(() =>
+                cut.Markup.Should().Contain($"cx=\"{2 * CellSize + CellSize / 2}\""));
+            cut.Markup.Should().Contain($"cy=\"{3 * CellSize + CellSize / 2}\"");
+
+            // Must NOT have moved to (4,5) — cx = 72
+            cut.Markup.Should().NotContain($"cx=\"{4 * CellSize + CellSize / 2}\"");
+        }
+    }
+
+    [TestMethod]
+    public void HandleAgentMoved_WhenIsSuccessFalse_StillAppearsInEventLog()
+    {
+        var (ctx, hub, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            ActivateSimulationView(cut, hub, MakeStartedWithAgent("agent-01", x: 2, y: 3));
+
+            hub.FireAgentMoved(new AgentMovedDto
+            {
+                AgentId   = "agent-01",
+                AgentType = ObjectType.Hero,
+                From      = new Coordinates(2, 3),
+                To        = new Coordinates(4, 5),
+                IsSuccess = false
+            });
+
+            // The event log should record the move regardless of success
+            cut.WaitForAssertion(() =>
+                cut.Markup.Should().Contain("Hero #agent"));
+        }
+    }
+
+    [TestMethod]
+    public void HandleAgentMoved_WhenIsSuccessFalse_StillUpdatesAgentSnapshot()
+    {
+        var (ctx, hub, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            ActivateSimulationView(cut, hub, MakeStartedWithAgent("agent-01", x: 2, y: 3));
+            cut.WaitForAssertion(() => cut.Markup.Should().Contain("<svg"));
+
+            hub.FireAgentMoved(new AgentMovedDto
+            {
+                AgentId   = "agent-01",
+                AgentType = ObjectType.Hero,
+                From      = new Coordinates(2, 3),
+                To        = new Coordinates(4, 5),
+                IsSuccess = false,
+                Agent     = new AgentSnapshotDto { Stamina = 80, MaxStamina = 100 }
+            });
+
+            cut.WaitForAssertion(() =>
+                cut.Markup.Should().NotContain("HandleAgentMoved EXCEPTION"));
+        }
+    }
+
+    // ── Effect overlay rendering tests ──────────────────────────────────────
+
+    [TestMethod]
+    public void HeroPathCell_IsRenderedWithHeroPathClass()
+    {
+        var (ctx, hub, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            ActivateSimulationView(cut, hub, MakeStartedWithCells(
+                MakeCell(3, 4, effects: [MakeEffect(ObjectType.Hero, EEffect.Path)])));
+
+            cut.WaitForAssertion(() =>
+                cut.Markup.Should().Contain("class=\"hero-path\""));
+        }
+    }
+
+    [TestMethod]
+    public void EnemyPathCell_IsRenderedWithEnemyPathClass()
+    {
+        var (ctx, hub, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            ActivateSimulationView(cut, hub, MakeStartedWithCells(
+                MakeCell(5, 2, effects: [MakeEffect(ObjectType.Enemy, EEffect.Path)])));
+
+            cut.WaitForAssertion(() =>
+                cut.Markup.Should().Contain("class=\"enemy-path\""));
+        }
+    }
+
+    [TestMethod]
+    public void HeroVisionCell_IsRenderedWithHeroVisionClass()
+    {
+        var (ctx, hub, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            ActivateSimulationView(cut, hub, MakeStartedWithCells(
+                MakeCell(1, 1, effects: [MakeEffect(ObjectType.Hero, EEffect.Vision)])));
+
+            cut.WaitForAssertion(() =>
+                cut.Markup.Should().Contain("class=\"hero-vision\""));
+        }
+    }
+
+    [TestMethod]
+    public void EnemyVisionCell_IsRenderedWithEnemyVisionClass()
+    {
+        var (ctx, hub, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            ActivateSimulationView(cut, hub, MakeStartedWithCells(
+                MakeCell(7, 7, effects: [MakeEffect(ObjectType.Enemy, EEffect.Vision)])));
+
+            cut.WaitForAssertion(() =>
+                cut.Markup.Should().Contain("class=\"enemy-vision\""));
+        }
+    }
+
+    [TestMethod]
+    public void HeroPath_TakesPriorityOverEnemyPath_WhenBothEffectsPresent()
+    {
+        var (ctx, hub, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            ActivateSimulationView(cut, hub, MakeStartedWithCells(
+                MakeCell(4, 4, effects: [MakeEffect(ObjectType.Hero, EEffect.Path), MakeEffect(ObjectType.Enemy, EEffect.Path)])));
+
+            cut.WaitForAssertion(() =>
+                cut.Markup.Should().Contain("class=\"hero-path\""));
+            cut.Markup.Should().NotContain("class=\"enemy-path\"");
+        }
+    }
+
+    [TestMethod]
+    public void HeroPath_TakesPriorityOverHeroVision_WhenBothEffectsPresent()
+    {
+        var (ctx, hub, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            ActivateSimulationView(cut, hub, MakeStartedWithCells(
+                MakeCell(2, 6, effects: [MakeEffect(ObjectType.Hero, EEffect.Vision), MakeEffect(ObjectType.Hero, EEffect.Path)])));
+
+            cut.WaitForAssertion(() =>
+                cut.Markup.Should().Contain("class=\"hero-path\""));
+            cut.Markup.Should().NotContain("class=\"hero-vision\"");
+        }
+    }
+
+    [TestMethod]
+    public void BlockCell_WithEffects_DoesNotRenderEffectOverlay()
+    {
+        var (ctx, hub, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            ActivateSimulationView(cut, hub, MakeStartedWithCells(
+                MakeCell(3, 3, objectType: ObjectType.Block, effects: [MakeEffect(ObjectType.Hero, EEffect.Path)])));
+
+            cut.WaitForAssertion(() => cut.Markup.Should().Contain("<svg"));
+            cut.Markup.Should().NotContain("class=\"hero-path\"");
+        }
+    }
+
+    [TestMethod]
+    public void TurnCompleted_WithEffectCells_RendersEffectOverlays()
+    {
+        var (ctx, hub, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            ActivateSimulationView(cut, hub, MakeStartedWithCells(MakeCell(0, 0)));
+            cut.WaitForAssertion(() => cut.Markup.Should().Contain("<svg"));
+
+            // Turn update replaces the cell with an enemy-vision effect.
+            hub.FireTurnCompleted(new TurnCompletedDto
+            {
+                TurnNumber   = 1,
+                UpdatedCells = [MakeCell(0, 0, effects: [MakeEffect(ObjectType.Enemy, EEffect.Vision)])]
+            });
+
+            cut.WaitForAssertion(() =>
+                cut.Markup.Should().Contain("class=\"enemy-vision\""));
+        }
+    }
+
+    // ── Trained-model selection tests ────────────────────────────────────────
+
+    [TestMethod]
+    public void WhenRandomAI_PreconditionsNotShown()
+    {
+        var (ctx, _, _, _) = BuildCtxWithModels(MakeSampleModels());
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            cut.Markup.Should().NotContain("Training Preconditions");
+        }
+    }
+
+    [TestMethod]
+    public void WhenRandomAI_InfoAlertShown()
+    {
+        var (ctx, _, _, _) = BuildCtxWithModels(MakeSampleModels());
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            cut.WaitForAssertion(() =>
+                cut.Markup.Should().Contain("no training preconditions"));
+        }
+    }
+
+    [TestMethod]
+    public void DataGrid_ShowsAllModelGroups()
+    {
+        var (ctx, _, _, _) = BuildCtxWithModels(MakeSampleModels());
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            cut.WaitForAssertion(() =>
+            {
+                cut.Instance._rows.Should().HaveCount(4); // 1 Random + 2 PPO + 1 A2C
+                cut.Instance._rows.Should().Contain(r => r.Group == "Non AI");
+                cut.Instance._rows.Should().Contain(r => r.Group == "PPO");
+                cut.Instance._rows.Should().Contain(r => r.Group == "A2C");
             });
         }
     }

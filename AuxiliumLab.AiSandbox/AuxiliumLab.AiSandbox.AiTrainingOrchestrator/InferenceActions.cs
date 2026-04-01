@@ -23,12 +23,16 @@ namespace AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
 /// and caches the model on the first call.
 /// </para>
 /// </summary>
-public sealed class InferenceActions : IAiActions
+public sealed class InferenceActions : IAiActions, IDisposable
 {
+    public ModelType ModelType { get; }
+
     private readonly IMessageBroker                            _messageBroker;
     private readonly IMemoryDataManager<AgentStateForAIDecision> _agentStateRepository;
     private readonly IPolicyTrainerClient                      _policyTrainerClient;
     private readonly string                                    _modelPath;
+    private readonly Action<GameStartedEvent>                  _onGameStartedHandler;
+    private readonly Action<RequestAgentDecisionMakeCommand>   _onDecisionRequestHandler;
     private Guid _playgroundId = Guid.Empty;
 
     public AiConfiguration AiConfiguration { get; init; }
@@ -45,6 +49,10 @@ public sealed class InferenceActions : IAiActions
         _policyTrainerClient  = policyTrainerClient;
         _modelPath            = modelPath;
         AiConfiguration       = aiConfiguration;
+        ModelType            = aiConfiguration.ModelType;
+
+        _onGameStartedHandler     = OnGameStarted;
+        _onDecisionRequestHandler = OnDecisionRequest;
     }
 
     /// <summary>
@@ -52,8 +60,17 @@ public sealed class InferenceActions : IAiActions
     /// </summary>
     public void Initialize()
     {
-        _messageBroker.Subscribe<GameStartedEvent>(OnGameStarted);
-        _messageBroker.Subscribe<RequestAgentDecisionMakeCommand>(OnDecisionRequest);
+        _messageBroker.Subscribe(_onGameStartedHandler);
+        _messageBroker.Subscribe(_onDecisionRequestHandler);
+    }
+
+    /// <summary>
+    /// Unsubscribes from game events so stale handlers don't leak on the shared broker.
+    /// </summary>
+    public void Dispose()
+    {
+        _messageBroker.Unsubscribe(_onGameStartedHandler);
+        _messageBroker.Unsubscribe(_onDecisionRequestHandler);
     }
 
     // ── Handlers ─────────────────────────────────────────────────────────────

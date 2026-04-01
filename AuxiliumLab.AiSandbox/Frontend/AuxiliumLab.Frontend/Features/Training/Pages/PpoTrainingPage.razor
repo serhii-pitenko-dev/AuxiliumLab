@@ -90,19 +90,12 @@
         </MudCard>
 
         <!-- Sandbox overrides -->
-        <MudCard Outlined="true">
-            <MudCardHeader>
-                <CardHeaderContent>
+        <MudExpansionPanels Outlined="true">
+            <MudExpansionPanel aria-label="Sandbox Overrides Panel">
+                <TitleContent>
                     <MudText Typo="Typo.subtitle1">Sandbox Overrides <MudText Inline="true" Color="Color.Secondary">(optional)</MudText></MudText>
-                </CardHeaderContent>
-                <CardHeaderActions>
-                    <MudIconButton Icon="@(_sandboxExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                                   OnClick="@(() => _sandboxExpanded = !_sandboxExpanded)" />
-                </CardHeaderActions>
-            </MudCardHeader>
-            @if (_sandboxExpanded)
-            {
-                <MudCardContent>
+                </TitleContent>
+                <ChildContent>
                     <MudGrid>
                         <MudItem xs="12" sm="6">
                             <MudNumericField @bind-Value="_cmd.SandboxSettings!.MaxTurns" Label="Max Turns" Variant="Variant.Outlined" />
@@ -138,9 +131,9 @@
                             <MudNumericField @bind-Value="_cmd.SandboxSettings!.EnemyStamina" Label="Enemy Stamina" Variant="Variant.Outlined" />
                         </MudItem>
                     </MudGrid>
-                </MudCardContent>
-            }
-        </MudCard>
+                </ChildContent>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
     </MudItem>
 </MudGrid>
 

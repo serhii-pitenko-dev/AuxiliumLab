@@ -242,3 +242,5 @@ Verify that both containers start successfully and run without errors.
 Start AuxiliumLab.Frontend locally using `dotnet run`.
 Verify that the frontend can communicate with the backend services and that the entire system works without errors.
 
+
+auxiliumlab-rl-service-baselines3 AuxiliumLab.AiSandbox.Startup is run in the docker. 

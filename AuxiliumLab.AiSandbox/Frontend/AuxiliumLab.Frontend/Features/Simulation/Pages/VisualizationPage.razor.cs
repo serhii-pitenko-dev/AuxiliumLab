@@ -10,6 +10,27 @@ public partial class VisualizationPage : IAsyncDisposable
     private const int AxisMargin = 18;
     private const int MaxLogs    = 200;
 
+    // ── Row model for the data grid ──────────────────────────────────────────
+
+    internal class SimulationSourceRow
+    {
+        public string                    Group        { get; init; } = string.Empty;
+        public string                    Name         { get; init; } = string.Empty;
+        public DateTime?                 CreatedDate  { get; init; }
+        public SimulationKind            Kind         { get; init; }
+        public ModelType                 Algorithm    { get; init; }
+        public string?                   ExperimentId { get; init; }
+        public TrainingPreconditionsDto? Preconditions { get; init; }
+    }
+
+    // ── State ────────────────────────────────────────────────────────────────
+
+    internal bool _simulationActive;
+    private bool  _loadingModels;
+
+    internal List<SimulationSourceRow> _rows = [];
+    private SimulationSourceRow? _selectedRow;
+
     private readonly StartSingleSimulationCommand _cmd = new()
     {
         Kind      = SimulationKind.RandomAI,
@@ -18,14 +39,14 @@ public partial class VisualizationPage : IAsyncDisposable
 
     private SimulationSandboxOverrideDto _override = new();
 
-    private bool   _starting;
-    private bool   _running;
-    private bool   _paused;
-    private Guid   _jobId;
-    private int    _gridWidth;
-    private int    _gridHeight;
-    private int    _maxTurns;
-    private int    _currentTurn;
+    private bool    _starting;
+    private bool    _running;
+    private bool    _paused;
+    private Guid    _jobId;
+    private int     _gridWidth;
+    private int     _gridHeight;
+    private int     _maxTurns;
+    private int     _currentTurn;
     private string? _outcome;
     private string? _reason;
 
@@ -34,11 +55,7 @@ public partial class VisualizationPage : IAsyncDisposable
     private Dictionary<string, AgentSnapshotDto> _agents          = [];
     private readonly List<string> _logs = [];
 
-    // ── Trained-model selection ───────────────────────────────────────────────
-    private List<TrainedModelInfoDto> _allModels = [];
-    private List<TrainedModelInfoDto> _filteredModels = [];
-    private TrainedModelInfoDto? _selectedModel;
-    private bool _loadingModels;
+    // ── Lifecycle ────────────────────────────────────────────────────────────
 
     protected override async Task OnInitializedAsync()
     {
@@ -49,8 +66,16 @@ public partial class VisualizationPage : IAsyncDisposable
         HubClient.OnSimulationEnded    += HandleEnded;
         HubClient.OnDebugMessage       += HandleDebugMessage;
 
+        _override = BuildDefaultOverride();
+        _cmd.SandboxSettings = _override;
+
+        await LoadModelsAndBuildRowsAsync();
+    }
+
+    internal SimulationSandboxOverrideDto BuildDefaultOverride()
+    {
         var sb = SandboxConfig.Value;
-        _override = new SimulationSandboxOverrideDto
+        return new SimulationSandboxOverrideDto
         {
             MaxTurns       = sb.MaxTurns.Current,
             MapWidth       = sb.MapSettings.Size.Width.Current,
@@ -64,56 +89,75 @@ public partial class VisualizationPage : IAsyncDisposable
             EnemySightRange  = sb.Enemy.SightRange.Current,
             EnemyStamina     = sb.Enemy.Stamina.Current
         };
-        _cmd.SandboxSettings = _override;
     }
 
-    private async Task OnKindChanged(SimulationKind kind)
-    {
-        _cmd.Kind = kind;
-        _selectedModel = null;
-        _cmd.ExperimentId = null;
-
-        if (kind == SimulationKind.TrainedAI)
-            await LoadModelsAsync();
-        else
-            _filteredModels = [];
-    }
-
-    private async Task OnAlgorithmChanged(ModelType algorithm)
-    {
-        _cmd.Algorithm = algorithm;
-        _selectedModel = null;
-        _cmd.ExperimentId = null;
-        await LoadModelsAsync();
-    }
-
-    private async Task LoadModelsAsync()
+    private async Task LoadModelsAndBuildRowsAsync()
     {
         _loadingModels = true;
+        var rows = new List<SimulationSourceRow>();
+
+        var randomRow = new SimulationSourceRow
+        {
+            Group = "Non AI",
+            Name  = "Random AI",
+            Kind  = SimulationKind.RandomAI
+        };
+        rows.Add(randomRow);
+
         try
         {
-            if (_allModels.Count == 0)
-                _allModels = await TrainingApi.GetTrainedModelsAsync();
-
-            _filteredModels = _allModels
-                .Where(m => string.Equals(m.Algorithm, _cmd.Algorithm.ToString(), StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(m => m.TrainedAt)
-                .ToList();
+            var models = await TrainingApi.GetTrainedModelsAsync();
+            foreach (var model in models.OrderByDescending(m => m.TrainedAt))
+            {
+                var group = model.Algorithm.ToUpperInvariant() switch
+                {
+                    "PPO" => "PPO",
+                    "A2C" => "A2C",
+                    "DQN" => "DQN",
+                    _     => model.Algorithm
+                };
+                rows.Add(new SimulationSourceRow
+                {
+                    Group         = group,
+                    Name          = model.ExperimentId,
+                    CreatedDate   = model.TrainedAt,
+                    Kind          = SimulationKind.TrainedAI,
+                    Algorithm     = Enum.TryParse<ModelType>(model.Algorithm, true, out var mt) ? mt : ModelType.PPO,
+                    ExperimentId  = model.ExperimentId,
+                    Preconditions = model.Preconditions
+                });
+            }
         }
         catch (Exception ex)
         {
             Notifications.Notify($"Error loading models: {ex.Message}");
         }
-        finally
-        {
-            _loadingModels = false;
-        }
+
+        _rows = rows;
+        _selectedRow = randomRow;
+        _loadingModels = false;
     }
 
-    private void OnModelSelected(TrainedModelInfoDto model)
+    // ── Row selection ────────────────────────────────────────────────────────
+
+    private void OnRowSelected(SimulationSourceRow? row)
     {
-        _selectedModel = model;
-        _cmd.ExperimentId = model.ExperimentId;
+        _selectedRow = row;
+        if (row is null) return;
+
+        _cmd.Kind         = row.Kind;
+        _cmd.Algorithm    = row.Algorithm;
+        _cmd.ExperimentId = row.ExperimentId;
+
+        var ov = BuildDefaultOverride();
+        if (row.Preconditions is not null)
+        {
+            ov.MaxTurns  = row.Preconditions.MaxTurns;
+            ov.MapWidth  = row.Preconditions.MapWidth;
+            ov.MapHeight = row.Preconditions.MapHeight;
+        }
+        _override = ov;
+        _cmd.SandboxSettings = _override;
     }
 
     private void OnOverrideChanged(SimulationSandboxOverrideDto dto)
@@ -121,16 +165,20 @@ public partial class VisualizationPage : IAsyncDisposable
         _cmd.SandboxSettings = dto;
     }
 
+    // ── Simulation controls ─────────────────────────────────────────────────
+
     private async Task StartAsync()
     {
-        _starting  = true;
-        _cells     = [];
+        _starting       = true;
+        _cells          = [];
         _agentPositions = [];
-        _agents    = [];
+        _agents         = [];
         _logs.Clear();
-        _outcome   = null;
-        _reason    = null;
+        _outcome     = null;
+        _reason      = null;
         _currentTurn = 0;
+        _gridWidth   = 0;
+        _gridHeight  = 0;
 
         try
         {
@@ -140,6 +188,7 @@ public partial class VisualizationPage : IAsyncDisposable
             _jobId   = result.JobId;
             _running = true;
             _paused  = false;
+            _simulationActive = true;
             AddLog($"Started job {_jobId}");
 
             await HubClient.ConnectAsync(_jobId.ToString());
@@ -153,6 +202,23 @@ public partial class VisualizationPage : IAsyncDisposable
         {
             _starting = false;
         }
+    }
+
+    private async Task BackToConfigAsync()
+    {
+        if (_running)
+        {
+            await SimulationApi.StopSimulationAsync(_jobId);
+            _running = false;
+        }
+
+        if (_jobId != default)
+        {
+            await HubClient.DisconnectAsync();
+            _jobId = default;
+        }
+
+        _simulationActive = false;
     }
 
     private async Task PauseResumeAsync()

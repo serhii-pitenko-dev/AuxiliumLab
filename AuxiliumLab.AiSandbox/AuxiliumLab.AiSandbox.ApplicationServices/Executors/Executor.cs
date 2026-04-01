@@ -29,7 +29,7 @@ using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects;
 
 namespace AuxiliumLab.AiSandbox.ApplicationServices.Executors;
 
-public abstract class Executor : IExecutor
+public abstract class Executor : IExecutor, IDisposable
 {
     private readonly IPlaygroundCommandsHandleService _playgroundCommands;
     private readonly IMemoryDataManager<StandardPlayground> _playgroundRepository;
@@ -102,6 +102,11 @@ public abstract class Executor : IExecutor
         _turnExecutionPerformanceFileRepository = turnExecutionPerformanceFileRepository;
         _sandboxExecutionPerformanceFileRepository = sandboxExecutionPerformanceFileRepository;
         _testPreconditionData = testPreconditionData;
+    }
+
+    public void Dispose()
+    {
+        (_aiActions as IDisposable)?.Dispose();
     }
 
     public async Task TestRunWithPreconditionsAsync()

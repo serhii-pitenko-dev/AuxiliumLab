@@ -12,7 +12,7 @@ namespace AuxiliumLab.AiSandbox.Ai;
 /// <summary>
 /// Should be one instace per one simulation 
 /// </summary>
-public class RandomActions : IAiActions
+public class RandomActions : IAiActions, IDisposable
 {
     public ModelType ModelType { get; init; } = ModelType.Random;
     public string Version { get; init; } = "1.0";
@@ -26,6 +26,8 @@ public class RandomActions : IAiActions
     private readonly Random _random = new();
     private readonly IMessageBroker _messageBroker;
     private readonly IMemoryDataManager<AgentStateForAIDecision> _agentStateMemoryRepository;
+    private readonly Action<GameStartedEvent> _onGameStartedHandler;
+    private readonly Action<RequestAgentDecisionMakeCommand> _onDecisionRequestHandler;
 
     public RandomActions(
         IMessageBroker messageBroker, 
@@ -33,21 +35,30 @@ public class RandomActions : IAiActions
     {
         _messageBroker = messageBroker;
         _agentStateMemoryRepository = agentStateMemoryRepository;
-    }
 
-    public void Initialize()
-    {
-        _messageBroker.Subscribe<GameStartedEvent>(msg =>
+        _onGameStartedHandler = msg =>
         {
             _messageBroker.Publish(new AiReadyToActionsResponse(Guid.NewGuid(), msg.PlaygroundId, msg.Id));
-        });
+        };
 
-        _messageBroker.Subscribe<RequestAgentDecisionMakeCommand>(msg =>
+        _onDecisionRequestHandler = msg =>
         {
             var agent = _agentStateMemoryRepository.LoadObject(msg.AgentId);
             AgentDecisionBaseResponse response = HandleAgentActionMessage(agent, msg.Id);
             _messageBroker.Publish(response);
-        });
+        };
+    }
+
+    public void Initialize()
+    {
+        _messageBroker.Subscribe(_onGameStartedHandler);
+        _messageBroker.Subscribe(_onDecisionRequestHandler);
+    }
+
+    public void Dispose()
+    {
+        _messageBroker.Unsubscribe(_onGameStartedHandler);
+        _messageBroker.Unsubscribe(_onDecisionRequestHandler);
     }
 
     private AgentDecisionBaseResponse HandleAgentActionMessage(AgentStateForAIDecision agent, Guid correlationId)

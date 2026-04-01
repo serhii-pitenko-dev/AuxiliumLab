@@ -6,7 +6,6 @@ public partial class PpoTrainingPage
     private StartPpoTrainingCommand _cmd = new();
 
     private bool _loading;
-    private bool _sandboxExpanded;
     private TrainingJobStartedDto? _started;
     private string? _error;
 

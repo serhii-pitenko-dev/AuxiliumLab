@@ -111,4 +111,81 @@ public class PpoTrainingPageTests
         rewards.WinReward.Should().Be(10.0f);
         rewards.LossReward.Should().Be(-10.0f);
     }
+
+    [TestMethod]
+    public void SandboxOverrides_CollapsedByDefault()
+    {
+        using var ctx = new TestContext();
+        ctx.SetupWithMudServices();
+        ctx.Services.AddSingleton(new Mock<ITrainingApiClient>().Object);
+        ctx.Services.AddSingleton(new Mock<INotificationService>().Object);
+
+        var cut = ctx.RenderComponent<PpoTrainingPage>();
+
+        // The expansion panel should exist but not be expanded
+        var panel = cut.Find("[aria-label='Sandbox Overrides Panel']");
+        panel.ClassList.Should().NotContain("mud-panel-expanded");
+    }
+
+    [TestMethod]
+    public void SandboxOverrides_ExpandsOnHeaderClick()
+    {
+        using var ctx = new TestContext();
+        ctx.SetupWithMudServices();
+        ctx.Services.AddSingleton(new Mock<ITrainingApiClient>().Object);
+        ctx.Services.AddSingleton(new Mock<INotificationService>().Object);
+
+        var cut = ctx.RenderComponent<PpoTrainingPage>();
+
+        // Click the expansion panel header
+        var header = cut.Find("[aria-label='Sandbox Overrides Panel'] .mud-expand-panel-header");
+        header.Click();
+
+        // Panel should now be expanded
+        var panel = cut.Find("[aria-label='Sandbox Overrides Panel']");
+        panel.ClassList.Should().Contain("mud-panel-expanded");
+    }
+
+    [TestMethod]
+    public void SandboxOverrides_ShowsFieldsWhenExpanded()
+    {
+        using var ctx = new TestContext();
+        ctx.SetupWithMudServices();
+        ctx.Services.AddSingleton(new Mock<ITrainingApiClient>().Object);
+        ctx.Services.AddSingleton(new Mock<INotificationService>().Object);
+
+        var cut = ctx.RenderComponent<PpoTrainingPage>();
+
+        // Expand the panel
+        var header = cut.Find("[aria-label='Sandbox Overrides Panel'] .mud-expand-panel-header");
+        header.Click();
+
+        // Verify sandbox override fields are present
+        cut.Markup.Should().Contain("Max Turns");
+        cut.Markup.Should().Contain("Map Width");
+        cut.Markup.Should().Contain("Map Height");
+        cut.Markup.Should().Contain("Hero Speed");
+        cut.Markup.Should().Contain("Enemy Speed");
+    }
+
+    [TestMethod]
+    public void SandboxOverrides_CollapsesOnSecondClick()
+    {
+        using var ctx = new TestContext();
+        ctx.SetupWithMudServices();
+        ctx.Services.AddSingleton(new Mock<ITrainingApiClient>().Object);
+        ctx.Services.AddSingleton(new Mock<INotificationService>().Object);
+
+        var cut = ctx.RenderComponent<PpoTrainingPage>();
+
+        var header = cut.Find("[aria-label='Sandbox Overrides Panel'] .mud-expand-panel-header");
+
+        // Expand
+        header.Click();
+        cut.Find("[aria-label='Sandbox Overrides Panel']").ClassList.Should().Contain("mud-panel-expanded");
+
+        // Collapse
+        header.Click();
+        cut.Find("[aria-label='Sandbox Overrides Panel']").ClassList.Should().NotContain("mud-panel-expanded");
+    }
 }

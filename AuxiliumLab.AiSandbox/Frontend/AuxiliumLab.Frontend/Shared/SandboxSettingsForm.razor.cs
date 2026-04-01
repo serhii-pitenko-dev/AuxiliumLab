@@ -6,8 +6,11 @@ public partial class SandboxSettingsForm
 {
     [Parameter, EditorRequired] public SimulationSandboxOverrideDto Override { get; set; } = new();
     [Parameter] public EventCallback<SimulationSandboxOverrideDto> OverrideChanged { get; set; }
+    [Parameter] public bool DefaultExpanded { get; set; }
 
     private bool _expanded;
+
+    protected override void OnInitialized() => _expanded = DefaultExpanded;
 
     private int MaxTurns
     {

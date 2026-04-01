@@ -161,11 +161,13 @@ public class ExecutorFactory : IExecutorFactory
         int actionDelayMs = 0,
         SemaphoreSlim? pauseGate = null)
     {
-        var broker     = new AuxiliumLab.AiSandbox.Common.MessageBroker.MessageBroker();
-        var rpcClient  = new BrokerRpcClient(broker);
+        // Presentation executors must use the shared singleton broker so that
+        // SimulationVisualizationBridge (which subscribes on the same singleton)
+        // receives all events and can forward them to the SignalR hub.
+        // Only mass/parallel executors use isolated brokers to avoid lock contention.
         var agentStore = new MemoryDataManager<AgentStateForAIDecision>();
         var aiActions  = new InferenceActions(
-            broker,
+            _messageBroker,
             agentStore,
             policyTrainerClient,
             modelPath,
@@ -178,8 +180,8 @@ public class ExecutorFactory : IExecutorFactory
             configuration,
             _playgroundStateFileRepository,
             agentStore,
-            broker,
-            rpcClient,
+            _messageBroker,
+            _brokerRpcClient,
             _standardPlaygroundMapper,
             _rawDataLogFileRepository,
             _turnExecutionPerformanceFileRepository,

@@ -20,6 +20,7 @@
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.AiTrainingOrchestrator\AuxiliumLab.AiSandbox.AiTrainingOrchestrator.csproj" />
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.ApplicationServices\AuxiliumLab.AiSandbox.ApplicationServices.csproj" />
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.Infrastructure\AuxiliumLab.AiSandbox.Infrastructure.csproj" />
+    <ProjectReference Include="..\AuxiliumLab.AiSandbox.WebApi\AuxiliumLab.AiSandbox.WebApi.csproj" />
   </ItemGroup>
 
 </Project>
