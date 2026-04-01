@@ -99,6 +99,9 @@ message StatusResponse {
 message ActRequest {
   string run_id = 1;
   repeated float observation = 2;
+  // Algorithm type hint for inference-by-path mode (e.g. "ppo", "a2c", "dqn").
+  // When non-empty, Python uses this instead of inferring from the filename.
+  string algorithm_type = 3;
 }
 
 // Response message for action inference

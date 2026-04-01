@@ -25,6 +25,9 @@ Or run from VS Code via the Test Explorer panel.
 | **Playground** | `StandardPlaygroundTest` | Place agents and objects, move objects, turn counter, vision update |
 | **Mapper** | `StandardPlaygroundMapperTest` | Round-trip serialisation: domain → state → domain preserves all properties |
 | **MessageBroker** | `BrokerRpcClientTest` | Request/response correlation, timeout, multiple concurrent requests |
+| **AI subscription** | `AiActionsSubscriptionCleanupTests` | InferenceActions / RandomActions unsubscribe on dispose; no handler leaks |
+| **Executor isolation** | `ExecutorFactoryBrokerIsolationTests` | Parallel executors use isolated brokers; presentation uses the shared broker |
+| **Inference — algorithm type** | `InferenceActionsAlgorithmTypeTests` | `ActRequest.AlgorithmType` is set from `ModelType`; failure logging fires once per episode |
 
 ## Test Project Structure
 

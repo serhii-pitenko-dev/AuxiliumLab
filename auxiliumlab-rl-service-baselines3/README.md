@@ -170,9 +170,10 @@ print(f"Steps done: {status.timesteps_done} | Done: {status.is_done}")
 ```python
 act = stub.Act(policy_trainer_pb2.ActRequest(
     run_id=run_id,
-    observation=[0.1, 0.2, 0.3, 0.4]
+    observation=[0.1, 0.2, 0.3, 0.4],
+    algorithm_type="ppo"  # helps Python select the correct SB3 class when run_id is a file path
 ))
-print(f"Action: {act.action}")
+print(f"Action: {act.action}, Success: {act.success}")
 ```
 
 ## Default Hyperparameters
@@ -360,11 +361,12 @@ print(f"Last checkpoint: {status.last_checkpoint_path}")
 ```python
 act_request = policy_trainer_pb2.ActRequest(
     run_id=run_id,
-    observation=[0.1, 0.2, 0.3, 0.4]
+    observation=[0.1, 0.2, 0.3, 0.4],
+    algorithm_type="ppo"  # optional; helps Python select the correct SB3 class when run_id is a file path
 )
 
 act_response = stub.Act(act_request)
-print(f"Action: {act_response.action}")
+print(f"Action: {act_response.action}, Success: {act_response.success}")
 ```
 
 ## Testing

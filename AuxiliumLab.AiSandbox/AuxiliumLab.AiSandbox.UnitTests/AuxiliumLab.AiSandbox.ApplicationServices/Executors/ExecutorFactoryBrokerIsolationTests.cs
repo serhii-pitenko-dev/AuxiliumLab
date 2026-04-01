@@ -79,7 +79,8 @@ public class ExecutorFactoryBrokerIsolationTests
             new Mock<IFileDataManager<RawDataLog>>().Object,
             new Mock<IFileDataManager<TurnExecutionPerformance>>().Object,
             new Mock<IFileDataManager<SandboxExecutionPerformance>>().Object,
-            new Mock<ITestPreconditionData>().Object);
+            new Mock<ITestPreconditionData>().Object,
+            new Mock<Microsoft.Extensions.Logging.ILoggerFactory>().Object);
     }
 
     // ── Presentation executors use the shared broker ────────────────────────

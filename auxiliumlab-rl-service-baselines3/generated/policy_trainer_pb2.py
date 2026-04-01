@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14policy_trainer.proto\x12\x0epolicy_trainer\"v\n\x0f\x45nvironmentSpec\x12\x17\n\x0fobservation_dim\x18\x01 \x01(\x05\x12\x12\n\naction_dim\x18\x02 \x01(\x05\x12\x13\n\x0bsight_range\x18\x03 \x01(\x05\x12!\n\x19observation_feature_names\x18\x04 \x03(\t\"c\n\x1bNegotiateEnvironmentRequest\x12\x15\n\rexperiment_id\x18\x01 \x01(\t\x12-\n\x04spec\x18\x02 \x01(\x0b\x32\x1f.policy_trainer.EnvironmentSpec\"w\n\x1cNegotiateEnvironmentResponse\x12\x10\n\x08\x61\x63\x63\x65pted\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x34\n\x0b\x65\x63hoed_spec\x18\x03 \x01(\x0b\x32\x1f.policy_trainer.EnvironmentSpec\"\xf1\x01\n\x0fTrainingRequest\x12\x15\n\rexperiment_id\x18\x01 \x01(\t\x12\x17\n\x0ftotal_timesteps\x18\x02 \x01(\x05\x12\x0c\n\x04seed\x18\x03 \x01(\x05\x12M\n\x0fhyperparameters\x18\x04 \x03(\x0b\x32\x34.policy_trainer.TrainingRequest.HyperparametersEntry\x12\x19\n\x11model_output_path\x18\x05 \x01(\t\x1a\x36\n\x14HyperparametersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"c\n\x10TrainingResponse\x12.\n\x06status\x18\x01 \x01(\x0e\x32\x1e.policy_trainer.TrainingStatus\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x0e\n\x06run_id\x18\x03 \x01(\t\"\x1f\n\rStatusRequest\x12\x0e\n\x06run_id\x18\x01 \x01(\t\"\x99\x01\n\x0eStatusResponse\x12\x16\n\x0etimesteps_done\x18\x01 \x01(\x05\x12\x0f\n\x07is_done\x18\x02 \x01(\x08\x12\x1c\n\x14last_checkpoint_path\x18\x03 \x01(\t\x12\x15\n\rerror_message\x18\x04 \x01(\t\x12\x17\n\x0ftotal_timesteps\x18\x05 \x01(\x05\x12\x10\n\x08num_envs\x18\x06 \x01(\x05\"1\n\nActRequest\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12\x13\n\x0bobservation\x18\x02 \x03(\x02\"E\n\x0b\x41\x63tResponse\x12\x0e\n\x06\x61\x63tion\x18\x01 \x01(\x05\x12\x0f\n\x07success\x18\x02 \x01(\x08\x12\x15\n\rerror_message\x18\x03 \x01(\t*)\n\x0eTrainingStatus\x12\x0b\n\x07STARTED\x10\x00\x12\n\n\x06\x46\x41ILED\x10\x01\x32\xa2\x04\n\x14PolicyTrainerService\x12q\n\x14NegotiateEnvironment\x12+.policy_trainer.NegotiateEnvironmentRequest\x1a,.policy_trainer.NegotiateEnvironmentResponse\x12U\n\x10StartTrainingPPO\x12\x1f.policy_trainer.TrainingRequest\x1a .policy_trainer.TrainingResponse\x12U\n\x10StartTrainingA2C\x12\x1f.policy_trainer.TrainingRequest\x1a .policy_trainer.TrainingResponse\x12U\n\x10StartTrainingDQN\x12\x1f.policy_trainer.TrainingRequest\x1a .policy_trainer.TrainingResponse\x12R\n\x11GetTrainingStatus\x12\x1d.policy_trainer.StatusRequest\x1a\x1e.policy_trainer.StatusResponse\x12>\n\x03\x41\x63t\x12\x1a.policy_trainer.ActRequest\x1a\x1b.policy_trainer.ActResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14policy_trainer.proto\x12\x0epolicy_trainer\"v\n\x0f\x45nvironmentSpec\x12\x17\n\x0fobservation_dim\x18\x01 \x01(\x05\x12\x12\n\naction_dim\x18\x02 \x01(\x05\x12\x13\n\x0bsight_range\x18\x03 \x01(\x05\x12!\n\x19observation_feature_names\x18\x04 \x03(\t\"c\n\x1bNegotiateEnvironmentRequest\x12\x15\n\rexperiment_id\x18\x01 \x01(\t\x12-\n\x04spec\x18\x02 \x01(\x0b\x32\x1f.policy_trainer.EnvironmentSpec\"w\n\x1cNegotiateEnvironmentResponse\x12\x10\n\x08\x61\x63\x63\x65pted\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x34\n\x0b\x65\x63hoed_spec\x18\x03 \x01(\x0b\x32\x1f.policy_trainer.EnvironmentSpec\"\xf1\x01\n\x0fTrainingRequest\x12\x15\n\rexperiment_id\x18\x01 \x01(\t\x12\x17\n\x0ftotal_timesteps\x18\x02 \x01(\x05\x12\x0c\n\x04seed\x18\x03 \x01(\x05\x12M\n\x0fhyperparameters\x18\x04 \x03(\x0b\x32\x34.policy_trainer.TrainingRequest.HyperparametersEntry\x12\x19\n\x11model_output_path\x18\x05 \x01(\t\x1a\x36\n\x14HyperparametersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"c\n\x10TrainingResponse\x12.\n\x06status\x18\x01 \x01(\x0e\x32\x1e.policy_trainer.TrainingStatus\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x0e\n\x06run_id\x18\x03 \x01(\t\"\x1f\n\rStatusRequest\x12\x0e\n\x06run_id\x18\x01 \x01(\t\"\x99\x01\n\x0eStatusResponse\x12\x16\n\x0etimesteps_done\x18\x01 \x01(\x05\x12\x0f\n\x07is_done\x18\x02 \x01(\x08\x12\x1c\n\x14last_checkpoint_path\x18\x03 \x01(\t\x12\x15\n\rerror_message\x18\x04 \x01(\t\x12\x17\n\x0ftotal_timesteps\x18\x05 \x01(\x05\x12\x10\n\x08num_envs\x18\x06 \x01(\x05\"I\n\nActRequest\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12\x13\n\x0bobservation\x18\x02 \x03(\x02\x12\x16\n\x0e\x61lgorithm_type\x18\x03 \x01(\t\"E\n\x0b\x41\x63tResponse\x12\x0e\n\x06\x61\x63tion\x18\x01 \x01(\x05\x12\x0f\n\x07success\x18\x02 \x01(\x08\x12\x15\n\rerror_message\x18\x03 \x01(\t*)\n\x0eTrainingStatus\x12\x0b\n\x07STARTED\x10\x00\x12\n\n\x06\x46\x41ILED\x10\x01\x32\xa2\x04\n\x14PolicyTrainerService\x12q\n\x14NegotiateEnvironment\x12+.policy_trainer.NegotiateEnvironmentRequest\x1a,.policy_trainer.NegotiateEnvironmentResponse\x12U\n\x10StartTrainingPPO\x12\x1f.policy_trainer.TrainingRequest\x1a .policy_trainer.TrainingResponse\x12U\n\x10StartTrainingA2C\x12\x1f.policy_trainer.TrainingRequest\x1a .policy_trainer.TrainingResponse\x12U\n\x10StartTrainingDQN\x12\x1f.policy_trainer.TrainingRequest\x1a .policy_trainer.TrainingResponse\x12R\n\x11GetTrainingStatus\x12\x1d.policy_trainer.StatusRequest\x1a\x1e.policy_trainer.StatusResponse\x12>\n\x03\x41\x63t\x12\x1a.policy_trainer.ActRequest\x1a\x1b.policy_trainer.ActResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,8 +33,8 @@ if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_TRAININGREQUEST_HYPERPARAMETERSENTRY']._loaded_options = None
   _globals['_TRAININGREQUEST_HYPERPARAMETERSENTRY']._serialized_options = b'8\001'
-  _globals['_TRAININGSTATUS']._serialized_start=1038
-  _globals['_TRAININGSTATUS']._serialized_end=1079
+  _globals['_TRAININGSTATUS']._serialized_start=1062
+  _globals['_TRAININGSTATUS']._serialized_end=1103
   _globals['_ENVIRONMENTSPEC']._serialized_start=40
   _globals['_ENVIRONMENTSPEC']._serialized_end=158
   _globals['_NEGOTIATEENVIRONMENTREQUEST']._serialized_start=160
@@ -52,9 +52,9 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_STATUSRESPONSE']._serialized_start=761
   _globals['_STATUSRESPONSE']._serialized_end=914
   _globals['_ACTREQUEST']._serialized_start=916
-  _globals['_ACTREQUEST']._serialized_end=965
-  _globals['_ACTRESPONSE']._serialized_start=967
-  _globals['_ACTRESPONSE']._serialized_end=1036
-  _globals['_POLICYTRAINERSERVICE']._serialized_start=1082
-  _globals['_POLICYTRAINERSERVICE']._serialized_end=1628
+  _globals['_ACTREQUEST']._serialized_end=989
+  _globals['_ACTRESPONSE']._serialized_start=991
+  _globals['_ACTRESPONSE']._serialized_end=1060
+  _globals['_POLICYTRAINERSERVICE']._serialized_start=1106
+  _globals['_POLICYTRAINERSERVICE']._serialized_end=1652
 # @@protoc_insertion_point(module_scope)

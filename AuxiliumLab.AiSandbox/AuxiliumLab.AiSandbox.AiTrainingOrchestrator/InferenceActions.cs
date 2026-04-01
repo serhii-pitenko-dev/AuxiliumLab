@@ -8,6 +8,7 @@ using AuxiliumLab.AiSandbox.Common.MessageBroker.Contracts.AiContract.Responses;
 using AuxiliumLab.AiSandbox.Common.MessageBroker.Contracts.CoreServicesContract.Events;
 using AuxiliumLab.AiSandbox.Infrastructure.MemoryManager;
 using AuxiliumLab.AiSandbox.SharedBaseTypes.AiContract.Dto;
+using Microsoft.Extensions.Logging;
 
 namespace AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
 
@@ -31,9 +32,11 @@ public sealed class InferenceActions : IAiActions, IDisposable
     private readonly IMemoryDataManager<AgentStateForAIDecision> _agentStateRepository;
     private readonly IPolicyTrainerClient                      _policyTrainerClient;
     private readonly string                                    _modelPath;
+    private readonly ILogger<InferenceActions>?                _logger;
     private readonly Action<GameStartedEvent>                  _onGameStartedHandler;
     private readonly Action<RequestAgentDecisionMakeCommand>   _onDecisionRequestHandler;
     private Guid _playgroundId = Guid.Empty;
+    private bool _actFailureLogged;
 
     public AiConfiguration AiConfiguration { get; init; }
 
@@ -42,12 +45,14 @@ public sealed class InferenceActions : IAiActions, IDisposable
         IMemoryDataManager<AgentStateForAIDecision> agentStateRepository,
         IPolicyTrainerClient policyTrainerClient,
         string modelPath,
-        AiConfiguration aiConfiguration)
+        AiConfiguration aiConfiguration,
+        ILogger<InferenceActions>? logger = null)
     {
         _messageBroker        = messageBroker;
         _agentStateRepository = agentStateRepository;
         _policyTrainerClient  = policyTrainerClient;
         _modelPath            = modelPath;
+        _logger               = logger;
         AiConfiguration       = aiConfiguration;
         ModelType            = aiConfiguration.ModelType;
 
@@ -89,7 +94,11 @@ public sealed class InferenceActions : IAiActions, IDisposable
         if (agent is null) return;
 
         var obs     = ObservationBuilder.Build(agent);
-        var request = new ActRequest { RunId = _modelPath };
+        var request = new ActRequest
+        {
+            RunId = _modelPath,
+            AlgorithmType = ModelType.ToString().ToLowerInvariant()
+        };
         request.Observation.AddRange(obs);
 
         // Fire-and-forget: await the gRPC call asynchronously (same pattern as Sb3Actions)
@@ -104,11 +113,34 @@ public sealed class InferenceActions : IAiActions, IDisposable
             try
             {
                 var actResponse = await _policyTrainerClient.ActAsync(request).ConfigureAwait(false);
-                action = actResponse.Success ? actResponse.Action : 0;
+                if (actResponse.Success)
+                {
+                    action = actResponse.Action;
+                }
+                else
+                {
+                    // Log once per episode to avoid flooding during mass simulation.
+                    if (!_actFailureLogged)
+                    {
+                        _actFailureLogged = true;
+                        _logger?.LogWarning(
+                            "[InferenceActions] Act RPC failed: {ErrorMessage}. " +
+                            "ModelPath={ModelPath}, Algorithm={Algorithm}. Defaulting to action 0 (up). " +
+                            "This usually means the Python service could not load the model file.",
+                            actResponse.ErrorMessage, _modelPath, ModelType);
+                    }
+                }
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[InferenceActions] gRPC ActAsync failed: {ex.Message}");
+                if (!_actFailureLogged)
+                {
+                    _actFailureLogged = true;
+                    _logger?.LogWarning(ex,
+                        "[InferenceActions] gRPC ActAsync threw. ModelPath={ModelPath}, Algorithm={Algorithm}. " +
+                        "Defaulting to action 0 (up).",
+                        _modelPath, ModelType);
+                }
             }
 
             var response = ObservationBuilder.BuildDecisionResponse(cmdId, agentId, agentPos, action);

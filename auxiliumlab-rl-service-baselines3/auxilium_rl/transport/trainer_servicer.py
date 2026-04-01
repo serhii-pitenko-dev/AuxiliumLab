@@ -213,11 +213,19 @@ class PolicyTrainerServicer(policy_trainer_pb2_grpc.PolicyTrainerServiceServicer
         try:
             # Convert observation to numpy array
             observation = np.array(request.observation, dtype=np.float32)
+
+            # Forward the optional algorithm_type hint so the orchestrator can
+            # load by-path models without guessing from the filename.
+            algorithm_hint = request.algorithm_type or ""
             
             # Get prediction
-            action = self.orchestrator.predict(request.run_id, observation)
+            action = self.orchestrator.predict(request.run_id, observation, algorithm_hint)
             
             if action is None:
+                logger.warning(
+                    f"Act failed: model not available for run_id={request.run_id!r}, "
+                    f"algorithm_type={algorithm_hint!r}"
+                )
                 return policy_trainer_pb2.ActResponse(
                     action=0,
                     success=False,

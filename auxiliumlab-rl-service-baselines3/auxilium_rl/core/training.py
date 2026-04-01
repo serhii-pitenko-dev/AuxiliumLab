@@ -275,7 +275,7 @@ class TrainingOrchestrator:
         with self.registry_lock:
             return self.run_registry.get(run_id)
     
-    def predict(self, run_id: str, observation: np.ndarray) -> Optional[int]:
+    def predict(self, run_id: str, observation: np.ndarray, algorithm_hint: str = "") -> Optional[int]:
         """
         Perform inference with a trained model.
 
@@ -283,6 +283,14 @@ class TrainingOrchestrator:
         - Training mode: ``run_id`` is a UUID registered during start_training().
         - Inference mode: ``run_id`` is the absolute file path to a saved model
           (sent by .NET's InferenceActions during MassTrainedAISimulation).
+
+        Args:
+            run_id: Either a UUID from start_training() or an absolute file path.
+            observation: The observation vector.
+            algorithm_hint: Optional algorithm type string (e.g. "ppo", "a2c", "dqn")
+                            sent by .NET via the ``algorithm_type`` field. Used
+                            when loading a model by file path to avoid unreliable
+                            filename-based inference.
         """
         # ── Training-mode lookup ─────────────────────────────────────────────
         with self.registry_lock:
@@ -298,15 +306,21 @@ class TrainingOrchestrator:
                     return int(action)
 
         # ── Inference-mode fallback: run_id is a file path ───────────────────
-        model = self._load_model_by_path(run_id)
+        model = self._load_model_by_path(run_id, algorithm_hint)
         if model is not None:
             action, _ = model.predict(observation, deterministic=True)
             return int(action)
 
         return None
 
-    def _load_model_by_path(self, model_path: str) -> Optional[BaseAlgorithm]:
-        """Load (and cache) a model given its file path, inferring algorithm from the filename prefix."""
+    def _load_model_by_path(self, model_path: str, algorithm_hint: str = "") -> Optional[BaseAlgorithm]:
+        """Load (and cache) a model given its file path.
+
+        Algorithm detection strategy (in priority order):
+        1. ``algorithm_hint`` from the gRPC ``ActRequest.algorithm_type`` field.
+        2. Parent directory names in the path (e.g. ``/PPO/``).
+        3. Filename prefix (legacy fallback, e.g. ``ppo_model.zip``).
+        """
         cached = self._path_model_cache.get(model_path)
         if cached is not None:
             return cached
@@ -322,25 +336,62 @@ class TrainingOrchestrator:
             logger.warning(f"Model file not found for inference: {model_path}")
             return None
 
-        # Infer algorithm from filename prefix (e.g. ppo_..., a2c_..., dqn_...).
-        fname = os.path.basename(actual_path).lower()
-        from .dto import AlgorithmType
-        if fname.startswith('ppo'):
-            algo_type = AlgorithmType.PPO
-        elif fname.startswith('a2c'):
-            algo_type = AlgorithmType.A2C
-        elif fname.startswith('dqn'):
-            algo_type = AlgorithmType.DQN
-        else:
-            logger.warning(f"Cannot infer algorithm type from model filename: {fname}")
+        algo_type = self._infer_algorithm(actual_path, algorithm_hint)
+        if algo_type is None:
             return None
 
         try:
             model_class = get_model_class(algo_type)
             model = self.model_store.load_model(actual_path, model_class)
             self._path_model_cache[model_path] = model
-            logger.info(f"Loaded inference model from {actual_path}")
+            logger.info(f"Loaded inference model from {actual_path} (algorithm={algo_type.value})")
             return model
         except Exception as e:
             logger.error(f"Failed to load inference model from {actual_path}: {e}")
             return None
+
+    @staticmethod
+    def _infer_algorithm(model_path: str, algorithm_hint: str = "") -> Optional["AlgorithmType"]:
+        """Infer the SB3 algorithm type for a model file.
+
+        Strategy (in priority order):
+        1. Explicit hint from the caller (e.g. ``ActRequest.algorithm_type``).
+        2. Parent directory name in the path (e.g. ``…/PPO/experiment/model.zip``).
+        3. Filename prefix (e.g. ``ppo_experiment.zip``).
+        """
+        from .dto import AlgorithmType
+
+        _ALGO_MAP = {
+            "ppo": AlgorithmType.PPO,
+            "a2c": AlgorithmType.A2C,
+            "dqn": AlgorithmType.DQN,
+        }
+
+        # 1. Explicit hint
+        if algorithm_hint:
+            algo = _ALGO_MAP.get(algorithm_hint.lower())
+            if algo:
+                logger.debug(f"Algorithm resolved from hint: {algorithm_hint}")
+                return algo
+            logger.warning(f"Unknown algorithm_hint '{algorithm_hint}'; falling back to path inference")
+
+        # 2. Parent directory names (walk up the path looking for PPO / A2C / DQN)
+        path_lower = model_path.replace("\\", "/").lower()
+        for token, algo in _ALGO_MAP.items():
+            if f"/{token}/" in path_lower:
+                logger.debug(f"Algorithm resolved from directory path: {token}")
+                return algo
+
+        # 3. Filename prefix (legacy)
+        fname = os.path.basename(model_path).lower()
+        for token, algo in _ALGO_MAP.items():
+            if fname.startswith(token):
+                logger.debug(f"Algorithm resolved from filename prefix: {token}")
+                return algo
+
+        logger.warning(
+            f"Cannot infer algorithm type from model path: {model_path}. "
+            f"Ensure the path contains a /PPO/, /A2C/, or /DQN/ directory segment, "
+            f"or pass algorithm_type in the ActRequest."
+        )
+        return None

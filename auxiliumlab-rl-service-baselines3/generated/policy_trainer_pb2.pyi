@@ -98,12 +98,14 @@ class StatusResponse(_message.Message):
     def __init__(self, timesteps_done: _Optional[int] = ..., is_done: bool = ..., last_checkpoint_path: _Optional[str] = ..., error_message: _Optional[str] = ..., total_timesteps: _Optional[int] = ..., num_envs: _Optional[int] = ...) -> None: ...
 
 class ActRequest(_message.Message):
-    __slots__ = ("run_id", "observation")
+    __slots__ = ("run_id", "observation", "algorithm_type")
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     OBSERVATION_FIELD_NUMBER: _ClassVar[int]
+    ALGORITHM_TYPE_FIELD_NUMBER: _ClassVar[int]
     run_id: str
     observation: _containers.RepeatedScalarFieldContainer[float]
-    def __init__(self, run_id: _Optional[str] = ..., observation: _Optional[_Iterable[float]] = ...) -> None: ...
+    algorithm_type: str
+    def __init__(self, run_id: _Optional[str] = ..., observation: _Optional[_Iterable[float]] = ..., algorithm_type: _Optional[str] = ...) -> None: ...
 
 class ActResponse(_message.Message):
     __slots__ = ("action", "success", "error_message")

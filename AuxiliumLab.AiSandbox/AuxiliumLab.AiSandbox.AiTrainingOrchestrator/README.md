@@ -118,3 +118,15 @@ If step 4 or 5 fails, training is aborted before any GPU time is spent.
 4. Add `XxxTrainingAsync` to `IPolicyTrainerClient` and implement in `PolicyTrainerClient`.
 5. Update the `switch` in `TrainingRunner.RunTrainingAsync()` to handle the new algorithm.
 6. Add an entry to the `TrainingSettings.Algorithms` section of `appsettings.json`.
+
+## Inference Flow (`InferenceActions`)
+
+`InferenceActions` drives a pre-trained model by calling the Python `Act` RPC for every agent decision:
+
+1. Subscribes to `RequestAgentDecisionMakeCommand` on the message broker.
+2. Builds an observation vector via `ObservationBuilder.Build(agent)`.
+3. Sends an `ActRequest` with `RunId = <model file path>` **and** `AlgorithmType = <ppo|a2c|dqn>`.
+4. The Python service uses `AlgorithmType` to load the correct SB3 class (PPO, A2C, or DQN) for the model file — this avoids unreliable filename-based guessing.
+5. If the Act RPC returns `Success = false` or throws, `InferenceActions` logs a warning (once per episode) and defaults to action 0.
+
+The optional `ILogger<InferenceActions>` parameter enables structured logging of Act failures — helpful for diagnosing model-loading issues without flooding logs during mass simulations.

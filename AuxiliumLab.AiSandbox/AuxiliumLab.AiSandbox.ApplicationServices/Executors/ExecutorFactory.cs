@@ -14,6 +14,7 @@ using AuxiliumLab.AiSandbox.Infrastructure.Configuration.Preconditions;
 using AuxiliumLab.AiSandbox.Infrastructure.FileManager;
 using AuxiliumLab.AiSandbox.Infrastructure.MemoryManager;
 using AuxiliumLab.AiSandbox.SharedBaseTypes.AiContract.Dto;
+using Microsoft.Extensions.Logging;
 
 namespace AuxiliumLab.AiSandbox.ApplicationServices.Executors;
 
@@ -31,6 +32,7 @@ public class ExecutorFactory : IExecutorFactory
     private readonly IFileDataManager<TurnExecutionPerformance> _turnExecutionPerformanceFileRepository;
     private readonly IFileDataManager<SandboxExecutionPerformance> _sandboxExecutionPerformanceFileRepository;
     private readonly ITestPreconditionData _testPreconditionData;
+    private readonly ILoggerFactory _loggerFactory;
 
     public ExecutorFactory(IPlaygroundCommandsHandleService mapCommands,
         IMemoryDataManager<StandardPlayground> sandboxRepository,
@@ -43,7 +45,8 @@ public class ExecutorFactory : IExecutorFactory
         IFileDataManager<RawDataLog> rawDataLogFileRepository,
         IFileDataManager<TurnExecutionPerformance> turnExecutionPerformanceFileRepository,
         IFileDataManager<SandboxExecutionPerformance> sandboxExecutionPerformanceFileRepository,
-        ITestPreconditionData testPreconditionData)
+        ITestPreconditionData testPreconditionData,
+        ILoggerFactory loggerFactory)
     {
         _mapCommands = mapCommands;
         _sandboxRepository = sandboxRepository;
@@ -57,6 +60,7 @@ public class ExecutorFactory : IExecutorFactory
         _turnExecutionPerformanceFileRepository = turnExecutionPerformanceFileRepository;
         _sandboxExecutionPerformanceFileRepository = sandboxExecutionPerformanceFileRepository;
         _testPreconditionData = testPreconditionData;
+        _loggerFactory = loggerFactory;
     }
 
     public IExecutorForPresentation CreateExecutorForPresentation(
@@ -134,7 +138,8 @@ public class ExecutorFactory : IExecutorFactory
             agentStore,
             policyTrainerClient,
             modelPath,
-            aiConfig);
+            aiConfig,
+            _loggerFactory.CreateLogger<InferenceActions>());
 
         return new StandardExecutor(
             _mapCommands,
@@ -171,7 +176,8 @@ public class ExecutorFactory : IExecutorFactory
             agentStore,
             policyTrainerClient,
             modelPath,
-            aiConfig);
+            aiConfig,
+            _loggerFactory.CreateLogger<InferenceActions>());
 
         return new ExecutorForPresentation(
             _mapCommands,
