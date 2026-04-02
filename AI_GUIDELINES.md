@@ -26,7 +26,7 @@ This repository contains two top-level sub-solutions:
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │  Presentation / Hosts                                        │
-│  ConsolePresentation · GrpcHost · WebApi · Startup          │
+│  GrpcHost · WebApi · Startup                                │
 ├──────────────────────────────────────────────────────────────┤
 │  Application                                                 │
 │  ApplicationServices · Ai · AiTrainingOrchestrator          │
@@ -57,7 +57,7 @@ infra/       ← infrastructure (config, storage, adapters)
 
 | Project | Responsibility |
 |---|---|
-| `SharedBaseTypes` | Enums (`ObjectType`, `AgentAction`, `ModelType`), value objects (`Coordinates`, `AgentSnapshot`), message-type base classes (`Command`, `Event`, `Query`, `Response`). No logic. |
+| `SharedBaseTypes` | Enums (`ObjectType`, `AgentAction`, `SandboxStatus`, `MapType`), value objects (`Coordinates`, `AgentSnapshot`), message-type base classes (`Command`, `Event`, `Query`, `Response`), startup enums (`ExecutionMode`, `PresentationMode`). No logic. |
 | `Common` | `IMessageBroker` — in-process pub/sub bus. `IBrokerRpcClient` — request/response wrapper over the broker. All message contracts (`AiContract`, `CoreServicesContract`, `GlobalMessagesContract`, `Sb3Contract`). |
 | `Domain` | `StandardPlayground` (aggregate root), map grid (`MapSquareCells`, `Cell`), agents (`Hero`, `Enemy`), inanimate objects (`Block`, `BorderBlock`, `EmptyCell`, `Exit`), `VisibilityService` (Bresenham line-of-sight), validators, factories. |
 
@@ -82,10 +82,10 @@ infra/       ← infrastructure (config, storage, adapters)
 
 | Project | Responsibility |
 |---|---|
-| `ConsolePresentation` | `ConsoleRunner` — subscribes to `IMessageBroker` events and renders the grid using Spectre.Console. Optimised for partial re-render via `GetAffectedCells()`. |
 | `GrpcHost` | `SimulationService` — Gymnasium gRPC endpoint (`:50062`). Bridges Python `reset`/`step` calls to `IMessageBroker` using `TaskCompletionSource` correlation. Active only during training. |
-| `WebApi` | ASP.NET Core controllers (`TrainingController`, `SimulationController`, `AggregationRunController`, `StatisticController`). All routes under `/ai-sandbox/`. Write endpoints return 202 Accepted (fire-and-forget). |
-| `Startup` | Composition root: DI wiring, host selection (Kestrel for training, generic host otherwise), `WebApiHost` launch. |
+| `WebApi` | ASP.NET Core controllers (`TrainingController`, `SimulationController`, `AggregationRunController`, `StatisticController`), SignalR `SimulationHub` for live visualization. All routes under `/ai-sandbox/`. Write endpoints return 202 Accepted (fire-and-forget). |
+| `SharedContracts` | Cross-cutting DTOs shared between the backend and the Blazor frontend. Contains `ModelType`, `AiPolicy`, `SimulationKind` enums and all SignalR/REST contract types. No logic. |
+| `Startup` | Composition root: DI wiring, unified Kestrel host (REST on :5000, gRPC on :50062). |
 | `Frontend` | Blazor WebAssembly SPA. Feature-based folder layout under `Features/`. Connects to the REST API and to `/hubs/simulation` (SignalR) for live grid visualisation. |
 
 ---
@@ -99,7 +99,7 @@ infra/       ← infrastructure (config, storage, adapters)
 | `Coordinates` | `(int X, int Y)`, `(0,0)` = **bottom-left**. Y increases upward in domain; the console renderer flips it. |
 | `BorderBlock` | Auto-placed perimeter wall. Never persisted — re-created on every load by `PlaygroundBuilder.SetMap()`. |
 | `AgentAction` | `Move` or `Run` (toggle sprint). Validated by `AgentActionAddValidator` before being added to `AvailableActions`. |
-| `SandboxStatus` | `InProgress`, `HeroWon`, `HeroLost`, `TurnLimitReached`. Determines the terminal condition. |
+| `SandboxStatus` | `InProgress`, `HeroWon`, `HeroLost`, `TurnLimitReached`, `Failed`. Determines the terminal condition. |
 | `IMessageBroker` | Singleton pub/sub bus. Decouples executor from all consumers (UI, gRPC, AI). Handlers are invoked **synchronously** on the publisher's thread. |
 | `IAiActions` | Single interface for all agent decision logic. `RandomActions` = baseline; `Sb3Actions` = RL bridge. Registered as scoped per execution context. |
 | `ObservationBuilder` | Encodes `AgentStateForAIDecision` into a flat `float[]`: 5 scalar features + `gridSize²` vision grid values. **Must stay in sync with `OBS_DIM` / `obs_dim` in the Python service.** |
@@ -109,7 +109,7 @@ infra/       ← infrastructure (config, storage, adapters)
 
 ```
 [x, y, is_run, stamina_frac, speed,  grid[0,0], grid[0,1] … grid[10,10]]
-  0  1    2         3          4         5 …                       130
+  0  1    2         3          4         5 …                       125
 ```
 
 Vision grid is row-major, top-to-bottom (Y increases downward in the grid encoding).
@@ -119,9 +119,9 @@ Cell values: `-1.0` = not visible, `0.0` = empty, `1.0` = hero, `2.0` = enemy, `
 
 | Condition | Event |
 |---|---|
-| Hero occupies the Exit cell | `HeroWonEvent(WinReason.ReachedExit)` |
-| Enemy occupies the Hero's cell | `HeroLostEvent(LostReason.CaughtByEnemy)` |
-| `Turn >= MaxTurns` | `HeroLostEvent(LostReason.TurnLimitReached)` |
+| Hero occupies the Exit cell | `HeroWonEvent(WinReason.ExitReached)` |
+| Enemy occupies the Hero’s cell | `HeroLostEvent(LostReason.HeroCatched)` |
+| `Turn >= MaxTurns` | `HeroLostEvent(LostReason.MaxTurnsReached)` |
 
 ---
 
@@ -135,7 +135,7 @@ These boundaries must not be crossed when adding new functionality:
 | `Ai` project contains **only** decision logic and observation encoding — no game rules | Game rules belong in Domain |
 | `ApplicationServices` contains **no game rules** — orchestration only | Game rules belong in Domain |
 | `Infrastructure` only implements interfaces defined in Application or Domain | Dependency inversion: swap storage backend without touching AppSvc |
-| `GrpcHost` only knows `IMessageBroker` and `SharedBaseTypes` — no direct domain or application imports | Keeps the gRPC surface thin and independently replaceable |
+| `GrpcHost` references `AiTrainingOrchestrator`, `Infrastructure`, and `Common` — no direct domain or `ApplicationServices` imports | Keeps the gRPC surface thin; business logic and use-case orchestration stay in inner layers |
 | `Statistics` only depends on `SharedBaseTypes` and `Common` | Result DTOs and CSV output are infrastructure-level concerns |
 | `Startup` is the **only** project that wires all DI registrations and knows the full dependency graph | Everything else is wired by its own `XxxServiceCollectionExtensions` and composed here |
 | `Frontend` communicates with the backend **only** through the REST API and the `/hubs/simulation` SignalR hub | No direct coupling to backend internals |
@@ -186,7 +186,7 @@ These boundaries must not be crossed when adding new functionality:
 - **Do not add direct field mutations to `StandardPlayground` from outside the aggregate.** Always call a method on the aggregate root or use `IPlaygroundCommandsHandleService`.
 - **Do not use `IMemoryDataManager<T>` for new domain-independent data** (e.g. API session state). Use a dedicated in-memory store or a command/query service instead.
 - **All write endpoints in `WebApi` return 202 Accepted.** Job results are queried via polling the corresponding GET status endpoint.
-- **New execution modes must be added to the `ExecutionMode` enum** in `SharedBaseTypes/ValueObjects/StartupSettings/`, the `MenuRunner` switch, and the `Program.cs` dispatch in `Startup`.
+- **New execution modes must be added to the `ExecutionMode` enum** in `SharedBaseTypes/ValueObjects/StartupSettings/` and any dispatch logic in `Program.cs` in `Startup`.
 - **The `EnvironmentSpec` sent to Python must exactly match what `ObservationBuilder` produces.** When changing `SightRange`, update `EnvironmentSpecBuilder.ScalarFeatureCount` constants or the observation encoding together.
 - **Do not modify auto-generated gRPC stubs** (`generated/` in the Python project, protobuf-generated `.cs` files in the C# projects). Regenerate them from `.proto` files.
 
@@ -201,13 +201,13 @@ When the observation vector length or action count changes:
 
 ### Adding a new RL algorithm
 
-1. Add value to `ModelType` enum in `SharedBaseTypes/AiContract/`.
+1. Add value to `ModelType` enum in `SharedContracts`.
 2. Create `XxxTraining : BaseTraining, ITraining` in `AiTrainingOrchestrator`.
 3. Add `StartTrainingXxx` RPC to `proto/policy_trainer.proto`, regenerate.
 4. Add `StartTrainingXxxAsync` to `IPolicyTrainerClient` + implement in `PolicyTrainerClient`.
 5. Add `AlgorithmType.XXX` to `core/dto.py` and a branch in `build_model()` in `core/algorithms.py`.
 6. Update `TrainingRunner` switch in `ApplicationServices`.
-7. Add an algorithm entry to `Startup/training-settings.json`.
+7. Add an algorithm entry to the `TrainingSettings.Algorithms` section of `appsettings.json` in `Startup/`.
 
 ### Adding a new map object type
 
@@ -215,9 +215,8 @@ When the observation vector length or action count changes:
 2. Create a class inheriting `SandboxMapBaseObject`; set `Transparent` appropriately.
 3. For agent types: inherit `Agent`, implement `Clone()`, add a factory in `Agents/Factories/`.
 4. Update `PlaygroundBuilder` / `PlaygroundFactory` to place the object.
-5. Update `ConsoleRunner` / `_cellData` dictionary in `ConsolePresentation` (colour + character).
-6. Update vision-grid cell encoding in `ObservationBuilder` (new numeric value).
-7. Update the Python cell-value comment table in the relevant README / docstring.
+5. Update vision-grid cell encoding in `ObservationBuilder` (new numeric value).
+6. Update the Python cell-value comment table in the relevant README / docstring.
 
 ### Adding a new statistic column
 
@@ -235,11 +234,11 @@ Before opening a pull request, verify:
 |---|---|
 | `Domain` project has no reference to `ApplicationServices`, `Infrastructure`, or any Presentation project | `dotnet list reference` is clean |
 | `Common` project has no reference to `ApplicationServices`, `Infrastructure`, or Domain projects (only `SharedBaseTypes`) | true |
-| `Ai` project references only `Common`, `Infrastructure`, `SharedBaseTypes` | true |
+| `Ai` project references only `SharedContracts`, `Common`, `Infrastructure`, `SharedBaseTypes` | true |
 | `Statistics` project references only `SharedBaseTypes`, `Common` | true |
-| `GrpcHost` project references only `Common`, `SharedBaseTypes` | true |
-| `ApplicationServices` does not reference `ConsolePresentation`, `WebApi`, `GrpcHost`, or `Startup` | true |
-| `WebApi` does not reference `ConsolePresentation`, `GrpcHost`, or `Startup` | true |
+| `GrpcHost` project references only `AiTrainingOrchestrator`, `Infrastructure`, `Common` | true |
+| `ApplicationServices` does not reference `WebApi`, `GrpcHost`, or `Startup` | true |
+| `WebApi` does not reference `GrpcHost` or `Startup` | true |
 | No project except `Startup` references `Startup` | true |
 
 ---
@@ -284,9 +283,7 @@ Before opening a pull request, verify:
 
 | File | Location | Contents |
 |---|---|---|
-| `appsettings.json` | `Startup/` | `StartupSettings`, `SandBox`, `PolicyTrainerClient`, `ConsoleSettings`, Kestrel |
-| `training-settings.json` | `Startup/` | Algorithm hyperparameter defaults for PPO, A2C, DQN |
-| `aggregation-settings.json` | `Startup/` | Default ordered step list for `AggregationRun` |
+| `appsettings.json` | `Startup/` | `PolicyTrainerClient`, `FileSource`, `Logging`, `AggregationSettings`, `TrainingSettings` (when present) |
 | `Directory.Build.props` | Solution root | Solution-wide MSBuild properties, optional diagnostic `DefineConstants` |
 | `wwwroot/appsettings.json` | `Frontend/AuxiliumLab.Frontend/` | `ApiSettings.AiSandboxBaseUrl` pointing at the .NET REST API (overridden at runtime by `entrypoint.sh` in Docker) |
 | `docker-compose.yml` | Workspace root | Orchestrates all three services; defines ports, volumes, health checks, and env vars |
@@ -297,15 +294,14 @@ Before opening a pull request, verify:
 
 | Key | Default | Effect |
 |---|---|---|
-| `StartupSettings.IsPreconditionStart` | `true` | Skip interactive menu, use file settings |
-| `StartupSettings.IsWebApiEnabled` | — | Launch `WebApiHost` on `:5000` |
-| `SandBox.MaxTurns.Current` | `10` | Turn limit per episode |
-| `SandBox.MapSettings.Size.Width/Height.Current` | `20` | Map dimensions |
-| `SandBox.Hero.SightRange.Current` | `5` | Vision radius; **drives `obs_dim` calculation** |
 | `PolicyTrainerClient.ServerAddress` | `http://localhost:50051` | Python gRPC service address |
+| `FileSource.FileStorage.BasePath` | `C:\FILE_STORAGE` | Root storage directory for all file output |
+| `FileSource.FileStorage.TrainedAlgorithms` | `TRAINED_ALGORITHMS` | Subdirectory for trained model output |
+| `FileSource.PrecreatedMap.IsEnabled` | `false` | Load a saved map instead of random generation |
 | `TrainingSettings.Rewards.StepPenalty` | `-0.1` | Reward per step (encourages speed) |
 | `TrainingSettings.Rewards.WinReward` | `+10.0` | Reward on exit reached |
 | `TrainingSettings.Rewards.LossReward` | `-10.0` | Reward on loss or timeout |
+| `AggregationSettings.Steps[*]` | _(configured per deployment)_ | Default ordered steps for `AggregationRun` |
 
 ---
 
@@ -373,10 +369,10 @@ All Markdown files in this repository, grouped by area.
 
 | File | Contents |
 |---|---|
-| [`AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.ConsolePresentation/README.md`](AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.ConsolePresentation/README.md) | `ConsoleRunner`, event subscriptions, partial render optimisation, coordinate flip, cell rendering |
+| [`AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.SharedContracts/README.md`](AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.SharedContracts/README.md) | Cross-cutting DTOs shared between backend and frontend |
 | [`AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.GrpcHost/README.md`](AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.GrpcHost/README.md) | `SimulationService`, gym reset/step bridging via `IMessageBroker`, correlation, configuration |
 | [`AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.WebApi/README.md`](AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.WebApi/README.md) | All REST endpoints, request/response DTOs, configuration, adding new endpoints |
-| [`AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.Startup/README.md`](AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.Startup/README.md) | Startup sequence, execution modes, aggregation run config, `RegisterCoreServices`, DI lifetimes, `appsettings.json` keys |
+| [`AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.Startup/README.md`](AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.Startup/README.md) | Startup sequence, execution modes, DI lifetimes, `appsettings.json` keys |
 
 ### Frontend
 

@@ -8,7 +8,7 @@ The central rule: **inner rings cannot reference outer rings**.
 ```
                   ┌───────────────────────────────────────────────────┐
                   │            Composition Root / Hosts               │
-                  │  Startup · ConsolePresentation · GrpcHost · WebApi│
+                  │  Startup · GrpcHost · WebApi · SharedContracts    │
                   │                                                   │
                   │   ┌───────────────────────────────────────────┐   │
                   │   │          Application Services             │   │
@@ -33,32 +33,36 @@ The central rule: **inner rings cannot reference outer rings**.
 ```
 Startup
 ├── Ai
+│   ├── SharedContracts
 │   ├── Common
 │   ├── Infrastructure
 │   └── SharedBaseTypes
 ├── AiTrainingOrchestrator
-│   ├── SharedBaseTypes
-│   └── Common
+│   ├── Ai
+│   └── Infrastructure
 ├── ApplicationServices
-│   ├── Domain
+│   ├── SharedContracts
+│   ├── Ai
+│   ├── AiTrainingOrchestrator
 │   ├── Common
-│   ├── SharedBaseTypes
+│   ├── Domain
 │   ├── Infrastructure
-│   └── AiTrainingOrchestrator
-├── ConsolePresentation
-│   ├── ApplicationServices
-│   ├── Common
-│   └── SharedBaseTypes
+│   └── Statistics
 ├── GrpcHost
-│   ├── Common
-│   └── SharedBaseTypes
+│   ├── AiTrainingOrchestrator
+│   ├── Infrastructure
+│   └── Common
 ├── Infrastructure
+│   ├── Common
 │   ├── Domain
-│   ├── SharedBaseTypes
 │   └── Statistics
 └── WebApi
+    ├── SharedContracts
     ├── ApplicationServices
-    └── SharedBaseTypes
+    ├── AiTrainingOrchestrator
+    ├── Ai
+    ├── Infrastructure
+    └── Statistics
 
 Domain
 └── SharedBaseTypes
@@ -90,8 +94,8 @@ Executor (Application) ──publish──► IMessageBroker
                                          │
                        ┌─────────────────┼──────────────────┐
                        ▼                 ▼                  ▼
-              ConsoleRunner        SimulationService   AI observation
-              (renders map)        (gRPC responses)   (training loop)
+              Web visualization    SimulationService   AI observation
+              (via SignalR hub)    (gRPC responses)   (training loop)
 ```
 
 ### Command / Query segregation (light CQRS)
@@ -153,7 +157,7 @@ Each execution mode uses a different `IExecutor` implementation:
                │
                ▼
   ┌─────────────────────────┐   IMessageBroker
-  │  Create playground      │──► GameStartedEvent ──► ConsoleRunner renders map
+  │  Create playground      │──► GameStartedEvent ──► subscribers render map
   └────────────┬────────────┘
                │ loop per turn
                ▼
@@ -174,7 +178,7 @@ Each execution mode uses a different `IExecutor` implementation:
                │
                ▼
   ┌─────────────────────────┐   IMessageBroker
-  │  TurnExecutedEvent      │──► ConsoleRunner re-renders affected cells
+  │  TurnExecutedEvent      │──► subscribers re-render affected cells
   └────────────┬────────────┘
                │
                ▼
@@ -210,15 +214,12 @@ Key sections:
 
 | Section | Type | Purpose |
 |---|---|---|
-| `StartupSettings` | `StartupSettings` | Execution mode, presentation mode, precondition start |
-| `SandBox` | `SandBoxConfiguration` | Map size, turn limits, element percentages |
-| `PolicyTrainerClient` | `PolicyTrainerClientSettings` | Python service gRPC address |
-| `Training` | `TrainingSettings` | Algorithm types, hyperparameters |
-| `ConsoleSettings` | `ConsoleSettings` | Console size, color scheme, action timeout |
+| `PolicyTrainerClient` | `PolicyTrainerClientSettings` | Python service gRPC address (`ServerAddress`) |
+| `FileSource` | `FileSourceConfiguration` | File storage paths, precreated map toggle |
 
 ## Thread Safety
 
 - `MessageBroker` — `ConcurrentDictionary` + lock per handler list.
 - `MemoryDataManager<T>` — `ConcurrentDictionary`.
 - `MassRunner` — `Parallel.ForEachAsync` with per-executor scoped DI containers.
-- `TrainingRunner` — one scoped executor per physical CPU core, all sharing a single `IMessageBroker` singleton.
+- `TrainingRunner` — one scoped executor per physical CPU core, each with an isolated `IMessageBroker` registered in `GymBrokerRegistry`.

@@ -27,30 +27,51 @@ Or run from VS Code via the Test Explorer panel.
 | **MessageBroker** | `BrokerRpcClientTest` | Request/response correlation, timeout, multiple concurrent requests |
 | **AI subscription** | `AiActionsSubscriptionCleanupTests` | InferenceActions / RandomActions unsubscribe on dispose; no handler leaks |
 | **Executor isolation** | `ExecutorFactoryBrokerIsolationTests` | Parallel executors use isolated brokers; presentation uses the shared broker |
+| **Executor presentation** | `ExecutorForPresentationBrokerDispatchTests` | Presentation executor dispatches events correctly through the shared broker |
+| **Executor save state** | `ExecutorSavePlaygroundStateTests` | Executor saves playground state to the file system |
 | **Inference — algorithm type** | `InferenceActionsAlgorithmTypeTests` | `ActRequest.AlgorithmType` is set from `ModelType`; failure logging fires once per episode |
+| **Environment spec** | `EnvironmentSpecBuilderTests` | Observation dim calculation, feature naming, echo mismatch detection |
+| **Sandbox overrides** | `ApplySandboxOverridesTests` | API command sandbox overrides are correctly applied to configuration |
+| **Single runner** | `SingleRunnerTests` | Single simulation runner lifecycle |
+| **Visualization bridge** | `SimulationVisualizationBridgeTests` | SignalR simulation visualization bridge attach/detach |
 
 ## Test Project Structure
 
 ```
 AuxiliumLab.AiSandbox.UnitTests/
+├── AuxiliumLab.AiSandbox.AiTrainingOrchestrator/
+│   ├── EnvironmentSpecBuilderTests.cs
+│   └── InferenceActionsAlgorithmTypeTests.cs
 ├── AuxiliumLab.AiSandbox.ApplicationServices/
+│   ├── Commands/Simulation/
+│   │   └── ApplySandboxOverridesTests.cs
+│   ├── Executors/
+│   │   ├── AiActionsSubscriptionCleanupTests.cs
+│   │   ├── ExecutorFactoryBrokerIsolationTests.cs
+│   │   ├── ExecutorForPresentationBrokerDispatchTests.cs
+│   │   └── ExecutorSavePlaygroundStateTests.cs
+│   ├── Runner/
+│   │   └── SingleRunnerTests.cs
 │   └── Saver/Persistence/Sandbox/Mappers/
 │       └── StandardPlaygroundMapperTest.cs
 ├── AuxiliumLab.AiSandbox.Common/
 │   └── MessageBrokers/
 │       └── BrokerRpcClientTest.cs
-└── AuxiliumLab.AiSandbox.Domain/
-    ├── Agents/
-    │   ├── Entities/AgentTest/
-    │   │   └── AgentTestRunAbility.cs
-    │   └── Services/Vision/
-    │       ├── VisibilityServiceTestBase.cs    ← shared map builders
-    │       ├── VisibilityServiceBasicTests.cs
-    │       ├── VisibilityServiceBlockingTests.cs
-    │       ├── VisibilityServiceComplexTests.cs
-    │       └── VisibilityServiceEdgeCaseTests.cs
-    └── Playgrounds/
-        └── StandardPlaygroundTest.cs
+├── AuxiliumLab.AiSandbox.Domain/
+│   ├── Agents/
+│   │   ├── Entities/AgentTest/
+│   │   │   └── AgentTestRunAbility.cs
+│   │   └── Services/Vision/
+│   │       ├── VisibilityServiceTestBase.cs    ← shared map builders
+│   │       ├── VisibilityServiceBasicTests.cs
+│   │       ├── VisibilityServiceBlockingTests.cs
+│   │       ├── VisibilityServiceComplexTests.cs
+│   │       └── VisibilityServiceEdgeCaseTests.cs
+│   └── Playgrounds/
+│       └── StandardPlaygroundTest.cs
+└── AuxiliumLab.AiSandbox.WebApi/
+    └── Features/Simulation/
+        └── SimulationVisualizationBridgeTests.cs
 ```
 
 ## Conventions
@@ -70,7 +91,7 @@ AuxiliumLab.AiSandbox.UnitTests/
 
 ## Known Gaps / Future Tests
 - `MassRunner` parallel execution and CSV output.
-- `PlaygroundFactory` / `PlaygroundFromFileFactory` round-trip.
+- `PlaygroundFactory` round-trip.
 - Agent pathfinding.
 
 > End-to-end HTTP + gRPC integration tests live in the separate `AuxiliumLab.AiSandbox.IntegrationTests` project.

@@ -2,7 +2,7 @@
 
 **Onion layer: Presentation / Host**  
 ASP.NET Core REST API that runs alongside the simulation engine.  
-Depends on: `SharedBaseTypes`, `ApplicationServices`.
+Depends on: `SharedContracts`, `ApplicationServices`, `AiTrainingOrchestrator`, `Ai`, `Infrastructure`, `Statistics`.
 
 ## Purpose
 Provides an HTTP REST API entry point for the Blazor Frontend to trigger training runs, simulations, aggregation pipelines, and query results.
@@ -44,6 +44,7 @@ Every write operation returns **202 Accepted** immediately (fire-and-forget job 
 | POST | `/ppo` | `StartPpoTrainingCommand` | `TrainingJobStartedDto` (202) | Start a PPO training run |
 | GET | `/models` | — | `TrainedModelInfoDto[]` | List all trained models on disk |
 | GET | `/status` | — | `TrainingJobStatusDto[]` | Status of all training jobs |
+| POST | `/{jobId}/stop` | — | 202 | Stop a running training job |
 
 **`StartPpoTrainingCommand`** fields (all optional — fall back to `appsettings.json → TrainingSettings` defaults):
 
@@ -71,6 +72,9 @@ Every write operation returns **202 Accepted** immediately (fire-and-forget job 
 |---|---|---|---|---|
 | POST | `/run/single` | `StartSingleSimulationCommand` | `SimulationJobStartedDto` (202) | Single simulation run |
 | POST | `/run/mass` | `StartMassSimulationCommand` | `SimulationJobStartedDto` (202) | Mass (batch) simulation run |
+| POST | `/{jobId}/stop` | — | 202 | Stop a simulation job |
+| POST | `/{jobId}/pause` | — | 202 | Pause a simulation job |
+| POST | `/{jobId}/resume` | — | 202 | Resume a paused simulation job |
 | GET | `/status` | — | `SimulationJobStatusDto[]` | Status of all simulation jobs |
 
 **`StartSingleSimulationCommand`**:
@@ -93,6 +97,7 @@ Every write operation returns **202 Accepted** immediately (fire-and-forget job 
 | Verb | Route | Body | Response | Description |
 |---|---|---|---|---|
 | POST | `/run` | `StartAggregationCommand` | `AggregationJobStartedDto` (202) | Start a multi-step aggregation pipeline |
+| POST | `/{jobId}/stop` | — | 202 | Stop an aggregation run |
 | GET | `/status` | — | `AggregationJobStatusDto[]` | Status of all aggregation jobs |
 
 **`StartAggregationCommand`**:

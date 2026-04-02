@@ -28,6 +28,7 @@ services:
     environment:
       GRPC_HOST: "0.0.0.0"
       GRPC_PORT: "50051"
+      SIMULATION_GRPC_HOST: "aisandbox-startup:50062"
     volumes:
       - rl-models:/app/trained_models
       - rl-checkpoints:/app/checkpoints

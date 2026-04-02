@@ -2,7 +2,7 @@
 
 **Onion layer: Presentation / Host**  
 ASP.NET Core gRPC server that exposes the C# simulation as a **Gymnasium-compatible environment** for the Python SB3 training service.  
-Depends on: `Common`, `SharedBaseTypes`.
+Depends on: `AiTrainingOrchestrator`, `Infrastructure`, `Common`.
 
 ## Purpose
 During AI training, the Python `ExternalSimEnv` needs to call `reset()` and `step()` on a live simulation. This project hosts those calls as gRPC endpoints.
@@ -41,7 +41,7 @@ Implements `SimulationServiceBase` (generated from `simulation.proto`).
 | `Close(CloseRequest)` | Terminates the environment instance |
 
 **Request/response bridging via MessageBroker:**  
-Each RPC publishes a `Command` on `IMessageBroker` and then awaits a correlated `Response` using a `TaskCompletionSource`. The correlation is achieved by matching `GymId + CorrelationId` on the response. Timeout is 30 seconds.
+Each RPC publishes a `Command` on the per-gym `IMessageBroker` (looked up via `GymBrokerRegistry`) and then awaits a correlated `Response` using a `TaskCompletionSource`. The correlation is achieved by matching `GymId + CorrelationId` on the response. Timeouts are: **120 s** for `Reset`, **60 s** for `Step`, **10 s** for `Close`.
 
 ## Proto Files
 `Protos/simulation.proto` — defines the gym interface.  

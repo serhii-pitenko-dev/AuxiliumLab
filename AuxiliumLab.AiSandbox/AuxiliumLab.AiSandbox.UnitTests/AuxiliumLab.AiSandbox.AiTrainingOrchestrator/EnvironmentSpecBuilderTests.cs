@@ -114,6 +114,30 @@ public class EnvironmentSpecBuilderTests
     }
 
     // -----------------------------------------------------------------------
+    // MaxSteps
+    // -----------------------------------------------------------------------
+
+    [TestMethod]
+    public void Build_MaxSteps_MatchesMaxTurnsCurrent()
+    {
+        var spec = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_maxsteps");
+        spec.MaxSteps.Should().Be(50, "MaxSteps must equal MaxTurns.Current from settings");
+    }
+
+    [TestMethod]
+    [DataRow(10)]
+    [DataRow(3000)]
+    [DataRow(1)]
+    public void Build_MaxSteps_VariesWithSettings(int maxTurns)
+    {
+        var settings = MakeSettings(5);
+        settings.MaxTurns.Current = maxTurns;
+
+        var spec = EnvironmentSpecBuilder.Build(settings, "exp_maxsteps_vary");
+        spec.MaxSteps.Should().Be(maxTurns);
+    }
+
+    // -----------------------------------------------------------------------
     // AssertEchoMatches — round-trip checks
     // -----------------------------------------------------------------------
 
@@ -135,6 +159,18 @@ public class EnvironmentSpecBuilderTests
         var echoed = EnvironmentSpecBuilder.Build(MakeSettings(4), "exp_mismatch"); // different sight_range → different obs_dim
 
         FluentActions.Invoking(() => EnvironmentSpecBuilder.AssertEchoMatches(sent, echoed, "exp_mismatch"))
+            .Should().ThrowExactly<InvalidOperationException>()
+            .WithMessage("*echo mismatch*");
+    }
+
+    [TestMethod]
+    public void AssertEchoMatches_MismatchedMaxSteps_Throws()
+    {
+        var sent = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_ms_mismatch");
+        var echoed = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_ms_mismatch");
+        echoed.MaxSteps = sent.MaxSteps + 1; // tamper with max_steps
+
+        FluentActions.Invoking(() => EnvironmentSpecBuilder.AssertEchoMatches(sent, echoed, "exp_ms_mismatch"))
             .Should().ThrowExactly<InvalidOperationException>()
             .WithMessage("*echo mismatch*");
     }

@@ -15,16 +15,18 @@ STARTED: TrainingStatus
 FAILED: TrainingStatus
 
 class EnvironmentSpec(_message.Message):
-    __slots__ = ("observation_dim", "action_dim", "sight_range", "observation_feature_names")
+    __slots__ = ("observation_dim", "action_dim", "sight_range", "observation_feature_names", "max_steps")
     OBSERVATION_DIM_FIELD_NUMBER: _ClassVar[int]
     ACTION_DIM_FIELD_NUMBER: _ClassVar[int]
     SIGHT_RANGE_FIELD_NUMBER: _ClassVar[int]
     OBSERVATION_FEATURE_NAMES_FIELD_NUMBER: _ClassVar[int]
+    MAX_STEPS_FIELD_NUMBER: _ClassVar[int]
     observation_dim: int
     action_dim: int
     sight_range: int
     observation_feature_names: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, observation_dim: _Optional[int] = ..., action_dim: _Optional[int] = ..., sight_range: _Optional[int] = ..., observation_feature_names: _Optional[_Iterable[str]] = ...) -> None: ...
+    max_steps: int
+    def __init__(self, observation_dim: _Optional[int] = ..., action_dim: _Optional[int] = ..., sight_range: _Optional[int] = ..., observation_feature_names: _Optional[_Iterable[str]] = ..., max_steps: _Optional[int] = ...) -> None: ...
 
 class NegotiateEnvironmentRequest(_message.Message):
     __slots__ = ("experiment_id", "spec")

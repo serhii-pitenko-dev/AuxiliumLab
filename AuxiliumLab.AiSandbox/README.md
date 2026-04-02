@@ -17,7 +17,7 @@ The solution follows **Onion Architecture** (also known as Clean / Hexagonal Arc
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  Presentation / Hosts                                           │
-│  ConsolePresentation · GrpcHost · WebApi · Startup             │
+│  GrpcHost · WebApi · SharedContracts · Startup                   │
 ├─────────────────────────────────────────────────────────────────┤
 │  Application Services                                           │
 │  ApplicationServices · AiTrainingOrchestrator                  │
@@ -47,7 +47,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full dependency graph.
 | `AuxiliumLab.AiSandbox.AiTrainingOrchestrator` | Application | Training settings, gRPC client to Python |
 | `AuxiliumLab.AiSandbox.Infrastructure` | Infrastructure | File & in-memory data managers |
 | `AuxiliumLab.AiSandbox.Statistics` | Infrastructure | Batch run statistics, CSV export |
-| `AuxiliumLab.AiSandbox.ConsolePresentation` | Presentation | Real-time Spectre.Console terminal renderer |
+| `AuxiliumLab.AiSandbox.SharedContracts` | Presentation | Cross-cutting DTOs shared between backend and frontend |
 | `AuxiliumLab.AiSandbox.GrpcHost` | Presentation | gRPC server exposing simulation as a gym |
 | `AuxiliumLab.AiSandbox.WebApi` | Presentation | ASP.NET Core REST API with Training, Simulation, Aggregation and Statistic endpoints |
 | `AuxiliumLab.AiSandbox.Startup` | Composition Root | DI wiring, entry point |
@@ -77,7 +77,7 @@ In **Debug** builds you can opt-in to additional diagnostic constants by uncomme
 
 | Constant | Effect |
 |---|---|
-| `CONSOLE_PRESENTATION_DEBUG` | Enables verbose debug output in the `ConsolePresentation` layer (frame timings, render traces) |
+| `CONSOLE_PRESENTATION_DEBUG` | Enables verbose debug output in `Executor` (frame timings, render traces) |
 | `PERFORMANCE_ANALYSIS` | Activates coarse-grained performance instrumentation across hot paths |
 | `PERFORMANCE_DETAILED_ANALYSIS` | Adds fine-grained per-step timing; implies `PERFORMANCE_ANALYSIS` overhead |
 
@@ -87,12 +87,14 @@ By default all three constants are **disabled** in every configuration. To enabl
 
 | Mode | Description |
 |---|---|
-| `SingleSimulation` | One interactive run with console visualization |
-| `MassRandomAISimulation` | Parallel batch runs without visualization |
-| `MassTrainedAISimulation` | Parallel batch runs using a trained model |
 | `Training` | Full RL training loop (requires Python service running) |
+| `SingleRandomAISimulation` | One run with random agent actions |
+| `SingleTrainedAISimulation` | One run using a trained model |
+| `MassRandomAISimulation` | Parallel batch runs with random AI |
+| `MassTrainedAISimulation` | Parallel batch runs using a trained model |
+| `LoadSimulation` | Play back a previously recorded simulation |
+| `TestPreconditions` | Generate playground with preconditions and test them |
 | `AggregationRun` | Ordered sequence of steps (Training → MassRandom → MassTrained) producing a combined CSV report |
-| `TestPreconditions` | Run seeded from saved precondition data |
 
 ## REST API
 
@@ -103,11 +105,16 @@ The REST API runs on `http://localhost:5000`. All routes are under `/ai-sandbox/
 | `TrainingController` | POST | `/ai-sandbox/training/ppo` | Start a PPO training job (202 Accepted) |
 | | GET | `/ai-sandbox/training/models` | List trained models |
 | | GET | `/ai-sandbox/training/status` | Training job statuses |
+| | POST | `/ai-sandbox/training/{jobId}/stop` | Stop a training job |
 | `SimulationController` | POST | `/ai-sandbox/simulation/run/single` | Start a single simulation (RandomAI or TrainedAI) |
 | | POST | `/ai-sandbox/simulation/run/mass` | Start a mass simulation batch |
+| | POST | `/ai-sandbox/simulation/{jobId}/stop` | Stop a simulation job |
+| | POST | `/ai-sandbox/simulation/{jobId}/pause` | Pause a simulation job |
+| | POST | `/ai-sandbox/simulation/{jobId}/resume` | Resume a paused simulation job |
 | | GET | `/ai-sandbox/simulation/status` | Simulation job statuses |
 | `AggregationRunController` | POST | `/ai-sandbox/aggregation/run` | Start an aggregation run |
 | | GET | `/ai-sandbox/aggregation/status` | Aggregation job statuses |
+| | POST | `/ai-sandbox/aggregation/{jobId}/stop` | Stop an aggregation run |
 | `StatisticController` | GET | `/ai-sandbox/statistic/simulations` | Completed simulation summaries |
 | | GET | `/ai-sandbox/statistic/aggregations` | Completed aggregation summaries |
 
@@ -118,5 +125,5 @@ The REST API runs on `http://localhost:5000`. All routes are under `/ai-sandbox/
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Onion architecture, dependency graph, data flow |
 | [AuxiliumLab.AiSandbox.Domain/README.md](AuxiliumLab.AiSandbox.Domain/README.md) | Domain model reference |
 | [AuxiliumLab.AiSandbox.ApplicationServices/README.md](AuxiliumLab.AiSandbox.ApplicationServices/README.md) | Application layer execution logic |
-| [AuxiliumLab.AiSandbox.ConsolePresentation/README.md](AuxiliumLab.AiSandbox.ConsolePresentation/README.md) | Console rendering system |
+| [AuxiliumLab.AiSandbox.SharedContracts/README.md](AuxiliumLab.AiSandbox.SharedContracts/README.md) | Cross-cutting DTOs shared between backend and frontend |
 | [AuxiliumLab.AiSandbox.Ai/README.md](AuxiliumLab.AiSandbox.Ai/README.md) | AI decision layer: actions, observation encoding, reward scheme |

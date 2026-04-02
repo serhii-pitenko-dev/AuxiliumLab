@@ -152,9 +152,17 @@ public partial class VisualizationPage : IAsyncDisposable
         var ov = BuildDefaultOverride();
         if (row.Preconditions is not null)
         {
-            ov.MaxTurns  = row.Preconditions.MaxTurns;
-            ov.MapWidth  = row.Preconditions.MapWidth;
-            ov.MapHeight = row.Preconditions.MapHeight;
+            ov.MaxTurns       = row.Preconditions.MaxTurns;
+            ov.MapWidth       = row.Preconditions.MapWidth;
+            ov.MapHeight      = row.Preconditions.MapHeight;
+            ov.BlocksPercent  = row.Preconditions.BlocksPercent;
+            ov.EnemiesPercent = row.Preconditions.EnemiesPercent;
+            ov.HeroSpeed      = row.Preconditions.HeroSpeed;
+            ov.HeroSightRange = row.Preconditions.HeroSightRange;
+            ov.HeroStamina    = row.Preconditions.HeroStamina;
+            ov.EnemySpeed       = row.Preconditions.EnemySpeed;
+            ov.EnemySightRange  = row.Preconditions.EnemySightRange;
+            ov.EnemyStamina     = row.Preconditions.EnemyStamina;
         }
         _override = ov;
         _cmd.SandboxSettings = _override;

@@ -12,6 +12,8 @@ All simulation visualization events use strongly typed enums instead of raw stri
 | Type | Values | Purpose |
 |---|---|---|
 | `EEffect` | `Path`, `Vision`, `Run` | Effect types agents apply to map cells |
+| `ModelType` | `Random, PPO, A2C, DQN` | RL algorithm type (used by training/simulation commands) |
+| `AiPolicy` | `MLP, LSTM` | Policy network architecture |
 
 ### DTOs
 

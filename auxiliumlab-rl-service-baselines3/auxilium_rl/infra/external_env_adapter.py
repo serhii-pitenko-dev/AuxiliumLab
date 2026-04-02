@@ -194,7 +194,7 @@ class GrpcExternalEnvAdapter(ExternalEnvAdapter):
         
         try:
             request = simulation_pb2.StepRequest(gym_id=self.gym_id, action=action)
-            response = self._stub.Step(request, timeout=30)
+            response = self._stub.Step(request, timeout=120)
             
             observation = np.array(response.observation, dtype=np.float32)
             reward = float(response.reward)

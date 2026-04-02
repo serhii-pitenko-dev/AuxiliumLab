@@ -64,9 +64,8 @@ Review these keys before the first run:
 | Key | Default | Notes |
 |---|---|---|
 | `PolicyTrainerClient.ServerAddress` | `http://localhost:50051` | Must match the Python service port |
-| `StartupSettings.IsWebApiEnabled` | — | Set `true` to start the REST API on `:5000` |
-| `StartupSettings.IsPreconditionStart` | `true` | `true` = skip interactive menu, use file settings directly |
-| `InfrastructureSettings.FilesPath` | (path) | Root folder for all file output (maps, stats, models) |
+| `FileSource.PrecreatedMap.IsEnabled` | `false` | Set `true` to load a pre-saved playground by ID |
+| `FileSource.FileStorage.BasePath` | `C:\FILE_STORAGE` | Root folder for all file output (maps, stats, models) |
 
 ---
 
@@ -150,7 +149,7 @@ to point at the .NET REST API (`http://localhost:5000` by default).
 |---|---|---|
 | `:50051` | Python `PolicyTrainerService` (gRPC) | .NET → Python: start training, get status, act |
 | `:50062` | .NET `SimulationService` (gRPC) | Python → .NET: gym reset / step (training only) |
-| `:5000` | .NET REST API | Active when `IsWebApiEnabled = true` |
+| `:5000` | .NET REST API | Always active (WebApi is wired via Startup) |
 | `:7001` / `:5001` | Blazor frontend (dev) | HTTPS / HTTP |
 | `:8080` | Frontend Docker container | Served by `StaticHost` (mapped from `:80` inside container) |
 
@@ -186,7 +185,7 @@ pytest -v
 ### Blazor frontend tests
 
 ```powershell
-cd AuxiliumLab.AiSandbox/Frontend/AuxiliumLab.AiSandbox.Frontend
+cd AuxiliumLab.AiSandbox/Frontend/AuxiliumLab.AiSandbox.Frontend.UnitTests
 dotnet test
 ```
 

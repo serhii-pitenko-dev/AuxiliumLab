@@ -2,7 +2,7 @@
 
 **Onion layer: Application**  
 Bridges the .NET simulation engine with the Python Stable Baselines3 training service.  
-Depends on: `SharedBaseTypes`, `Common`.
+Depends on: `Ai`, `Infrastructure` (project references); also uses `Google.Protobuf`, `Grpc.Net.Client`, `Grpc.Tools` NuGet packages.
 
 ## Purpose
 - Defines `ITraining` abstractions for each RL algorithm (PPO, A2C, DQN).
@@ -55,7 +55,7 @@ Single source of truth for the environment contract sent to the Python RL servic
 | Member | Description |
 |---|---|
 | `const int ScalarFeatureCount = 5` | Fixed scalar features: `x`, `y`, `is_run`, `stamina_frac`, `speed` |
-| `const int ActionDim = 5` | Fixed action space size (Move N/S/E/W + Stay) |
+| `const int ActionDim = 5` | Fixed action space size (Move N/S/E/W + Toggle Run) |
 | `Build(settings, experimentId)` | Computes `obs_dim = 5 + (2×sightRange+1)²` from `appsettings.json` `SandBox.Hero.SightRange.Current`; generates all feature names (scalars + grid cells `grid[r,c]`) |
 | `AssertEchoMatches(sent, echoed, experimentId)` | Throws `InvalidOperationException` if the spec echoed back by Python differs from what was sent |
 

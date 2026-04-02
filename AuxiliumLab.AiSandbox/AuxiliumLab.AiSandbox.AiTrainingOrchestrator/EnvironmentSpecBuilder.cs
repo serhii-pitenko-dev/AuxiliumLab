@@ -46,6 +46,7 @@ public static class EnvironmentSpecBuilder
             ObservationDim = obsDim,
             ActionDim      = ActionDim,
             SightRange     = sightRange,
+            MaxSteps       = settings.MaxTurns.Current,
         };
 
         // ── Scalar feature names (indices 0–4) ─────────────────────────────
@@ -70,14 +71,15 @@ public static class EnvironmentSpecBuilder
 
         if (echoed.ObservationDim != sent.ObservationDim
             || echoed.ActionDim   != sent.ActionDim
-            || echoed.SightRange  != sent.SightRange)
+            || echoed.SightRange  != sent.SightRange
+            || echoed.MaxSteps    != sent.MaxSteps)
         {
             throw new InvalidOperationException(
                 $"Environment spec echo mismatch for experiment '{experimentId}'. " +
                 $"Sent: obs_dim={sent.ObservationDim}, action_dim={sent.ActionDim}, " +
-                $"sight_range={sent.SightRange}. " +
+                $"sight_range={sent.SightRange}, max_steps={sent.MaxSteps}. " +
                 $"Echoed: obs_dim={echoed.ObservationDim}, action_dim={echoed.ActionDim}, " +
-                $"sight_range={echoed.SightRange}. " +
+                $"sight_range={echoed.SightRange}, max_steps={echoed.MaxSteps}. " +
                 "The Python service returned a modified spec — aborting training.");
         }
     }

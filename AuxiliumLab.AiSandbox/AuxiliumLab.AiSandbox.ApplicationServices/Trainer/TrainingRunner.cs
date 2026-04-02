@@ -200,10 +200,27 @@ public class TrainingRunner
             executorTasks.Add(execTask);
         }
 
-        // 5. Negotiate environment contract with Python before starting training.
+        // 5. Compute experiment identity and save preconditions BEFORE training
+        //    so the folder always has diagnostic data even if training fails.
+        string experimentId = training.BuildExperimentId();
+        var parameterDict = algoSettings.Parameters
+            .ToDictionary(p => p.Name, p => p.Value);
+
+        // Update job status with the real experiment id immediately
+        if (jobStatus is not null)
+            jobStatus.ExperimentId = experimentId;
+
+        await SavePreconditionsAsync(
+            algorithmType,
+            experimentId,
+            parameterDict,
+            effectiveSandboxConfig,
+            rewards,
+            fileSourceConfig.Value);
+
+        // 6. Negotiate environment contract with Python before starting training.
         //    This replaces the old silent coupling where obs_dim was hard-coded
         //    on both sides. Any mismatch is now a hard error here.
-        string experimentId = training.BuildExperimentId();
         var spec = EnvironmentSpecBuilder.Build(effectiveSandboxConfig, experimentId);
         var negotiationCt = new CancellationTokenSource(TimeSpan.FromSeconds(30)).Token;
         NegotiateEnvironmentResponse negotiation;
@@ -230,7 +247,7 @@ public class TrainingRunner
             $"[Training] Environment spec negotiated: obs_dim={spec.ObservationDim}, "
             + $"action_dim={spec.ActionDim}, sight_range={spec.SightRange}.");
 
-        // 6. Start training on the Python side
+        // 7. Start training on the Python side
         Console.WriteLine($"[Training] Starting {algorithmType} training with {nEnvs} gym(s)...");
         Console.WriteLine($"[Training] Experiment: {experimentId}");
         Console.WriteLine($"[Training] Gym IDs: {string.Join(", ", gymIds.Select(g => g.ToString("N")[..8]))}");
@@ -244,15 +261,17 @@ public class TrainingRunner
         if (jobStatus is not null)
         {
             jobStatus.RunId           = runId;
-            jobStatus.TotalTimesteps  = training.BuildTrainingRequest(algoSettings, nEnvs, gymIds).TotalTimesteps;
+            jobStatus.TotalTimesteps  = training.BuildTrainingRequest(algoSettings, nEnvs, gymIds,
+                fileSourceConfig.Value.FileStorage.BasePath,
+                fileSourceConfig.Value.FileStorage.TrainedAlgorithms).TotalTimesteps;
             jobStatus.NumEnvironments = nEnvs;
         }
 
-        // 6b. Poll Python for training progress while waiting for gyms to close
+        // 7b. Poll Python for training progress while waiting for gyms to close
         using var pollCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var pollTask = PollTrainingProgressAsync(runId, jobStatus, pollCts.Token);
 
-        // 7. Wait until all gyms close (Python training complete) or app is stopped.
+        // 8. Wait until all gyms close (Python training complete) or app is stopped.
         try
         {
             await Task.WhenAll(executorTasks).ConfigureAwait(false);
@@ -277,7 +296,7 @@ public class TrainingRunner
             foreach (var cts in gymCtsList)    cts.Dispose();
         }
 
-        // 8. Verify Python-side training actually succeeded
+        // 9. Verify Python-side training actually succeeded
         try
         {
             var finalStatus = await _policyTrainerClient.GetTrainingStatusAsync(
@@ -296,18 +315,6 @@ public class TrainingRunner
         }
 
         // Return training metadata so callers (e.g. AggregationRunner) can include it in reports.
-        var parameterDict = algoSettings.Parameters
-            .ToDictionary(p => p.Name, p => p.Value);
-
-        // Save preconditions.json alongside the trained model folder
-        await SavePreconditionsAsync(
-            algorithmType,
-            experimentId,
-            parameterDict,
-            effectiveSandboxConfig,
-            rewards,
-            fileSourceConfig.Value);
-
         return new TrainingRunInfo(algorithmName, experimentId, parameterDict);
     }
 
@@ -337,16 +344,24 @@ public class TrainingRunner
 
             var preconditions = new TrainingPreconditionsDto
             {
-                Algorithm      = algorithmType.ToString(),
-                ExperimentId   = experimentId,
+                Algorithm       = algorithmType.ToString(),
+                ExperimentId    = experimentId,
                 Hyperparameters = parameters.ToDictionary(kv => kv.Key, kv => kv.Value),
-                MaxTurns       = sandboxCfg.MaxTurns.Current,
-                MapWidth       = sandboxCfg.MapSettings.Size.Width.Current,
-                MapHeight      = sandboxCfg.MapSettings.Size.Height.Current,
-                StepPenalty    = rewards.StepPenalty,
-                WinReward      = rewards.WinReward,
-                LossReward     = rewards.LossReward,
-                StartedAt      = DateTime.UtcNow
+                MaxTurns        = sandboxCfg.MaxTurns.Current,
+                MapWidth        = sandboxCfg.MapSettings.Size.Width.Current,
+                MapHeight       = sandboxCfg.MapSettings.Size.Height.Current,
+                BlocksPercent   = sandboxCfg.MapSettings.ElementsPercentages.BlocksPercent.Current,
+                EnemiesPercent  = sandboxCfg.MapSettings.ElementsPercentages.PercentOfEnemies.Current,
+                HeroSpeed       = sandboxCfg.Hero.Speed.Current,
+                HeroSightRange  = sandboxCfg.Hero.SightRange.Current,
+                HeroStamina     = sandboxCfg.Hero.Stamina.Current,
+                EnemySpeed      = sandboxCfg.Enemy.Speed.Current,
+                EnemySightRange = sandboxCfg.Enemy.SightRange.Current,
+                EnemyStamina    = sandboxCfg.Enemy.Stamina.Current,
+                StepPenalty     = rewards.StepPenalty,
+                WinReward       = rewards.WinReward,
+                LossReward      = rewards.LossReward,
+                StartedAt       = DateTime.UtcNow
             };
 
             var json = JsonSerializer.Serialize(preconditions, new JsonSerializerOptions { WriteIndented = true });
@@ -356,6 +371,43 @@ public class TrainingRunner
         catch (Exception ex)
         {
             Console.WriteLine($"[Training] WARNING: Failed to save preconditions.json: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Saves error.json to the experiment folder so failures can be investigated later.
+    /// </summary>
+    internal static async Task SaveErrorAsync(
+        string algorithm,
+        string experimentId,
+        string errorMessage,
+        FileSourceConfiguration fileSourceCfg)
+    {
+        var folder = Path.Combine(
+            fileSourceCfg.FileStorage.BasePath,
+            fileSourceCfg.FileStorage.TrainedAlgorithms,
+            algorithm,
+            experimentId);
+
+        try
+        {
+            Directory.CreateDirectory(folder);
+
+            var errorInfo = new Dictionary<string, object>
+            {
+                ["Algorithm"] = algorithm,
+                ["ExperimentId"] = experimentId,
+                ["ErrorMessage"] = errorMessage,
+                ["FailedAt"] = DateTime.UtcNow.ToString("o")
+            };
+
+            var json = JsonSerializer.Serialize(errorInfo, new JsonSerializerOptions { WriteIndented = true });
+            await File.WriteAllTextAsync(Path.Combine(folder, "error.json"), json);
+            Console.WriteLine($"[Training] Error info saved to '{folder}/error.json'.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Training] WARNING: Failed to save error.json: {ex.Message}");
         }
     }
 

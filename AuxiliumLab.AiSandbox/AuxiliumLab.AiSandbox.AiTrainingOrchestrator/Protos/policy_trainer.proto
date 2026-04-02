@@ -44,6 +44,10 @@ message EnvironmentSpec {
   // Human-readable names for each observation index, length must equal observation_dim.
   // Example: ["x", "y", "is_run", "stamina_frac", "speed", "grid_0_0", ...]
   repeated string observation_feature_names = 4;
+
+  // Maximum steps (turns) per episode. Maps to SandBox.MaxTurns.Current on the .NET side.
+  // Python uses this to set ExternalSimEnv.max_steps for episode truncation.
+  int32 max_steps = 5;
 }
 
 // Sent by .NET before StartTraining* to establish the environment contract.

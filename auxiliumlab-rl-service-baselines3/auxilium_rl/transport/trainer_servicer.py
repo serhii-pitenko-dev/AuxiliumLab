@@ -68,11 +68,13 @@ class PolicyTrainerServicer(policy_trainer_pb2_grpc.PolicyTrainerServiceServicer
         self._experiment_specs[experiment_id] = spec
         self.orchestrator.env_config.observation_dim = spec.observation_dim
         self.orchestrator.env_config.action_dim = spec.action_dim
+        if spec.max_steps > 0:
+            self.orchestrator.env_config.max_steps = spec.max_steps
 
         msg = (
             f"Environment spec accepted for experiment '{experiment_id}': "
             f"obs_dim={spec.observation_dim}, action_dim={spec.action_dim}, "
-            f"sight_range={spec.sight_range}."
+            f"sight_range={spec.sight_range}, max_steps={spec.max_steps}."
         )
         logger.info(msg)
 

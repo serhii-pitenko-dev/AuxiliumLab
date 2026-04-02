@@ -25,8 +25,9 @@ public static class ObservationBuilder
         var obs             = new float[observationSize];
 
         // ── Scalar features (indices 0-4) ─────────────────────────────────────
-        obs[0] = agent.Coordinates.X;
-        obs[1] = agent.Coordinates.Y;
+        float factorTOreduceImportanceOfAbsolutePosition = 5f; 
+        obs[0] = agent.Coordinates.X/factorTOreduceImportanceOfAbsolutePosition; 
+        obs[1] = agent.Coordinates.Y/factorTOreduceImportanceOfAbsolutePosition; 
         obs[2] = agent.IsRun ? 1f : 0f;
         obs[3] = agent.MaxStamina > 0 ? (float)agent.Stamina / agent.MaxStamina : 0f;
         obs[4] = agent.Speed;

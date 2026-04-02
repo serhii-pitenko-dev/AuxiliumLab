@@ -34,30 +34,30 @@ All message contracts live in `MessageBroker/Contracts/`:
 
 ```
 Contracts/
-├── AiContract/           Commands and events for AI decision-making
-│   ├── Commands/         RequestAiActionCommand
-│   ├── Events/           (AI-related events)
-│   └── Responses/        AiActionResponse, AgentObservationResponse
+├── AiContract/           Commands and responses for AI decision-making
+│   ├── Commands/         RequestAgentDecisionMakeCommand
+│   ├── Dto/              AgentStateForAIDecision, VisibleCellData
+│   └── Responses/        AgentDecisionBaseResponse, AgentDecisionMoveResponse, AgentDecisionUseAbilityResponse, AiReadyToActionsResponse
 ├── CoreServicesContract/ Internal simulation events
-│   └── Events/           GameStartedEvent, TurnExecutedEvent, OnBaseAgentActionEvent
+│   └── Events/           GameStartedEvent, TurnExecutedEvent, OnBaseAgentActionEvent, OnAgentMoveActionEvent, OnAgentToggleActionEvent
 ├── GlobalMessagesContract/ Game outcome events
 │   └── Events/
 │       ├── Win/          HeroWonEvent (WinReason enum)
 │       └── Lost/         HeroLostEvent (LostReason enum)
 └── Sb3Contract/          Gym interface messages for SB3 training
-    ├── Commands/         RequestSimulationResetCommand, RequestSimulationStepCommand
-    └── Responses/        SimulationResetResponse, SimulationStepResponse
+    ├── Commands/         RequestSimulationResetCommand, RequestSimulationStepCommand, RequestSimulationCloseCommand
+    └── Responses/        SimulationResetResponse, SimulationStepResponse, SimulationCloseResponse
 ```
 
 ### Key Message Flow
 
 | Event | Published by | Consumed by |
 |---|---|---|
-| `GameStartedEvent` | `Executor` | `ConsoleRunner` (renders initial map) |
-| `TurnExecutedEvent` | `Executor` | `ConsoleRunner` (re-renders changed cells) |
-| `OnBaseAgentActionEvent` | `ExecutorForPresentation` | `ConsoleRunner` (animates per-action updates) |
-| `HeroWonEvent` | `Executor` | `ConsoleRunner`, `StandardExecutor` (captures result) |
-| `HeroLostEvent` | `Executor` | `ConsoleRunner`, `StandardExecutor` (captures result) |
+| `GameStartedEvent` | `Executor` | Web visualization (via SignalR hub) |
+| `TurnExecutedEvent` | `Executor` | Web visualization (via SignalR hub) |
+| `OnBaseAgentActionEvent` | `ExecutorForPresentation` | Web visualization (per-action updates) |
+| `HeroWonEvent` | `Executor` | `StandardExecutor` (captures result), web visualization |
+| `HeroLostEvent` | `Executor` | `StandardExecutor` (captures result), web visualization |
 | `RequestSimulationResetCommand` | `SimulationService` (gRPC) | Training executor (resets playground) |
 | `RequestSimulationStepCommand` | `SimulationService` (gRPC) | Training executor (executes one step) |
 | `SimulationResetResponse` | Training executor | `SimulationService` (completes gRPC call) |
@@ -78,6 +78,10 @@ Used by `BaseTraining` in `AiTrainingOrchestrator` to scale the number of parall
 4. Any subscriber calls `_messageBroker.Subscribe<MyEvent>(handler)` at startup and `Unsubscribe` on disposal.
 
 ## Registration
-`Common/Extensions/CommonServiceCollectionExtensions.cs` registers:
+`Common/Configuration/CommonServiceCollectionExtensions.cs` registers:
 - `IMessageBroker` as singleton `MessageBroker`.
 - `IBrokerRpcClient` as singleton `BrokerRpcClient`.
+- `GymBrokerRegistry` as singleton.
+
+## `GymBrokerRegistry`
+Maps each gym's unique `Guid` to its isolated `IMessageBroker` instance. Used by `SimulationService` (GrpcHost) to route `Reset`/`Step`/`Close` calls to the correct per-gym broker instead of the shared singleton.

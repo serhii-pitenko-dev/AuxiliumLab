@@ -4,6 +4,7 @@ namespace AuxiliumLab.Frontend.Features.Training.Pages;
 public partial class TrainingStatusPage
 {
     private List<TrainingJobStatusDto> _jobs = [];
+    private List<TrainedModelInfoDto> _failedModels = [];
     private bool _loading;
     private Timer? _timer;
 
@@ -16,7 +17,12 @@ public partial class TrainingStatusPage
     private async Task RefreshAsync()
     {
         _loading = true;
-        try { _jobs = await TrainingApi.GetTrainingStatusesAsync(); }
+        try
+        {
+            _jobs = await TrainingApi.GetTrainingStatusesAsync();
+            var models = await TrainingApi.GetTrainedModelsAsync();
+            _failedModels = models.Where(m => m.IsFailed).ToList();
+        }
         finally { _loading = false; StateHasChanged(); }
     }
 

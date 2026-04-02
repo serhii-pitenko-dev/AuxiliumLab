@@ -100,7 +100,7 @@ Domain/
 ├── Maps/                   Cell, MapSquareCells
 ├── Playgrounds/
 │   ├── Builders/           PlaygroundBuilder
-│   ├── Factories/          PlaygroundFactory, PlaygroundFromFileFactory
+│   ├── Factories/          PlaygroundFactory
 │   └── StandardPlayground.cs
 ├── Validation/
 │   ├── Agents/             AgentActionAddValidator

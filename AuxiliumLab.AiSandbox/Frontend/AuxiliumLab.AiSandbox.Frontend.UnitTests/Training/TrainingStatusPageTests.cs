@@ -16,6 +16,8 @@ public class TrainingStatusPageTests
         var mockApi = new Mock<ITrainingApiClient>();
         mockApi.Setup(a => a.GetTrainingStatusesAsync(It.IsAny<CancellationToken>()))
                .ReturnsAsync(jobs ?? []);
+        mockApi.Setup(a => a.GetTrainedModelsAsync(It.IsAny<CancellationToken>()))
+               .ReturnsAsync([]);
 
         var mockNotif = new Mock<INotificationService>();
         ctx.Services.AddSingleton(mockApi.Object);

@@ -15,11 +15,8 @@ Depends on: every other project in the solution.
 Program.cs
   │
   ├─ 1. Read appsettings.json
-  │       ├─ FileSource          (storage paths)
-  │       ├─ SandBox             (map, agent, turn configuration)
-  │       ├─ PolicyTrainerClient (gRPC address for Python RL service)
-  │       ├─ TrainingSettings    (algorithm hyperparameters & rewards)
-  │       └─ AggregationSettings (default aggregation step sequence)
+  │       ├─ FileSource           (storage paths, precreated map toggle)
+  │       └─ PolicyTrainerClient  (gRPC address for Python RL service)
   │
   ├─ 2. Ensure storage folders exist (FileSource.FileStorage.BasePath)
   │
@@ -72,12 +69,11 @@ Builds a `WebApplication` with Kestrel configured for dual-protocol:
 | Key | Default | Description |
 |---|---|---|
 | `PolicyTrainerClient.ServerAddress` | `http://localhost:50051` | Python RL training service address |
-| `TrainingSettings.Rewards.*` | `-0.1 / 10.0 / -10.0` | Default reward shaping (overridable via API) |
-| `TrainingSettings.Algorithms[*]` | PPO, A2C, DQN | Default hyperparameters per algorithm |
-| `AggregationSettings.Steps[*]` | Random AI, PPO - AI | Default aggregation step sequence |
-| `SandBox.MaxTurns.Current` | `50` | Default turn limit |
-| `SandBox.MapSettings.Size.Width/Height.Current` | `20` | Default map size |
-| `FileSource.FileStorage.BasePath` | `D:\FILE_STORAGE` | Root storage directory |
+| `FileSource.FileStorage.BasePath` | `C:\FILE_STORAGE` | Root storage directory |
+| `FileSource.PrecreatedMap.IsEnabled` | `false` | Load a pre-saved playground by ID |
+| `FileSource.PrecreatedMap.PlaygroundId` | `""` | Playground GUID to load when enabled |
+
+> **Note:** Sandbox settings (map size, turn limits, agent stats), training hyperparameters (rewards, algorithms), and aggregation steps are **not** stored in `appsettings.json`. They are provided via the REST API command DTOs (e.g. `StartPpoTrainingCommand`, `StartSingleSimulationCommand`) and use code-level defaults when not specified.
 
 ## DI Lifetime Conventions
 

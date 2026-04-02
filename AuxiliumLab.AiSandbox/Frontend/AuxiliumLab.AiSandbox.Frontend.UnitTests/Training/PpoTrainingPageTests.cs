@@ -108,8 +108,8 @@ public class PpoTrainingPageTests
         capturedCmd.Should().NotBeNull();
         var rewards = capturedCmd!.RewardSettings!;
         rewards.StepPenalty.Should().Be(-0.1f);
-        rewards.WinReward.Should().Be(10.0f);
-        rewards.LossReward.Should().Be(-10.0f);
+        rewards.WinReward.Should().Be(50.0f);
+        rewards.LossReward.Should().Be(-50.0f);
     }
 
     [TestMethod]

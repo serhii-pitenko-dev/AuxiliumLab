@@ -12,21 +12,20 @@ Holds all shared value types, enumerations, and message-type base classes. Becau
 
 | Type | Kind | Description |
 |---|---|---|
-| `Coordinates` | `record struct` | `(int X, int Y)` grid position. `(0,0)` = bottom-left |
+| `Coordinates` | `class` | `(int X, int Y)` grid position. `(0,0)` = bottom-left. Value-equality via manual `Equals`/`GetHashCode` overrides. |
 | `ObjectType` | `enum` | `Empty, Block, Hero, Enemy, Exit, BorderBlock` |
-| `AgentAction` | `enum` | `Move, Run` |
-| `SandboxStatus` | `enum` | `InProgress, HeroWon, HeroLost, TurnLimitReached` |
-| `MapType` | `enum` | Random vs. file-loaded map generation strategy |
+| `AgentAction` | `enum` | `Run, Move` |
+| `SandboxStatus` | `enum` | `InProgress, HeroWon, HeroLost, TurnLimitReached, Failed` |
+| `MapType` | `enum` | `Standard = 1, Empty = 2` — map generation strategy |
 | `AgentSnapshot` | `record` | Immutable copy of agent state at a point in time (used in events/messages) |
 
 #### `StartupSettings/`
-Strongly-typed settings records used by the `Startup` project.
+Enums used by the `Startup` project.
 
 | Type | Description |
 |---|---|
-| `StartupSettings` | Top-level settings: execution mode, presentation mode, web API flag |
-| `ExecutionMode` | `SingleSimulation, MassRandomAISimulation, Training, TestPreconditions` |
-| `PresentationMode` | `Console, WithoutVisualization` |
+| `ExecutionMode` | `Training, SingleRandomAISimulation, SingleTrainedAISimulation, MassRandomAISimulation, MassTrainedAISimulation, LoadSimulation, TestPreconditions, AggregationRun` |
+| `PresentationMode` | `WithoutVisualization, Console, Web` |
 
 ### `MessageTypes/`
 
@@ -42,8 +41,8 @@ Base types for the in-process pub/sub bus (`IMessageBroker`).
 
 **Convention:** every concrete message defined in `Common/MessageBroker/Contracts/` must inherit one of these four base types.
 
-### `AiContract/` (inside `SharedBaseTypes` or referenced from `Common`)
-DTOs for the AI decision interface:
+### `AiContract/` (defined in `Common/MessageBroker/Contracts/AiContract/`)
+DTOs for the AI decision interface. These files live in the `Common` project but use the `AuxiliumLab.AiSandbox.SharedBaseTypes.AiContract` namespace.
 
 | Type | Description |
 |---|---|

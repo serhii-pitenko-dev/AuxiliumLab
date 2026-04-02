@@ -20,12 +20,10 @@ public class PpoTraining : BaseTraining, ITraining
     public string BuildExperimentId() => BuildExperimentId(_settings);
 
     public TrainingRequest BuildTrainingRequest(TrainingAlgorithmSettings settings, int nEnvs, IReadOnlyList<Guid> gymIds,
-        string? basePath = null, string? trainedAlgorithmsFolder = null)
+        string basePath, string trainedAlgorithmsFolder)
     {
         string experimentId = BuildExperimentId(settings);
-        string modelOutputPath = (basePath is not null && trainedAlgorithmsFolder is not null)
-            ? GetModelOutputPath(experimentId, basePath, trainedAlgorithmsFolder)
-            : GetModelSavePath(experimentId);
+        string modelOutputPath = GetModelOutputPath(experimentId, basePath, trainedAlgorithmsFolder);
 
         // Ensure the experiment folder exists so Python can save directly into it
         var folderPath = Path.GetDirectoryName(modelOutputPath);
@@ -52,7 +50,7 @@ public class PpoTraining : BaseTraining, ITraining
     }
 
     public async Task<string> Run(IPolicyTrainerClient policyTrainerClient, IReadOnlyList<Guid> gymIds,
-        string? basePath = null, string? trainedAlgorithmsFolder = null)
+        string basePath, string trainedAlgorithmsFolder)
     {
         int nEnvs = Math.Max(1, gymIds.Count);
         var request = BuildTrainingRequest(_settings, nEnvs, gymIds, basePath, trainedAlgorithmsFolder);

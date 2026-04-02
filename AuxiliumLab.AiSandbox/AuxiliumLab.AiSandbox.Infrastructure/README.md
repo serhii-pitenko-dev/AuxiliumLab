@@ -2,7 +2,7 @@
 
 **Onion layer: Infrastructure**  
 Implements the persistence ports (interfaces) defined in the Application layer.  
-Depends on: `Domain`, `SharedBaseTypes`, `Statistics`.
+Depends on: `Common`, `Domain`, `Statistics`.
 
 ## Purpose
 Provides concrete implementations of data access abstractions used by the Application layer.  
@@ -20,7 +20,7 @@ Generic file-system repository.
 | `DeleteAsync(id)` | Removes the file |
 | `GetAvailableIds()` | Lists all IDs (file names) in the storage folder |
 
-**Storage path** is resolved from `InfrastructureSettings.FilesPath` (configurable in `appsettings.json`).  
+**Storage path** is resolved from `FileSource.FileStorage.BasePath` (configurable in `appsettings.json`).  
 Serialization uses `System.Text.Json` with custom converters registered in `Converters/`.
 
 #### `NullFileDataManager<T>`
@@ -62,13 +62,14 @@ IMemoryDataManager<T>        ◄───────   MemoryDataManager<T>
 2. Register the new implementation in `InfrastructureServiceCollectionExtensions`.
 3. Example: swapping to SQL would only require a new implementation here — Application code stays unchanged.
 
-## Configuration Reference (`appsettings.json` → `SandBox` section)
+## Configuration Reference (`SandBoxConfiguration` class in `Configuration/Preconditions/`)
 
-| Key | Type | Description |
+These values are **not** stored in `appsettings.json` by default. They are provided via API command DTOs at runtime and use code defaults when not specified.
+
+| Property | Type | Description |
 |---|---|---|
 | `SaveToFileRegularity` | `int` | Save state every N turns (0 = disabled) |
 | `TurnTimeout` | `int` (ms) | Max time per turn before timeout |
-| `MaxTurns` | `IncrementalValue` | Turn limit with min/current/max/step for sweeps |
-| `MapSettings.Size` | `MapSizeSettings` | Width/Height ranges and step |
-| `MapSettings.FileSource` | `FileSourceSettings` | Load map from file instead of random generation |
+| `MaxTurns` | `IncrementalRange` | Turn limit with min/current/max/step for sweeps |
+| `MapSettings.Size` | `MapConfiguration` | Width/Height ranges and step |
 | `MapSettings.ElementsPercentages` | `ElementsPercentages` | Block/enemy density |

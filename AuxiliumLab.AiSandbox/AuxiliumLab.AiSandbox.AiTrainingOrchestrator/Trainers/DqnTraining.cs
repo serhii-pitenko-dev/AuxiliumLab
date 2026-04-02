@@ -20,15 +20,13 @@ public class DqnTraining : BaseTraining, ITraining
     public string BuildExperimentId() => BuildExperimentId(_settings);
 
     public TrainingRequest BuildTrainingRequest(TrainingAlgorithmSettings settings, int nEnvs, IReadOnlyList<Guid> gymIds,
-        string? basePath = null, string? trainedAlgorithmsFolder = null)
+        string basePath, string trainedAlgorithmsFolder)
     {
         string experimentId = BuildExperimentId(settings);
         var request = new TrainingRequest
         {
             ExperimentId = experimentId,
-            ModelOutputPath = basePath is not null
-                ? GetModelOutputPath(experimentId, basePath, trainedAlgorithmsFolder)
-                : GetModelSavePath(experimentId)
+            ModelOutputPath = GetModelOutputPath(experimentId, basePath, trainedAlgorithmsFolder)
         };
 
         request.Hyperparameters.Add("n_envs", nEnvs.ToString());
@@ -47,7 +45,7 @@ public class DqnTraining : BaseTraining, ITraining
     }
 
     public async Task<string> Run(IPolicyTrainerClient policyTrainerClient, IReadOnlyList<Guid> gymIds,
-        string? basePath = null, string? trainedAlgorithmsFolder = null)
+        string basePath, string trainedAlgorithmsFolder)
     {
         int nEnvs = Math.Max(1, gymIds.Count);
         var request = BuildTrainingRequest(_settings, nEnvs, gymIds, basePath, trainedAlgorithmsFolder);

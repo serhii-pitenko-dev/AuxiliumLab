@@ -54,8 +54,8 @@ Standard `gymnasium.Env` that delegates all `reset()` / `step()` calls to an `Ex
 
 | Space | Type | Default shape |
 |---|---|---|
-| `observation_space` | `Box(−∞, +∞)` | `(4,)` — position + stats |
-| `action_space` | `Discrete` | `4` — Move N/S/E/W (or 0…3) |
+| `observation_space` | `Box(−∞, +∞)` | `(126,)` — 5 scalars + 11×11 vision grid (SightRange=5) |
+| `action_space` | `Discrete` | `5` — Move N/S/E/W + Toggle Run (0…4) |
 
 `max_steps` controls episode truncation (default 500).
 
@@ -123,11 +123,13 @@ python server.py        # starts gRPC server on :50051
 |---|---|---|
 | `GRPC_HOST` | `0.0.0.0` | Bind address |
 | `GRPC_PORT` | `50051` | Listen port |
+| `GRPC_MAX_WORKERS` | `10` | gRPC server thread pool size |
 | `MODELS_DIR` | `./trained_models` | Final model storage |
 | `CHECKPOINT_DIR` | `./checkpoints` | Checkpoint storage |
 | `LOG_LEVEL` | `INFO` | Logging verbosity |
-| `OBSERVATION_DIM` | `4` | Observation vector size |
-| `ACTION_DIM` | `4` | Number of discrete actions |
+| `OBSERVATION_DIM` | `126` | Observation vector size (5 + (2×SightRange+1)²) |
+| `ACTION_DIM` | `5` | Number of discrete actions |
+| `SIMULATION_GRPC_HOST` | `localhost:50062` | .NET GrpcHost address for gym calls |
 | `MAX_STEPS` | `500` | Max steps per episode |
 
 ## Testing

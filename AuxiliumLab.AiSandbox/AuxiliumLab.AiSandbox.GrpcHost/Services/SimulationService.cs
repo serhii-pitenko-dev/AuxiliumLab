@@ -90,7 +90,7 @@ public class SimulationService : Protos.SimulationService.SimulationServiceBase
         broker.Publish(new RequestSimulationStepCommand(commandId, gymId, request.Action));
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken);
-        cts.CancelAfter(TimeSpan.FromSeconds(60));  // 60s: must exceed Python's 30s Step timeout
+        cts.CancelAfter(TimeSpan.FromSeconds(180));  // 180s: must exceed Python's 120s Step timeout
         cts.Token.Register(() => tcs.TrySetCanceled());
 
         var result = await tcs.Task.ConfigureAwait(false);

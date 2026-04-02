@@ -99,3 +99,47 @@ else
     }
 }
 
+@if (_failedModels.Any())
+{
+    <MudText Typo="Typo.h5" Class="mt-6 mb-3">Failed Trainings (History)</MudText>
+    @foreach (var model in _failedModels)
+    {
+        <MudCard Class="mb-4" Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <div class="d-flex align-center gap-3">
+                        <MudChip T="string" Color="Color.Error" Size="Size.Small"
+                                 aria-label="Failed Training Badge">Failed</MudChip>
+                        <MudText Typo="Typo.h6">@model.Algorithm</MudText>
+                        <MudText Typo="Typo.body2" Style="color:var(--mud-palette-text-secondary)">@model.ExperimentId</MudText>
+                    </div>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudSimpleTable Dense="true" Bordered="true">
+                    <tbody>
+                        <tr>
+                            <td><b>Date</b></td>
+                            <td>@model.TrainedAt.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        </tr>
+                        @if (model.Preconditions is not null)
+                        {
+                            <tr>
+                                <td><b>Parallel Environments</b></td>
+                                <td>@(model.Preconditions.Hyperparameters.GetValueOrDefault("n_envs", "—"))</td>
+                            </tr>
+                        }
+                        @if (!string.IsNullOrEmpty(model.ErrorMessage))
+                        {
+                            <tr>
+                                <td><b>Error</b></td>
+                                <td style="color:var(--mud-palette-error);word-break:break-all">@model.ErrorMessage</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudCardContent>
+        </MudCard>
+    }
+}
+

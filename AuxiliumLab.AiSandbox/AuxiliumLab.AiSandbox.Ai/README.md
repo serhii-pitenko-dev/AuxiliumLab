@@ -14,8 +14,8 @@ AuxiliumLab.AiSandbox.Ai/
 ├── Sb3AlgorithmTypeProvider.cs # Factory for Sb3Actions instances
 └── Configuration/
     ├── AiConfiguration.cs      # Per-instance config (ModelType, PolicyType, Version)
-    ├── AiPolicy.cs             # Enum: MLP | LSTM
-    ├── ModelType.cs            # Enum: Random | PPO | A2C | DQN
+    ├── AiPolicy.cs             # Stub — enum moved to SharedContracts
+    ├── ModelType.cs            # Stub — enum moved to SharedContracts
     └── AiSandBoxCollectionExtensions.cs  # DI registration
 ```
 

@@ -132,12 +132,14 @@ public sealed class TrainingCommandService : ITrainingCommands
                 status.State        = TrainingJobState.Failed;
                 status.CompletedAt  = DateTime.UtcNow;
                 status.ErrorMessage = "Stopped by user.";
+                await SaveTrainingErrorAsync(status);
             }
             catch (Exception ex)
             {
                 status.State        = TrainingJobState.Failed;
                 status.CompletedAt  = DateTime.UtcNow;
                 status.ErrorMessage = ex.Message;
+                await SaveTrainingErrorAsync(status);
             }
             finally
             {
@@ -146,5 +148,21 @@ public sealed class TrainingCommandService : ITrainingCommands
         });
 
         return Task.FromResult(new TrainingJobStartedDto { JobId = jobId, Algorithm = algoName, ExperimentId = experimentId, StartedAt = startedAt });
+    }
+
+    private async Task SaveTrainingErrorAsync(TrainingJobStatusDto status)
+    {
+        try
+        {
+            await TrainingRunner.SaveErrorAsync(
+                status.Algorithm,
+                status.ExperimentId,
+                status.ErrorMessage ?? "Unknown error",
+                _fileSourceConfig.Value);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Training] WARNING: Could not save error.json: {ex.Message}");
+        }
     }
 }

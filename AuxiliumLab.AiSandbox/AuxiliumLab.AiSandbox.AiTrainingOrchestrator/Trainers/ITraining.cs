@@ -10,8 +10,8 @@ public interface ITraining
     int PhysicalCores { get; }
     ModelType AlgorithmType { get; }
     Task<string> Run(IPolicyTrainerClient policyTrainerClient, IReadOnlyList<Guid> gymIds,
-        string? basePath = null, string? trainedAlgorithmsFolder = null);
+        string basePath, string trainedAlgorithmsFolder);
     string BuildExperimentId();
     TrainingRequest BuildTrainingRequest(TrainingAlgorithmSettings settings, int nEnvs, IReadOnlyList<Guid> gymIds,
-        string? basePath = null, string? trainedAlgorithmsFolder = null);
+        string basePath, string trainedAlgorithmsFolder);
 }

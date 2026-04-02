@@ -42,7 +42,12 @@ public sealed class TrainingQueryService : ITrainingQueries
             {
                 string experimentId = Path.GetFileName(expDir);
                 string modelFile    = Path.Combine(expDir, "model.zip");
-                if (!File.Exists(modelFile))
+                string errorFile    = Path.Combine(expDir, "error.json");
+                bool hasModel       = File.Exists(modelFile);
+                bool hasError       = File.Exists(errorFile);
+
+                // Skip folders that have neither a model nor an error
+                if (!hasModel && !hasError)
                     continue;
 
                 TrainingPreconditionsDto? preconditions = null;
@@ -58,13 +63,29 @@ public sealed class TrainingQueryService : ITrainingQueries
                     catch { /* corrupt file — skip */ }
                 }
 
+                string? errorMessage = null;
+                if (hasError)
+                {
+                    try
+                    {
+                        string errorJson = File.ReadAllText(errorFile);
+                        var errorData = JsonSerializer.Deserialize<Dictionary<string, string>>(errorJson,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        errorData?.TryGetValue("ErrorMessage", out errorMessage);
+                    }
+                    catch { /* corrupt file — skip */ }
+                }
+
                 models.Add(new TrainedModelInfoDto
                 {
-                    Algorithm    = algorithm,
-                    ExperimentId = experimentId,
-                    ModelFilePath = modelFile,
-                    TrainedAt    = File.GetLastWriteTime(modelFile),
-                    Preconditions = preconditions
+                    Algorithm     = algorithm,
+                    ExperimentId  = experimentId,
+                    ModelFilePath = hasModel ? modelFile : string.Empty,
+                    TrainedAt     = hasModel ? File.GetLastWriteTime(modelFile)
+                                  : File.GetLastWriteTime(hasError ? errorFile : preconditionsFile),
+                    Preconditions = preconditions,
+                    IsFailed      = hasError && !hasModel,
+                    ErrorMessage  = errorMessage
                 });
             }
         }

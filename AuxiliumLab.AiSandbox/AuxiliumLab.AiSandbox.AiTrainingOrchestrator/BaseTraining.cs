@@ -43,8 +43,4 @@ public abstract class BaseTraining
     /// </summary>
     public string GetModelOutputPath(string experimentId, string basePath, string trainedAlgorithmsFolder)
         => Path.Combine(GetModelFolderPath(experimentId, basePath, trainedAlgorithmsFolder), "model");
-
-    /// <summary>Legacy overload — uses the hardcoded default path. Prefer the overload with basePath.</summary>
-    public string GetModelSavePath(string experimentId)
-        => Path.Combine("D:/FILE_STORAGE/TRAINED_ALGORITHMS", AlgorithmType.ToString(), experimentId, "model");
 }

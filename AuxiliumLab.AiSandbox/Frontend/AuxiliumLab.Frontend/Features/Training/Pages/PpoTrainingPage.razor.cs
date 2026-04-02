@@ -46,8 +46,8 @@ public partial class PpoTrainingPage
             RewardSettings = new RewardSettingsDto
             {
                 StepPenalty = -0.1f,
-                WinReward   = 10.0f,
-                LossReward  = -10.0f
+                WinReward   = 50.0f,
+                LossReward  = -50.0f
             }
         };
     }
