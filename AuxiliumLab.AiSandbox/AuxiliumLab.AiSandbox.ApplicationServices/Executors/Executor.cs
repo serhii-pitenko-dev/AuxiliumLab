@@ -251,7 +251,6 @@ public abstract class Executor : IExecutor, IDisposable
 
                 };
 #endif
-
                 AgentDecisionBaseResponse agentDecision = await SendAgentActionRequestAsync(agent, _playground.Id, cancellationToken);
                 await ApplyAgentActionAsync(agentDecision);
                 await WaitIfPausedAsync(cancellationToken);

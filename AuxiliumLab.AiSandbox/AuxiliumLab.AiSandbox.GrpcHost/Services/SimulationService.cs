@@ -55,7 +55,22 @@ public class SimulationService : Protos.SimulationService.SimulationServiceBase
         cts.CancelAfter(TimeSpan.FromSeconds(120));  // 120s: must exceed Python's 60s Reset timeout
         cts.Token.Register(() => tcs.TrySetCanceled());
 
-        var result = await tcs.Task.ConfigureAwait(false);
+        SimulationResetResponse result;
+        try
+        {
+            result = await tcs.Task.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw new RpcException(new Status(StatusCode.DeadlineExceeded,
+                $"Reset timed out for gym_id '{gymId}'."));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Reset failed for gym {GymId}", gymId);
+            throw new RpcException(new Status(StatusCode.Internal,
+                $"Reset failed for gym_id '{gymId}': {ex.Message}"));
+        }
 
         var response = new ResetResponse();
         response.Observation.AddRange(result.Observation);
@@ -93,7 +108,22 @@ public class SimulationService : Protos.SimulationService.SimulationServiceBase
         cts.CancelAfter(TimeSpan.FromSeconds(180));  // 180s: must exceed Python's 120s Step timeout
         cts.Token.Register(() => tcs.TrySetCanceled());
 
-        var result = await tcs.Task.ConfigureAwait(false);
+        SimulationStepResponse result;
+        try
+        {
+            result = await tcs.Task.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw new RpcException(new Status(StatusCode.DeadlineExceeded,
+                $"Step timed out for gym_id '{gymId}'."));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Step failed for gym {GymId}", gymId);
+            throw new RpcException(new Status(StatusCode.Internal,
+                $"Step failed for gym_id '{gymId}': {ex.Message}"));
+        }
 
         var response = new StepResponse
         {

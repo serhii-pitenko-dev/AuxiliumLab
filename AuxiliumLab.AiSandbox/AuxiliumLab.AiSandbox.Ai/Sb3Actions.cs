@@ -45,6 +45,14 @@ public class Sb3Actions : IAiActions
     // TCS bridging Python Step action to executor DecisionMakeCommand
     private TaskCompletionSource<int>? _actionTcs;
 
+    // Tracks the running episode background task so mid-episode crashes
+    // can be propagated to the pending step/reset TCS instead of hanging.
+    private Task? _episodeTask;
+
+    // When OnDecisionRequest fires but _stepResponseTcs is null (Python hasn't called
+    // Step() yet), the observation is buffered here. OnSimulationStep picks it up.
+    private SimulationStepResponse? _pendingStepObservation;
+
     // ── IAiActions ────────────────────────────────────────────────────────────
     public AiConfiguration AiConfiguration { get; init; }
 
@@ -115,8 +123,6 @@ public class Sb3Actions : IAiActions
     {
         if (cmd.PlaygroundId != _playgroundId) return;
 
-        Console.WriteLine($"[Sb3Actions:{GymId:N}] OnDecisionRequest playground={cmd.PlaygroundId:N} waitingForReset={_isWaitingForResetObservation}");
-
         var agent = _agentStateMemoryRepository.LoadObject(cmd.AgentId);
         if (agent is null) return;
         if (agent.Type != TargetAgentType) return;
@@ -135,13 +141,26 @@ public class Sb3Actions : IAiActions
         }
         else
         {
-            // Subsequent decision -> deliver step result (step penalty reward)
-            var stepTcs = _stepResponseTcs;
-            _stepResponseTcs = null;
-            stepTcs?.TrySetResult(new SimulationStepResponse(
+            // Subsequent decision -> deliver step result (step penalty reward).
+            // If _stepResponseTcs is null, Python hasn't called Step() yet (e.g. the
+            // executor processes another agent before the hero within the same turn).
+            // Buffer the observation so OnSimulationStep can deliver it when Step arrives.
+            var stepObs = new SimulationStepResponse(
                 Guid.NewGuid(), GymId, _stepCorrelationId, obs,
                 _stepPenalty, false, false,
-                new Dictionary<string, string>()));
+                new Dictionary<string, string>());
+
+            var stepTcs = _stepResponseTcs;
+            _stepResponseTcs = null;
+            if (stepTcs != null)
+            {
+                stepTcs.TrySetResult(stepObs);
+            }
+            else
+            {
+                // Python Step hasn't arrived yet — park the observation for OnSimulationStep.
+                _pendingStepObservation = stepObs;
+            }
         }
 
         // Asynchronously wait for Python's next action
@@ -176,11 +195,21 @@ public class Sb3Actions : IAiActions
 
     private void CompleteStep(float reward, bool terminated)
     {
+        var stepObs = new SimulationStepResponse(
+            Guid.NewGuid(), GymId, _stepCorrelationId, _lastObservation,
+            reward, terminated, false, new Dictionary<string, string>());
+
         var stepTcs = _stepResponseTcs;
         _stepResponseTcs = null;
-        stepTcs?.TrySetResult(new SimulationStepResponse(
-            Guid.NewGuid(), GymId, _stepCorrelationId, _lastObservation,
-            reward, terminated, false, new Dictionary<string, string>()));
+        if (stepTcs != null)
+        {
+            stepTcs.TrySetResult(stepObs);
+        }
+        else
+        {
+            // Python Step hasn't arrived yet — park for OnSimulationStep.
+            _pendingStepObservation = stepObs;
+        }
     }
 
     // ── Sb3Contract handlers ──────────────────────────────────────────────────
@@ -189,18 +218,18 @@ public class Sb3Actions : IAiActions
     {
         if (cmd.GymId != GymId) return;
 
-        Console.WriteLine($"[Sb3Actions:{GymId:N}] OnSimulationReset firing, starting episode...");
-
         _resetCorrelationId = cmd.Id;
         _isWaitingForResetObservation = true;
+        _pendingStepObservation = null;
 
         var tcs = new TaskCompletionSource<SimulationResetResponse>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         _resetResponseTcs = tcs;
 
-        // Start a new episode in the background; propagate failures to reset TCS so Python gets an error
+        // Start a new episode in the background; propagate failures to reset TCS so Python gets an error.
+        // Track the episode task so mid-episode crashes can be propagated to _stepResponseTcs.
         var capturedTcs = tcs;
-        _ = Task.Run(async () =>
+        _episodeTask = Task.Run(async () =>
         {
             try
             {
@@ -209,17 +238,25 @@ public class Sb3Actions : IAiActions
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Sb3Actions:{GymId:N}] Episode callback FAILED: {ex.Message}");
+                // If the reset TCS is still pending, propagate there (episode failed during init).
                 capturedTcs.TrySetException(ex);
+                // If a step TCS is pending, propagate there too (episode failed mid-step).
+                _stepResponseTcs?.TrySetException(ex);
             }
         });
 
         // Await initial obs then publish response to SimulationService
         _ = Task.Run(async () =>
         {
-            var response = await tcs.Task.ConfigureAwait(false);
-            Console.WriteLine($"[Sb3Actions:{GymId:N}] Reset TCS resolved, publishing SimulationResetResponse");
-            _messageBroker.Publish(response);
+            try
+            {
+                var response = await tcs.Task.ConfigureAwait(false);
+                _messageBroker.Publish(response);
+            }
+            catch
+            {
+                // Reset faulted — exception already propagated to SimulationService via TCS.
+            }
         });
     }
 
@@ -227,7 +264,48 @@ public class Sb3Actions : IAiActions
     {
         if (cmd.GymId != GymId) return;
 
+        // If the episode task has faulted, fail immediately instead of hanging.
+        var episode = _episodeTask;
+        if (episode is { IsFaulted: true })
+        {
+            Exception ex = episode.Exception?.InnerException
+                           ?? (Exception?)episode.Exception
+                           ?? new InvalidOperationException("Episode crashed before step could be processed.");
+            // Publish an error response so SimulationService.Step can return to Python.
+            var errorTcs = new TaskCompletionSource<SimulationStepResponse>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            errorTcs.TrySetException(ex);
+            _stepResponseTcs = errorTcs;
+
+            // Fire-and-forget: propagate the exception to SimulationService
+            _ = Task.Run(() =>
+            {
+                try { errorTcs.Task.GetAwaiter().GetResult(); }
+                catch { /* exception will be observed by SimulationService */ }
+            });
+            return;
+        }
+
         _stepCorrelationId = cmd.Id;
+
+        // If OnDecisionRequest already fired (executor asked hero for a decision before
+        // Python called Step), the observation is buffered. Deliver it now.
+        var pending = _pendingStepObservation;
+        _pendingStepObservation = null;
+        if (pending != null)
+        {
+            // Re-stamp with the correct correlation ID from this Step command.
+            var response = new SimulationStepResponse(
+                pending.Id, pending.GymId, cmd.Id, pending.Observation,
+                pending.Reward, pending.Terminated, pending.Truncated, pending.Info);
+
+            // Provide action to executor so the background task in OnDecisionRequest can publish the decision response.
+            _actionTcs?.TrySetResult(cmd.Action);
+
+            // Publish to SimulationService directly — no need to await a TCS.
+            _messageBroker.Publish(response);
+            return;
+        }
 
         var tcs = new TaskCompletionSource<SimulationStepResponse>(
             TaskCreationOptions.RunContinuationsAsynchronously);
@@ -239,8 +317,15 @@ public class Sb3Actions : IAiActions
         // Await step result then publish response to SimulationService
         _ = Task.Run(async () =>
         {
-            var response = await tcs.Task.ConfigureAwait(false);
-            _messageBroker.Publish(response);
+            try
+            {
+                var response = await tcs.Task.ConfigureAwait(false);
+                _messageBroker.Publish(response);
+            }
+            catch
+            {
+                // Step faulted — exception already propagated to SimulationService via TCS.
+            }
         });
     }
 
@@ -251,6 +336,7 @@ public class Sb3Actions : IAiActions
         _actionTcs?.TrySetCanceled();
         _resetResponseTcs?.TrySetCanceled();
         _stepResponseTcs?.TrySetCanceled();
+        _pendingStepObservation = null;
 
         _messageBroker.Publish(new SimulationCloseResponse(Guid.NewGuid(), GymId, cmd.Id, true));
     }

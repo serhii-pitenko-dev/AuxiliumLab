@@ -5,10 +5,18 @@
 
 <PageHeader Title="Training Status" />
 
-<MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh"
-           OnClick="RefreshAsync" Disabled="_loading" Class="mb-4">
-    Refresh
-</MudButton>
+<div class="d-flex align-center gap-3 mb-4 flex-wrap">
+    <MudDatePicker Label="From" Value="_from" ValueChanged="OnFromChanged"
+                   Variant="Variant.Outlined" Clearable="true" aria-label="From Date"
+                   DateFormat="yyyy-MM-dd" Style="max-width:200px" />
+    <MudDatePicker Label="To" Value="_to" ValueChanged="OnToChanged"
+                   Variant="Variant.Outlined" Clearable="true" aria-label="To Date"
+                   DateFormat="yyyy-MM-dd" Placeholder="Current" Style="max-width:200px" />
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh"
+               OnClick="RefreshAsync" Disabled="_loading">
+        Refresh
+    </MudButton>
+</div>
 
 @if (!_jobs.Any())
 {

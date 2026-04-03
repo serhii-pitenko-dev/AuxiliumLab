@@ -28,10 +28,11 @@
                     </CardHeaderContent>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudDataGrid T="SimulationSourceRow" Items="_rows" Dense="true" Hover="true"
+                    <MudDataGrid T="SimulationSourceRow" Items="_heroRows" Dense="true" Hover="true"
                                  SelectedItem="_selectedHeroRow" SelectedItemChanged="OnHeroRowSelected"
                                  SelectOnRowClick="true" Filterable="false" SortMode="SortMode.None"
-                                 Groupable="true" aria-label="Hero AI Selection">
+                                 Groupable="true" aria-label="Hero AI Selection"
+                                 RowStyleFunc="@((row, _) => row == _selectedHeroRow ? "background:rgba(30,136,229,0.15)" : "")">
                         <Columns>
                             <PropertyColumn Property="x => x.Group" Title="AI Type" Groupable="true" Grouping="true" Hidden="true" GroupExpanded="true">
                                 <GroupTemplate>
@@ -54,10 +55,11 @@
                     </CardHeaderContent>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudDataGrid T="SimulationSourceRow" Items="_rows" Dense="true" Hover="true"
+                    <MudDataGrid T="SimulationSourceRow" Items="_enemyRows" Dense="true" Hover="true"
                                  SelectedItem="_selectedEnemyRow" SelectedItemChanged="OnEnemyRowSelected"
                                  SelectOnRowClick="true" Filterable="false" SortMode="SortMode.None"
-                                 Groupable="true" aria-label="Enemy AI Selection">
+                                 Groupable="true" aria-label="Enemy AI Selection"
+                                 RowStyleFunc="@((row, _) => row == _selectedEnemyRow ? "background:rgba(229,57,53,0.15)" : "")">
                         <Columns>
                             <PropertyColumn Property="x => x.Group" Title="AI Type" Groupable="true" Grouping="true" Hidden="true" GroupExpanded="true">
                                 <GroupTemplate>
@@ -147,6 +149,13 @@ else
         <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="StopAsync" Disabled="!_running">
             Stop
         </MudButton>
+        @if (!_running)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ReRunAsync"
+                       StartIcon="@Icons.Material.Filled.Replay" aria-label="Re Run">
+                Re Run
+            </MudButton>
+        }
         @if (_currentTurn > 0)
         {
             <MudText Typo="Typo.caption" Class="ml-2">Turn: @_currentTurn / @_maxTurns</MudText>

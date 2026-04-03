@@ -17,8 +17,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\AuxiliumLab.AiSandbox.Ai\AuxiliumLab.AiSandbox.Ai.csproj" />
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.AiTrainingOrchestrator\AuxiliumLab.AiSandbox.AiTrainingOrchestrator.csproj" />
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.ApplicationServices\AuxiliumLab.AiSandbox.ApplicationServices.csproj" />
+    <ProjectReference Include="..\AuxiliumLab.AiSandbox.GrpcHost\AuxiliumLab.AiSandbox.GrpcHost.csproj" />
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.Infrastructure\AuxiliumLab.AiSandbox.Infrastructure.csproj" />
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.WebApi\AuxiliumLab.AiSandbox.WebApi.csproj" />
   </ItemGroup>

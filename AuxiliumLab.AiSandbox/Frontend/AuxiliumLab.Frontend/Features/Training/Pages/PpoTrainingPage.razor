@@ -99,7 +99,7 @@
             <MudCardContent>
                 <MudGrid>
                     <MudItem xs="12" sm="6">
-                        <MudSelect T="TraineeAgentType" @bind-Value="_cmd.TraineeAgent" Label="Trainee Agent"
+                        <MudSelect T="TraineeAgentType" Value="_cmd.TraineeAgent" ValueChanged="OnTraineeAgentChanged" Label="Trainee Agent"
                                    Variant="Variant.Outlined" aria-label="Trainee Agent">
                             <MudSelectItem Value="TraineeAgentType.Hero">Hero</MudSelectItem>
                             <MudSelectItem Value="TraineeAgentType.Enemy">Enemy</MudSelectItem>
@@ -110,7 +110,8 @@
                         <MudDataGrid T="OpponentAiRow" Items="_opponentRows" Dense="true" Hover="true"
                                      SelectedItem="_selectedOpponentRow" SelectedItemChanged="OnOpponentRowSelected"
                                      SelectOnRowClick="true" Filterable="false" SortMode="SortMode.None"
-                                     Groupable="true" aria-label="Opponent AI">
+                                     Groupable="true" aria-label="Opponent AI"
+                                     RowStyleFunc="@((row, _) => row == _selectedOpponentRow ? "background:rgba(30,136,229,0.15)" : "")">
                             <Columns>
                                 <PropertyColumn Property="x => x.Group" Title="AI Type" Groupable="true" Grouping="true" Hidden="true" GroupExpanded="true">
                                     <GroupTemplate>

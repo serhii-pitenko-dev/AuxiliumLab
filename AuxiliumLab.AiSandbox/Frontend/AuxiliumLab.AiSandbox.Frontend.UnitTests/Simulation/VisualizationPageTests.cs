@@ -112,6 +112,7 @@ public class VisualizationPageTests
             ExperimentId  = "exp-001",
             ModelFilePath = @"C:\models\PPO\exp-001\model.zip",
             TrainedAt     = new DateTime(2025, 1, 15, 10, 0, 0),
+            AgentType     = "HERO",
             Preconditions = new TrainingPreconditionsDto
             {
                 Algorithm       = "PPO",
@@ -131,6 +132,7 @@ public class VisualizationPageTests
             ExperimentId  = "exp-002",
             ModelFilePath = @"C:\models\PPO\exp-002\model.zip",
             TrainedAt     = new DateTime(2025, 1, 20, 14, 0, 0),
+            AgentType     = "ENEMY",
             Preconditions = new TrainingPreconditionsDto
             {
                 Algorithm       = "PPO",
@@ -150,6 +152,7 @@ public class VisualizationPageTests
             ExperimentId  = "exp-a2c-01",
             ModelFilePath = @"C:\models\A2C\exp-a2c-01\model.zip",
             TrainedAt     = new DateTime(2025, 2, 1, 8, 0, 0),
+            AgentType     = "HERO",
             Preconditions = null
         }
     ];
@@ -227,6 +230,43 @@ public class VisualizationPageTests
                 rows.Select(r => r.Name).Should().Contain("exp-001");
                 rows.Select(r => r.Name).Should().Contain("exp-002");
                 rows.Select(r => r.Name).Should().Contain("exp-a2c-01");
+            });
+        }
+    }
+
+    [TestMethod]
+    public void ConfigView_HeroGrid_ShowsOnlyHeroModelsAndRandom()
+    {
+        var (ctx, _, _, _) = BuildCtxWithModels(MakeSampleModels());
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            cut.WaitForAssertion(() =>
+            {
+                var heroRows = cut.Instance._heroRows;
+                heroRows.Should().HaveCount(3); // Random + exp-001 (HERO) + exp-a2c-01 (HERO)
+                heroRows.Select(r => r.Name).Should().Contain("Random AI");
+                heroRows.Select(r => r.Name).Should().Contain("exp-001");
+                heroRows.Select(r => r.Name).Should().Contain("exp-a2c-01");
+                heroRows.Select(r => r.Name).Should().NotContain("exp-002"); // ENEMY model
+            });
+        }
+    }
+
+    [TestMethod]
+    public void ConfigView_EnemyGrid_ShowsOnlyEnemyModelsAndRandom()
+    {
+        var (ctx, _, _, _) = BuildCtxWithModels(MakeSampleModels());
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            cut.WaitForAssertion(() =>
+            {
+                var enemyRows = cut.Instance._enemyRows;
+                enemyRows.Should().HaveCount(2); // Random + exp-002 (ENEMY)
+                enemyRows.Select(r => r.Name).Should().Contain("Random AI");
+                enemyRows.Select(r => r.Name).Should().Contain("exp-002");
+                enemyRows.Select(r => r.Name).Should().NotContain("exp-001"); // HERO model
             });
         }
     }
@@ -320,6 +360,35 @@ public class VisualizationPageTests
 
             cut.WaitForAssertion(() =>
                 cut.Markup.Should().Contain("Event Log"));
+        }
+    }
+
+    [TestMethod]
+    public void SimulationView_WhenStopped_ShowsReRunButton()
+    {
+        var (ctx, hub, _, simMock) = BuildCtx();
+        simMock.Setup(s => s.StopSimulationAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+               .ReturnsAsync(true);
+
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            ActivateSimulationView(cut, hub);
+
+            // Simulate the simulation being not running (e.g., after stop)
+            cut.InvokeAsync(() =>
+            {
+                // Directly set _running to false to simulate stopped state
+                cut.Instance.GetType()
+                    .GetField("_running", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                    .SetValue(cut.Instance, false);
+                cut.Instance.GetType()
+                    .GetMethod("StateHasChanged", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                    .Invoke(cut.Instance, null);
+            });
+
+            cut.WaitForAssertion(() =>
+                cut.Markup.Should().Contain("Re Run"));
         }
     }
 
@@ -594,6 +663,7 @@ public class VisualizationPageTests
             var cut = ctx.RenderComponent<VisualizationPage>();
             cut.WaitForAssertion(() =>
             {
+                // _rows still holds all models unfiltered
                 cut.Instance._rows.Should().HaveCount(4); // 1 Random + 2 PPO + 1 A2C
                 cut.Instance._rows.Should().Contain(r => r.Group == "Non AI");
                 cut.Instance._rows.Should().Contain(r => r.Group == "PPO");

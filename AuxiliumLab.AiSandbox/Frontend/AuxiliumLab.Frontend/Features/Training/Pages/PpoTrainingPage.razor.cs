@@ -81,6 +81,8 @@ public partial class PpoTrainingPage
 
     private void BuildOpponentRows()
     {
+        var oppositeAgentType = _cmd.TraineeAgent == TraineeAgentType.Hero ? "ENEMY" : "HERO";
+
         var rows = new List<OpponentAiRow>
         {
             new()
@@ -93,6 +95,9 @@ public partial class PpoTrainingPage
 
         foreach (var model in _trainedModels.OrderByDescending(m => m.TrainedAt))
         {
+            if (!string.Equals(model.AgentType, oppositeAgentType, StringComparison.OrdinalIgnoreCase))
+                continue;
+
             var group = model.Algorithm.ToUpperInvariant() switch
             {
                 "PPO" => "PPO",
@@ -113,6 +118,12 @@ public partial class PpoTrainingPage
 
         _opponentRows = rows;
         _selectedOpponentRow = rows[0]; // Random AI by default
+    }
+
+    private void OnTraineeAgentChanged(TraineeAgentType value)
+    {
+        _cmd.TraineeAgent = value;
+        BuildOpponentRows();
     }
 
     private void OnOpponentRowSelected(OpponentAiRow? row)

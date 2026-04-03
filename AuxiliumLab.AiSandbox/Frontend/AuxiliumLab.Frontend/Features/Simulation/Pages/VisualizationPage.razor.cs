@@ -30,6 +30,8 @@ public partial class VisualizationPage : IAsyncDisposable
     private bool  _loadingModels;
 
     internal List<SimulationSourceRow> _rows = [];
+    internal List<SimulationSourceRow> _heroRows = [];
+    internal List<SimulationSourceRow> _enemyRows = [];
     private SimulationSourceRow? _selectedHeroRow;
     private SimulationSourceRow? _selectedEnemyRow;
 
@@ -137,9 +139,20 @@ public partial class VisualizationPage : IAsyncDisposable
         }
 
         _rows = rows;
-        _selectedHeroRow = randomRow;
-        _selectedEnemyRow = randomRow;
+        BuildFilteredRows();
+        _selectedHeroRow = _heroRows.First(r => r.Kind == SimulationKind.RandomAI);
+        _selectedEnemyRow = _enemyRows.First(r => r.Kind == SimulationKind.RandomAI);
         _loadingModels = false;
+    }
+
+    private void BuildFilteredRows()
+    {
+        _heroRows = _rows.Where(r => r.Kind == SimulationKind.RandomAI
+                                     || string.Equals(r.AgentType, "HERO", StringComparison.OrdinalIgnoreCase))
+                         .ToList();
+        _enemyRows = _rows.Where(r => r.Kind == SimulationKind.RandomAI
+                                      || string.Equals(r.AgentType, "ENEMY", StringComparison.OrdinalIgnoreCase))
+                          .ToList();
     }
 
     // ── Row selection ────────────────────────────────────────────────────────
@@ -279,6 +292,17 @@ public partial class VisualizationPage : IAsyncDisposable
         _running = false;
         AddRawLog("---Stop Requested---");
         Notifications.Notify("Simulation stop requested");
+    }
+
+    private async Task ReRunAsync()
+    {
+        if (_jobId != default)
+        {
+            await HubClient.DisconnectAsync();
+            _jobId = default;
+        }
+
+        await StartAsync();
     }
 
     // ── Hub event handlers ────────────────────────────────────────────────────

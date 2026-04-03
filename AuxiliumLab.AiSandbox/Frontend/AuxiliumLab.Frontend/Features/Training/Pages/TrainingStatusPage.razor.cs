@@ -8,6 +8,9 @@ public partial class TrainingStatusPage
     private bool _loading;
     private Timer? _timer;
 
+    internal DateTime? _from;
+    internal DateTime? _to;
+
     protected override async Task OnInitializedAsync()
     {
         await RefreshAsync();
@@ -19,11 +22,50 @@ public partial class TrainingStatusPage
         _loading = true;
         try
         {
-            _jobs = await TrainingApi.GetTrainingStatusesAsync();
+            var allJobs = await TrainingApi.GetTrainingStatusesAsync();
             var models = await TrainingApi.GetTrainedModelsAsync();
-            _failedModels = models.Where(m => m.IsFailed).ToList();
+
+            // Exclude failed models whose ExperimentId already appears in the
+            // in-memory job list to avoid showing the same failure twice.
+            var jobExperimentIds = new HashSet<string>(
+                allJobs.Select(j => j.ExperimentId),
+                StringComparer.OrdinalIgnoreCase);
+            var allFailed = models
+                .Where(m => m.IsFailed && !jobExperimentIds.Contains(m.ExperimentId))
+                .ToList();
+
+            _jobs = FilterJobsByDate(allJobs);
+            _failedModels = FilterFailedByDate(allFailed);
         }
         finally { _loading = false; StateHasChanged(); }
+    }
+
+    private List<TrainingJobStatusDto> FilterJobsByDate(List<TrainingJobStatusDto> jobs)
+    {
+        var from = _from;
+        var to = _to ?? DateTime.UtcNow;
+        if (from is null) return jobs;
+        return jobs.Where(j => j.StartedAt >= from && j.StartedAt <= to).ToList();
+    }
+
+    private List<TrainedModelInfoDto> FilterFailedByDate(List<TrainedModelInfoDto> models)
+    {
+        var from = _from;
+        var to = _to ?? DateTime.UtcNow;
+        if (from is null) return models;
+        return models.Where(m => m.TrainedAt >= from && m.TrainedAt <= to).ToList();
+    }
+
+    private async Task OnFromChanged(DateTime? value)
+    {
+        _from = value;
+        await RefreshAsync();
+    }
+
+    private async Task OnToChanged(DateTime? value)
+    {
+        _to = value;
+        await RefreshAsync();
     }
 
     private async Task StopAsync(Guid jobId)
