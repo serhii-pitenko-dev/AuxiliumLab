@@ -170,7 +170,7 @@ public class VisualizationPageTests
         using (ctx)
         {
             var cut = ctx.RenderComponent<VisualizationPage>();
-            cut.Markup.Should().Contain("Select Simulation Source");
+            cut.Markup.Should().Contain("Agent AI Configuration");
             cut.Markup.Should().Contain("Start Simulation");
         }
     }
@@ -240,9 +240,10 @@ public class VisualizationPageTests
             var cut = ctx.RenderComponent<VisualizationPage>();
             cut.WaitForAssertion(() =>
             {
-                cut.Markup.Should().Contain("Non AI");
-                cut.Markup.Should().Contain("PPO");
-                cut.Markup.Should().Contain("A2C");
+                var rows = cut.Instance._rows;
+                rows.Should().Contain(r => r.Group == "Non AI");
+                rows.Should().Contain(r => r.Group == "PPO");
+                rows.Should().Contain(r => r.Group == "A2C");
             });
         }
     }
@@ -301,7 +302,7 @@ public class VisualizationPageTests
 
             cut.WaitForAssertion(() =>
             {
-                cut.Markup.Should().NotContain("Select Simulation Source");
+                cut.Markup.Should().NotContain("Agent AI Configuration");
                 cut.Markup.Should().NotContain("Start Simulation");
                 cut.Markup.Should().NotContain("Training Preconditions");
             });

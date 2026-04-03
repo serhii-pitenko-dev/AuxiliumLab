@@ -201,6 +201,7 @@ public class InferenceActionsAlgorithmTypeTests
                 Version = "1.0",
                 PolicyType = AiPolicy.MLP
             },
+            ObjectType.Hero,
             _loggerMock.Object);
 
         sut.Initialize();

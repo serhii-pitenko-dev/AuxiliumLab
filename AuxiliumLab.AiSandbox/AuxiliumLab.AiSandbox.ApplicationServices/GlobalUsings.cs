@@ -16,6 +16,8 @@ global using TrainingJobState           = AuxiliumLab.AiSandbox.SharedContracts.
 global using TrainingJobStatusDto       = AuxiliumLab.AiSandbox.SharedContracts.TrainingJobStatusDto;
 global using TrainedModelInfoDto        = AuxiliumLab.AiSandbox.SharedContracts.TrainedModelInfoDto;
 global using TrainingPreconditionsDto   = AuxiliumLab.AiSandbox.SharedContracts.TrainingPreconditionsDto;
+global using TraineeAgentType           = AuxiliumLab.AiSandbox.SharedContracts.TraineeAgentType;
+global using AgentAiConfigDto           = AuxiliumLab.AiSandbox.SharedContracts.AgentAiConfigDto;
 
 // Simulation
 global using SimulationKind              = AuxiliumLab.AiSandbox.SharedContracts.SimulationKind;

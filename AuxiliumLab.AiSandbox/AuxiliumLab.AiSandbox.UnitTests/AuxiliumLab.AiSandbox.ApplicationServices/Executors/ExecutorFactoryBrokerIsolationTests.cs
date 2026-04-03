@@ -70,9 +70,7 @@ public class ExecutorFactoryBrokerIsolationTests
         _factory = new ExecutorFactory(
             new Mock<IPlaygroundCommandsHandleService>().Object,
             new Mock<IMemoryDataManager<StandardPlayground>>().Object,
-            new Mock<IAiActions>().Object,
             new Mock<IFileDataManager<StandardPlaygroundState>>().Object,
-            new Mock<IMemoryDataManager<AgentStateForAIDecision>>().Object,
             _sharedBroker,
             _sharedRpcClient,
             new Mock<IStandardPlaygroundMapper>().Object,
@@ -80,7 +78,8 @@ public class ExecutorFactoryBrokerIsolationTests
             new Mock<IFileDataManager<TurnExecutionPerformance>>().Object,
             new Mock<IFileDataManager<SandboxExecutionPerformance>>().Object,
             new Mock<ITestPreconditionData>().Object,
-            new Mock<Microsoft.Extensions.Logging.ILoggerFactory>().Object);
+            new Mock<Microsoft.Extensions.Logging.ILoggerFactory>().Object,
+            _mockPolicyTrainerClient.Object);
     }
 
     // ── Presentation executors use the shared broker ────────────────────────
@@ -92,7 +91,8 @@ public class ExecutorFactoryBrokerIsolationTests
         GameStartedEvent? received = null;
         _sharedBroker.Subscribe<GameStartedEvent>(e => received = e);
 
-        var executor = _factory.CreateExecutorForPresentation(_sandboxConfig);
+        var executor = _factory.CreateExecutorForPresentation(
+            _sandboxConfig, AgentAiSpec.Random(), AgentAiSpec.Random());
 
         // Act — publish a GameStartedEvent on the shared broker
         var evt = new GameStartedEvent(Guid.NewGuid(), Guid.NewGuid());
@@ -107,17 +107,20 @@ public class ExecutorFactoryBrokerIsolationTests
     }
 
     [TestMethod]
-    public void CreateInferenceExecutorForPresentation_UsesSharedBroker_EventsReachSharedSubscriber()
+    public void CreateExecutorForPresentation_TrainedAI_UsesSharedBroker_EventsReachSharedSubscriber()
     {
         // Arrange — subscribe on the shared broker BEFORE creating the executor
-        // The executor's InferenceActions.Initialize() subscribes GameStartedEvent on the
-        // broker it receives. If it uses the shared broker, our subscriber will be invoked
-        // alongside InferenceActions when the shared broker publishes GameStartedEvent.
         GameStartedEvent? received = null;
         _sharedBroker.Subscribe<GameStartedEvent>(e => received = e);
 
-        _factory.CreateInferenceExecutorForPresentation(
-            _sandboxConfig, _mockPolicyTrainerClient.Object, "models/ppo_model.zip", _aiConfig);
+        var heroSpec = new AgentAiSpec
+        {
+            ModelType = ModelType.PPO,
+            ModelPath = "models/ppo_model.zip",
+            AiConfig = _aiConfig
+        };
+        _factory.CreateExecutorForPresentation(
+            _sandboxConfig, heroSpec, AgentAiSpec.Random());
 
         // Act — publish on the shared broker
         var evt = new GameStartedEvent(Guid.NewGuid(), Guid.NewGuid());
@@ -139,21 +142,19 @@ public class ExecutorFactoryBrokerIsolationTests
         GameStartedEvent? received = null;
         _sharedBroker.Subscribe<GameStartedEvent>(e => received = e);
 
-        _factory.CreateStandardExecutor(_sandboxConfig);
+        _factory.CreateStandardExecutor(
+            _sandboxConfig, AgentAiSpec.Random(), AgentAiSpec.Random());
 
         // Act — publish on the shared broker
         _sharedBroker.Publish(new GameStartedEvent(Guid.NewGuid(), Guid.NewGuid()));
 
         // Assert — the shared subscriber IS notified (it's the same broker)
         // but the StandardExecutor internally uses its OWN broker, which is isolated.
-        // This test verifies that _creating_ a StandardExecutor doesn't add
-        // subscribers to the shared broker.
         received.Should().NotBeNull("shared subscriber still receives shared-broker events");
 
         // The key assertion: verify the StandardExecutor's internal broker is different
-        // by confirming the executor doesn't interfere with the shared broker.
-        // We'll verify isolation through the executor's broker field via reflection.
-        var executor = _factory.CreateStandardExecutor(_sandboxConfig);
+        var executor = _factory.CreateStandardExecutor(
+            _sandboxConfig, AgentAiSpec.Random(), AgentAiSpec.Random());
         var brokerField = typeof(Executor).GetField("_messageBroker",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         var executorBroker = brokerField!.GetValue(executor);
@@ -163,11 +164,17 @@ public class ExecutorFactoryBrokerIsolationTests
     }
 
     [TestMethod]
-    public void CreateInferenceExecutor_UsesIsolatedBroker_NotSharedBrokerInstance()
+    public void CreateStandardExecutor_TrainedAI_UsesIsolatedBroker_NotSharedBrokerInstance()
     {
         // Arrange & Act
-        var executor = _factory.CreateInferenceExecutor(
-            _sandboxConfig, _mockPolicyTrainerClient.Object, "models/ppo_model.zip", _aiConfig);
+        var heroSpec = new AgentAiSpec
+        {
+            ModelType = ModelType.PPO,
+            ModelPath = "models/ppo_model.zip",
+            AiConfig = _aiConfig
+        };
+        var executor = _factory.CreateStandardExecutor(
+            _sandboxConfig, heroSpec, AgentAiSpec.Random());
 
         // Assert — use reflection to verify the executor's broker is NOT the shared one
         var brokerField = typeof(Executor).GetField("_messageBroker",
@@ -179,11 +186,17 @@ public class ExecutorFactoryBrokerIsolationTests
     }
 
     [TestMethod]
-    public void CreateInferenceExecutorForPresentation_UsesSharedBrokerInstance()
+    public void CreateExecutorForPresentation_TrainedAI_UsesSharedBrokerInstance()
     {
         // Arrange & Act
-        var executor = _factory.CreateInferenceExecutorForPresentation(
-            _sandboxConfig, _mockPolicyTrainerClient.Object, "models/ppo_model.zip", _aiConfig);
+        var heroSpec = new AgentAiSpec
+        {
+            ModelType = ModelType.PPO,
+            ModelPath = "models/ppo_model.zip",
+            AiConfig = _aiConfig
+        };
+        var executor = _factory.CreateExecutorForPresentation(
+            _sandboxConfig, heroSpec, AgentAiSpec.Random());
 
         // Assert — use reflection to verify the executor's broker IS the shared one
         var brokerField = typeof(Executor).GetField("_messageBroker",
@@ -191,7 +204,7 @@ public class ExecutorFactoryBrokerIsolationTests
         var executorBroker = brokerField!.GetValue(executor);
 
         executorBroker.Should().BeSameAs(_sharedBroker,
-            "InferenceExecutorForPresentation must use the shared broker so " +
+            "Presentation executor must use the shared broker so " +
             "SimulationVisualizationBridge receives events for visualization");
     }
 
@@ -199,7 +212,8 @@ public class ExecutorFactoryBrokerIsolationTests
     public void CreateExecutorForPresentation_UsesSharedBrokerInstance()
     {
         // Arrange & Act
-        var executor = _factory.CreateExecutorForPresentation(_sandboxConfig);
+        var executor = _factory.CreateExecutorForPresentation(
+            _sandboxConfig, AgentAiSpec.Random(), AgentAiSpec.Random());
 
         // Assert
         var brokerField = typeof(Executor).GetField("_messageBroker",

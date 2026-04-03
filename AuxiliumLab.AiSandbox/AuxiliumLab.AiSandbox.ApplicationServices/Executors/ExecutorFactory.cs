@@ -14,6 +14,7 @@ using AuxiliumLab.AiSandbox.Infrastructure.Configuration.Preconditions;
 using AuxiliumLab.AiSandbox.Infrastructure.FileManager;
 using AuxiliumLab.AiSandbox.Infrastructure.MemoryManager;
 using AuxiliumLab.AiSandbox.SharedBaseTypes.AiContract.Dto;
+using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects;
 using Microsoft.Extensions.Logging;
 
 namespace AuxiliumLab.AiSandbox.ApplicationServices.Executors;
@@ -22,9 +23,7 @@ public class ExecutorFactory : IExecutorFactory
 {
     private readonly IPlaygroundCommandsHandleService _mapCommands;
     private readonly IMemoryDataManager<StandardPlayground> _sandboxRepository;
-    private readonly IAiActions _aiActions;
     private readonly IFileDataManager<StandardPlaygroundState> _playgroundStateFileRepository;
-    private readonly IMemoryDataManager<AgentStateForAIDecision> _agentStateMemoryRepository;
     private readonly IMessageBroker _messageBroker;
     private readonly IBrokerRpcClient _brokerRpcClient;
     private readonly IStandardPlaygroundMapper _standardPlaygroundMapper;
@@ -33,12 +32,11 @@ public class ExecutorFactory : IExecutorFactory
     private readonly IFileDataManager<SandboxExecutionPerformance> _sandboxExecutionPerformanceFileRepository;
     private readonly ITestPreconditionData _testPreconditionData;
     private readonly ILoggerFactory _loggerFactory;
+    private readonly IPolicyTrainerClient _policyTrainerClient;
 
     public ExecutorFactory(IPlaygroundCommandsHandleService mapCommands,
         IMemoryDataManager<StandardPlayground> sandboxRepository,
-        IAiActions aiActions,
         IFileDataManager<StandardPlaygroundState> playgroundStateFileRepository,
-        IMemoryDataManager<AgentStateForAIDecision> agentStateMemoryRepository,
         IMessageBroker messageBroker,
         IBrokerRpcClient brokerRpcClient,
         IStandardPlaygroundMapper standardPlaygroundMapper,
@@ -46,13 +44,12 @@ public class ExecutorFactory : IExecutorFactory
         IFileDataManager<TurnExecutionPerformance> turnExecutionPerformanceFileRepository,
         IFileDataManager<SandboxExecutionPerformance> sandboxExecutionPerformanceFileRepository,
         ITestPreconditionData testPreconditionData,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        IPolicyTrainerClient policyTrainerClient)
     {
         _mapCommands = mapCommands;
         _sandboxRepository = sandboxRepository;
-        _aiActions = aiActions;
         _playgroundStateFileRepository = playgroundStateFileRepository;
-        _agentStateMemoryRepository = agentStateMemoryRepository;
         _messageBroker = messageBroker;
         _brokerRpcClient = brokerRpcClient;
         _standardPlaygroundMapper = standardPlaygroundMapper;
@@ -61,20 +58,31 @@ public class ExecutorFactory : IExecutorFactory
         _sandboxExecutionPerformanceFileRepository = sandboxExecutionPerformanceFileRepository;
         _testPreconditionData = testPreconditionData;
         _loggerFactory = loggerFactory;
+        _policyTrainerClient = policyTrainerClient;
     }
 
     public IExecutorForPresentation CreateExecutorForPresentation(
         SandBoxConfiguration configuration,
+        AgentAiSpec heroAiSpec,
+        AgentAiSpec enemyAiSpec,
         int actionDelayMs = 0,
         SemaphoreSlim? pauseGate = null)
     {
+        // Presentation executors must use the shared singleton broker so that
+        // SimulationVisualizationBridge (which subscribes on the same singleton)
+        // receives all events and can forward them to the SignalR hub.
+        var agentStore = new MemoryDataManager<AgentStateForAIDecision>();
+        var heroAi  = CreateAiActions(heroAiSpec, ObjectType.Hero, _messageBroker, agentStore);
+        var enemyAi = CreateAiActions(enemyAiSpec, ObjectType.Enemy, _messageBroker, agentStore);
+
         return new ExecutorForPresentation(
             _mapCommands,
             _sandboxRepository,
-            _aiActions,
+            heroAi,
+            enemyAi,
             configuration,
             _playgroundStateFileRepository,
-            _agentStateMemoryRepository,
+            agentStore,
             _messageBroker,
             _brokerRpcClient,
             _standardPlaygroundMapper,
@@ -86,65 +94,25 @@ public class ExecutorFactory : IExecutorFactory
             pauseGate);
     }
 
-    public IStandardExecutor CreateStandardExecutor(SandBoxConfiguration configuration)
+    public IStandardExecutor CreateStandardExecutor(
+        SandBoxConfiguration configuration,
+        AgentAiSpec heroAiSpec,
+        AgentAiSpec enemyAiSpec)
     {
         // Create fully isolated instances per simulation so that concurrent
         // simulations running on different thread-pool threads share NO mutable
-        // state in the message/AI pipeline.  This eliminates:
-        //   1. The global lock in MessageBroker.Publish (all N handlers under one lock)
-        //   2. Subscriber proliferation: each Initialize() previously accumulated
-        //      another handler on the shared broker, causing N×wasted CPU work per
-        //      decision (N handlers respond but only 1 result is consumed)
-        //
-        // Note: IMemoryDataManager<StandardPlayground> stays shared because
-        //   CreatePlaygroundCommandHandler saves to that singleton, and each
-        //   simulation uses a unique sandboxId GUID so there are no key collisions.
-        var broker     = new AuxiliumLab.AiSandbox.Common.MessageBroker.MessageBroker();
-        var rpcClient  = new BrokerRpcClient(broker);
-        var agentStore = new MemoryDataManager<AgentStateForAIDecision>(); // per-sim: no GUID collisions and keeps broker/AI pair consistent
-        var aiActions  = new RandomActions(broker, agentStore);
-
-        return new StandardExecutor(
-            _mapCommands,
-            _sandboxRepository, // shared: CreatePlaygroundCommandHandler writes here; unique GUIDs prevent collisions
-            aiActions,          // per-sim: subscribes to its own broker only
-            configuration,
-            _playgroundStateFileRepository,
-            agentStore,         // per-sim: matches the broker/aiActions pair
-            broker,             // per-sim: no shared publish lock
-            rpcClient,          // per-sim: subscribes to its own broker
-            _standardPlaygroundMapper,
-            _rawDataLogFileRepository,
-            _turnExecutionPerformanceFileRepository,
-            _sandboxExecutionPerformanceFileRepository,
-            _testPreconditionData);
-    }
-
-    /// <inheritdoc/>
-    public IStandardExecutor CreateInferenceExecutor(
-        SandBoxConfiguration configuration,
-        IPolicyTrainerClient policyTrainerClient,
-        string modelPath,
-        AiConfiguration aiConfig)
-    {
-        // Each parallel simulation gets its own isolated broker, agent-store, and
-        // InferenceActions instance (InferenceActions stores per-game _playgroundId).
-        // The policyTrainerClient and modelPath are shared and read-only after construction.
+        // state in the message/AI pipeline.
         var broker     = new AuxiliumLab.AiSandbox.Common.MessageBroker.MessageBroker();
         var rpcClient  = new BrokerRpcClient(broker);
         var agentStore = new MemoryDataManager<AgentStateForAIDecision>();
-        var aiActions  = new InferenceActions(
-            broker,
-            agentStore,
-            policyTrainerClient,
-            modelPath,
-            aiConfig,
-            _loggerFactory.CreateLogger<InferenceActions>());
+        var heroAi     = CreateAiActions(heroAiSpec, ObjectType.Hero, broker, agentStore);
+        var enemyAi    = CreateAiActions(enemyAiSpec, ObjectType.Enemy, broker, agentStore);
 
         return new StandardExecutor(
             _mapCommands,
             _sandboxRepository,
-            aiActions,
+            heroAi,
+            enemyAi,
             configuration,
             _playgroundStateFileRepository,
             agentStore,
@@ -157,43 +125,22 @@ public class ExecutorFactory : IExecutorFactory
             _testPreconditionData);
     }
 
-    /// <inheritdoc/>
-    public IExecutorForPresentation CreateInferenceExecutorForPresentation(
-        SandBoxConfiguration configuration,
-        IPolicyTrainerClient policyTrainerClient,
-        string modelPath,
-        AiConfiguration aiConfig,
-        int actionDelayMs = 0,
-        SemaphoreSlim? pauseGate = null)
+    /// <summary>
+    /// Creates an <see cref="IAiActions"/> from the given spec.
+    /// Random → <see cref="RandomActions"/>; otherwise → <see cref="InferenceActions"/>.
+    /// </summary>
+    private IAiActions CreateAiActions(AgentAiSpec spec, ObjectType targetAgentType, IMessageBroker broker, IMemoryDataManager<AgentStateForAIDecision> agentStore)
     {
-        // Presentation executors must use the shared singleton broker so that
-        // SimulationVisualizationBridge (which subscribes on the same singleton)
-        // receives all events and can forward them to the SignalR hub.
-        // Only mass/parallel executors use isolated brokers to avoid lock contention.
-        var agentStore = new MemoryDataManager<AgentStateForAIDecision>();
-        var aiActions  = new InferenceActions(
-            _messageBroker,
-            agentStore,
-            policyTrainerClient,
-            modelPath,
-            aiConfig,
-            _loggerFactory.CreateLogger<InferenceActions>());
+        if (spec.ModelType == ModelType.Random)
+            return new RandomActions(broker, agentStore, targetAgentType);
 
-        return new ExecutorForPresentation(
-            _mapCommands,
-            _sandboxRepository,
-            aiActions,
-            configuration,
-            _playgroundStateFileRepository,
+        return new InferenceActions(
+            broker,
             agentStore,
-            _messageBroker,
-            _brokerRpcClient,
-            _standardPlaygroundMapper,
-            _rawDataLogFileRepository,
-            _turnExecutionPerformanceFileRepository,
-            _sandboxExecutionPerformanceFileRepository,
-            _testPreconditionData,
-            actionDelayMs,
-            pauseGate);
+            _policyTrainerClient,
+            spec.ModelPath ?? throw new InvalidOperationException("ModelPath required for trained AI"),
+            spec.AiConfig ?? new AiConfiguration { ModelType = spec.ModelType, Version = "1.0", PolicyType = AiPolicy.MLP },
+            targetAgentType,
+            _loggerFactory.CreateLogger<InferenceActions>());
     }
 }

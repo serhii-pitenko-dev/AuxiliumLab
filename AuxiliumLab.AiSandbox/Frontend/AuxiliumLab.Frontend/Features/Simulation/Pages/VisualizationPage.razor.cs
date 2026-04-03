@@ -21,6 +21,7 @@ public partial class VisualizationPage : IAsyncDisposable
         public ModelType                 Algorithm    { get; init; }
         public string?                   ExperimentId { get; init; }
         public TrainingPreconditionsDto? Preconditions { get; init; }
+        public string?                   AgentType    { get; init; }
     }
 
     // ── State ────────────────────────────────────────────────────────────────
@@ -29,7 +30,8 @@ public partial class VisualizationPage : IAsyncDisposable
     private bool  _loadingModels;
 
     internal List<SimulationSourceRow> _rows = [];
-    private SimulationSourceRow? _selectedRow;
+    private SimulationSourceRow? _selectedHeroRow;
+    private SimulationSourceRow? _selectedEnemyRow;
 
     private readonly StartSingleSimulationCommand _cmd = new()
     {
@@ -124,7 +126,8 @@ public partial class VisualizationPage : IAsyncDisposable
                     Kind          = SimulationKind.TrainedAI,
                     Algorithm     = Enum.TryParse<ModelType>(model.Algorithm, true, out var mt) ? mt : ModelType.PPO,
                     ExperimentId  = model.ExperimentId,
-                    Preconditions = model.Preconditions
+                    Preconditions = model.Preconditions,
+                    AgentType     = model.AgentType
                 });
             }
         }
@@ -134,35 +137,60 @@ public partial class VisualizationPage : IAsyncDisposable
         }
 
         _rows = rows;
-        _selectedRow = randomRow;
+        _selectedHeroRow = randomRow;
+        _selectedEnemyRow = randomRow;
         _loadingModels = false;
     }
 
     // ── Row selection ────────────────────────────────────────────────────────
 
-    private void OnRowSelected(SimulationSourceRow? row)
+    private void OnHeroRowSelected(SimulationSourceRow? row)
     {
-        _selectedRow = row;
+        _selectedHeroRow = row;
         if (row is null) return;
 
-        _cmd.Kind         = row.Kind;
-        _cmd.Algorithm    = row.Algorithm;
-        _cmd.ExperimentId = row.ExperimentId;
+        _cmd.HeroAi = BuildAiConfigFromRow(row);
+        ApplyPreconditionsToOverride();
+    }
 
-        var ov = BuildDefaultOverride();
-        if (row.Preconditions is not null)
+    private void OnEnemyRowSelected(SimulationSourceRow? row)
+    {
+        _selectedEnemyRow = row;
+        if (row is null) return;
+
+        _cmd.EnemyAi = BuildAiConfigFromRow(row);
+        ApplyPreconditionsToOverride();
+    }
+
+    private static AgentAiConfigDto BuildAiConfigFromRow(SimulationSourceRow row) => row.Kind switch
+    {
+        SimulationKind.TrainedAI => new AgentAiConfigDto
         {
-            ov.MaxTurns       = row.Preconditions.MaxTurns;
-            ov.MapWidth       = row.Preconditions.MapWidth;
-            ov.MapHeight      = row.Preconditions.MapHeight;
-            ov.BlocksPercent  = row.Preconditions.BlocksPercent;
-            ov.EnemiesPercent = row.Preconditions.EnemiesPercent;
-            ov.HeroSpeed      = row.Preconditions.HeroSpeed;
-            ov.HeroSightRange = row.Preconditions.HeroSightRange;
-            ov.HeroStamina    = row.Preconditions.HeroStamina;
-            ov.EnemySpeed       = row.Preconditions.EnemySpeed;
-            ov.EnemySightRange  = row.Preconditions.EnemySightRange;
-            ov.EnemyStamina     = row.Preconditions.EnemyStamina;
+            ModelType    = row.Algorithm,
+            ExperimentId = row.ExperimentId,
+            AgentType    = Enum.TryParse<TraineeAgentType>(row.AgentType, true, out var at) ? at : TraineeAgentType.Hero
+        },
+        _ => new AgentAiConfigDto { ModelType = ModelType.Random }
+    };
+
+    private void ApplyPreconditionsToOverride()
+    {
+        // Pick preconditions from the first trained model found (hero takes priority)
+        var precond = _selectedHeroRow?.Preconditions ?? _selectedEnemyRow?.Preconditions;
+        var ov = BuildDefaultOverride();
+        if (precond is not null)
+        {
+            ov.MaxTurns       = precond.MaxTurns;
+            ov.MapWidth       = precond.MapWidth;
+            ov.MapHeight      = precond.MapHeight;
+            ov.BlocksPercent  = precond.BlocksPercent;
+            ov.EnemiesPercent = precond.EnemiesPercent;
+            ov.HeroSpeed      = precond.HeroSpeed;
+            ov.HeroSightRange = precond.HeroSightRange;
+            ov.HeroStamina    = precond.HeroStamina;
+            ov.EnemySpeed       = precond.EnemySpeed;
+            ov.EnemySightRange  = precond.EnemySightRange;
+            ov.EnemyStamina     = precond.EnemyStamina;
         }
         _override = ov;
         _cmd.SandboxSettings = _override;

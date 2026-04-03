@@ -31,16 +31,16 @@ public abstract class BaseTraining
 
     /// <summary>
     /// Returns the folder path for the experiment's trained model and metadata.
-    /// Structure: {basePath}/{trainedAlgorithmsFolder}/{Algorithm}/{experimentId}/
+    /// Structure: {basePath}/{trainedAlgorithmsFolder}/{Algorithm}/{AgentType}/{experimentId}/
     /// The model file (e.g. model.zip) and preconditions.json are stored inside this folder.
     /// </summary>
-    public string GetModelFolderPath(string experimentId, string basePath, string trainedAlgorithmsFolder)
-        => Path.Combine(basePath, trainedAlgorithmsFolder, AlgorithmType.ToString(), experimentId);
+    public string GetModelFolderPath(string experimentId, string basePath, string trainedAlgorithmsFolder, string agentType)
+        => Path.Combine(basePath, trainedAlgorithmsFolder, AlgorithmType.ToString(), agentType, experimentId);
 
     /// <summary>
     /// Returns the model output file path (without extension) within the experiment folder.
     /// Python SB3 appends .zip when saving.
     /// </summary>
-    public string GetModelOutputPath(string experimentId, string basePath, string trainedAlgorithmsFolder)
-        => Path.Combine(GetModelFolderPath(experimentId, basePath, trainedAlgorithmsFolder), "model");
+    public string GetModelOutputPath(string experimentId, string basePath, string trainedAlgorithmsFolder, string agentType)
+        => Path.Combine(GetModelFolderPath(experimentId, basePath, trainedAlgorithmsFolder, agentType), "model");
 }

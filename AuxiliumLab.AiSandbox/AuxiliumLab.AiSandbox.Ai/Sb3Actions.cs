@@ -51,6 +51,7 @@ public class Sb3Actions : IAiActions
     // ── Extra public API ──────────────────────────────────────────────────────
     public Guid GymId { get; }
     public ModelType ModelType { get; }
+    public ObjectType TargetAgentType { get; }
 
     // ── Constructor ───────────────────────────────────────────────────────────
     public Sb3Actions(
@@ -61,13 +62,15 @@ public class Sb3Actions : IAiActions
         Guid gymId,
         float stepPenalty,
         float winReward,
-        float lossReward)
+        float lossReward,
+        ObjectType targetAgentType = ObjectType.Hero)
     {
         _messageBroker = messageBroker;
         _agentStateMemoryRepository = agentStateMemoryRepository;
         ModelType = modelType;
         GymId = gymId;
         AiConfiguration = aiConfiguration;
+        TargetAgentType = targetAgentType;
         _stepPenalty = stepPenalty;
         _winReward = winReward;
         _lossReward = lossReward;
@@ -116,6 +119,7 @@ public class Sb3Actions : IAiActions
 
         var agent = _agentStateMemoryRepository.LoadObject(cmd.AgentId);
         if (agent is null) return;
+        if (agent.Type != TargetAgentType) return;
 
         var obs = BuildObservation(agent);
         _lastObservation = obs;

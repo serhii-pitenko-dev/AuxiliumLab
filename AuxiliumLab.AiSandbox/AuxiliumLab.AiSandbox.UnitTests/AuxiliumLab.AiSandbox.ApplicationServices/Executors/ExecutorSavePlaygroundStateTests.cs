@@ -118,7 +118,7 @@ public class ExecutorSavePlaygroundStateTests
     private ExecutorForPresentation BuildPresentationExecutor() =>
         new ExecutorForPresentation(
             _mockPlaygroundCommands.Object, _mockPlaygroundRepository.Object,
-            _mockAiActions.Object, _configuration,
+            _mockAiActions.Object, _mockAiActions.Object, _configuration,
             _mockPlaygroundStateFileRepo.Object, _mockAgentStateMemoryRepo.Object,
             _messageBroker, _mockBrokerRpcClient.Object, _mockMapper.Object,
             _mockRawDataLogRepo.Object, _mockTurnPerfRepo.Object,
@@ -127,7 +127,7 @@ public class ExecutorSavePlaygroundStateTests
     private StandardExecutor BuildStandardExecutor() =>
         new StandardExecutor(
             _mockPlaygroundCommands.Object, _mockPlaygroundRepository.Object,
-            _mockAiActions.Object, _configuration,
+            _mockAiActions.Object, _mockAiActions.Object, _configuration,
             _mockPlaygroundStateFileRepo.Object, _mockAgentStateMemoryRepo.Object,
             _messageBroker, _mockBrokerRpcClient.Object, _mockMapper.Object,
             _mockRawDataLogRepo.Object, _mockTurnPerfRepo.Object,

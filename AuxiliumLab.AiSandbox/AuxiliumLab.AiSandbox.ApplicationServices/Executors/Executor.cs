@@ -39,7 +39,8 @@ public abstract class Executor : IExecutor, IDisposable
     protected List<Agent> _agentsToAct = new();
     protected IMemoryDataManager<AgentStateForAIDecision> _agentStateMemoryRepository;
     protected IBrokerRpcClient _brokerRpcClient;
-    protected IAiActions _aiActions;
+    protected IAiActions _heroAiActions;
+    protected IAiActions _enemyAiActions;
     protected IStandardPlaygroundMapper _standardPlaygroundMapper;
     protected IFileDataManager<StandardPlaygroundState> _playgroundStateFileRepository;
     protected IFileDataManager<RawDataLog> _rawDataLogFileRepository;
@@ -76,7 +77,8 @@ public abstract class Executor : IExecutor, IDisposable
     public Executor(
         IPlaygroundCommandsHandleService playgroundCommandsHandleService,
         IMemoryDataManager<StandardPlayground> sandboxRepository,
-        IAiActions aiActions,
+        IAiActions heroAiActions,
+        IAiActions enemyAiActions,
         SandBoxConfiguration configuration,
         IFileDataManager<StandardPlaygroundState> playgroundStateFileRepository,
         IMemoryDataManager<AgentStateForAIDecision> agentStateMemoryRepository,
@@ -95,7 +97,8 @@ public abstract class Executor : IExecutor, IDisposable
         _agentStateMemoryRepository = agentStateMemoryRepository;
         _messageBroker = messageBroker;
         _brokerRpcClient = brokerRpcClient;
-        _aiActions = aiActions;
+        _heroAiActions = heroAiActions;
+        _enemyAiActions = enemyAiActions;
         _standardPlaygroundMapper = standardPlaygroundMapper;
         _playgroundStateFileRepository = playgroundStateFileRepository;
         _rawDataLogFileRepository = rawDataLogFileRepository;
@@ -106,7 +109,8 @@ public abstract class Executor : IExecutor, IDisposable
 
     public void Dispose()
     {
-        (_aiActions as IDisposable)?.Dispose();
+        (_heroAiActions as IDisposable)?.Dispose();
+        (_enemyAiActions as IDisposable)?.Dispose();
     }
 
     public async Task TestRunWithPreconditionsAsync()
@@ -150,8 +154,9 @@ public abstract class Executor : IExecutor, IDisposable
     /// </summary>
     protected virtual async Task StartSimulationPreparationsAsync(CancellationToken cancellationToken = default)
     {
-        // Initialize AI module
-        _aiActions.Initialize();
+        // Initialize AI modules for both agent types
+        _heroAiActions.Initialize();
+        _enemyAiActions.Initialize();
 
         if (NeedsStatePersistence)
             await SaveAsync();

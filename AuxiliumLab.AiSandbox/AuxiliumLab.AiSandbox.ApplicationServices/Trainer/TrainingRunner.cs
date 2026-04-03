@@ -20,7 +20,9 @@ using AuxiliumLab.AiSandbox.Domain.Statistics.Result;
 using AuxiliumLab.AiSandbox.Infrastructure.FileManager;
 using AuxiliumLab.AiSandbox.Infrastructure.MemoryManager;
 using AuxiliumLab.AiSandbox.SharedBaseTypes.AiContract.Dto;
+using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 
@@ -47,7 +49,7 @@ public class TrainingRunner
 
     /// <summary>
     /// Starts training with optional parameter overrides from a web request.
-    /// Creates a folder structure: {BasePath}/{TrainedAlgorithms}/{Algorithm}/{ExperimentId}/
+    /// Creates a folder structure: {BasePath}/{TrainedAlgorithms}/{Algorithm}/{AgentType}/{ExperimentId}/
     /// containing the trained model and a preconditions.json file.
     /// </summary>
     public async Task<TrainingRunInfo> RunTrainingAsync(
@@ -116,7 +118,18 @@ public class TrainingRunner
                 sb.HeroSpeed, sb.HeroSightRange, sb.HeroStamina,
                 sb.EnemySpeed, sb.EnemySightRange, sb.EnemyStamina);
 
-        // 4. Create one executor + Sb3Actions pair per physical core (or the override count).
+        // 4. Determine trainee/opponent agent types and reward mapping.
+        var traineeAgentType = overrides.TraineeAgent;
+        var traineeObjectType = traineeAgentType == TraineeAgentType.Hero ? ObjectType.Hero : ObjectType.Enemy;
+        var opponentObjectType = traineeAgentType == TraineeAgentType.Hero ? ObjectType.Enemy : ObjectType.Hero;
+        string agentTypeFolder = traineeAgentType.ToString().ToUpperInvariant();
+
+        // When training Enemy, invert rewards: HeroWon=loss for enemy, HeroLost=win for enemy
+        float traineeStepPenalty = rewards.StepPenalty;
+        float traineeWinReward   = traineeAgentType == TraineeAgentType.Hero ? rewards.WinReward : rewards.LossReward;
+        float traineeLossReward  = traineeAgentType == TraineeAgentType.Hero ? rewards.LossReward : rewards.WinReward;
+
+        // 5. Create one executor + Sb3Actions pair per physical core (or the override count).
         int nEnvs = Math.Max(1, hp.NEnvs);
         var executorTasks = new List<Task>();
         var gymIds = new List<Guid>();
@@ -137,10 +150,14 @@ public class TrainingRunner
             var gymRpcClient = new BrokerRpcClient(gymBroker);
             var gymAgentStateRepo = new MemoryDataManager<AgentStateForAIDecision>();
 
-            // Create a dedicated Sb3Actions for this gym
+            // Create a dedicated Sb3Actions for the trainee agent type
             var sb3 = _algorithmTypeProvider.Create(
                 algorithmType, gymBroker, gymAgentStateRepo,
-                rewards.StepPenalty, rewards.WinReward, rewards.LossReward);
+                traineeObjectType,
+                traineeStepPenalty, traineeWinReward, traineeLossReward);
+
+            // Create opponent AI (Random by default; could be InferenceActions for trained opponent)
+            IAiActions opponentAi = CreateOpponentAi(overrides, gymBroker, gymAgentStateRepo, opponentObjectType);
 
             // Track the gym's unique ID so it can be passed to Python
             gymIds.Add(sb3.GymId);
@@ -153,20 +170,38 @@ public class TrainingRunner
             // (sandboxStatus, _playground, _agentsToAct, etc.) leaks between runs.
             // Sb3Actions stays alive for the full training session since it owns
             // the Python gRPC channel.
-            StandardExecutor CreateEpisodeExecutor() => new StandardExecutor(
-                playgroundCommands,
-                playgroundRepo,
-                sb3,
-                effectiveSandboxConfig,
-                playgroundStateFileRepo,
-                gymAgentStateRepo,
-                gymBroker,
-                gymRpcClient,
-                mapper,
-                rawDataRepo,
-                turnPerfRepo,
-                sbxPerfRepo,
-                testPreconditionData);
+            var capturedOpponentAi = opponentAi;
+            StandardExecutor CreateEpisodeExecutor()
+            {
+                // Assign hero/enemy AI based on who is the trainee
+                IAiActions heroAi, enemyAi;
+                if (traineeAgentType == TraineeAgentType.Hero)
+                {
+                    heroAi = sb3;
+                    enemyAi = capturedOpponentAi;
+                }
+                else
+                {
+                    heroAi = capturedOpponentAi;
+                    enemyAi = sb3;
+                }
+
+                return new StandardExecutor(
+                    playgroundCommands,
+                    playgroundRepo,
+                    heroAi,
+                    enemyAi,
+                    effectiveSandboxConfig,
+                    playgroundStateFileRepo,
+                    gymAgentStateRepo,
+                    gymBroker,
+                    gymRpcClient,
+                    mapper,
+                    rawDataRepo,
+                    turnPerfRepo,
+                    sbxPerfRepo,
+                    testPreconditionData);
+            }
 
             // Set the episode callback so Sb3Actions can restart episodes
             sb3.SetEpisodeCallback(async () => await CreateEpisodeExecutor().RunAsync());
@@ -200,7 +235,7 @@ public class TrainingRunner
             executorTasks.Add(execTask);
         }
 
-        // 5. Compute experiment identity and save preconditions BEFORE training
+        // 6. Compute experiment identity and save preconditions BEFORE training
         //    so the folder always has diagnostic data even if training fails.
         string experimentId = training.BuildExperimentId();
         var parameterDict = algoSettings.Parameters
@@ -216,9 +251,12 @@ public class TrainingRunner
             parameterDict,
             effectiveSandboxConfig,
             rewards,
-            fileSourceConfig.Value);
+            fileSourceConfig.Value,
+            agentTypeFolder,
+            overrides.OpponentAi.ModelType.ToString(),
+            overrides.OpponentAi.ExperimentId);
 
-        // 6. Negotiate environment contract with Python before starting training.
+        // 7. Negotiate environment contract with Python before starting training.
         //    This replaces the old silent coupling where obs_dim was hard-coded
         //    on both sides. Any mismatch is now a hard error here.
         var spec = EnvironmentSpecBuilder.Build(effectiveSandboxConfig, experimentId);
@@ -247,15 +285,16 @@ public class TrainingRunner
             $"[Training] Environment spec negotiated: obs_dim={spec.ObservationDim}, "
             + $"action_dim={spec.ActionDim}, sight_range={spec.SightRange}.");
 
-        // 7. Start training on the Python side
-        Console.WriteLine($"[Training] Starting {algorithmType} training with {nEnvs} gym(s)...");
+        // 8. Start training on the Python side
+        Console.WriteLine($"[Training] Starting {algorithmType} training with {nEnvs} gym(s) for {agentTypeFolder}...");
         Console.WriteLine($"[Training] Experiment: {experimentId}");
         Console.WriteLine($"[Training] Gym IDs: {string.Join(", ", gymIds.Select(g => g.ToString("N")[..8]))}");
         var runId = await training.Run(
             _policyTrainerClient,
             gymIds,
             fileSourceConfig.Value.FileStorage.BasePath,
-            fileSourceConfig.Value.FileStorage.TrainedAlgorithms);
+            fileSourceConfig.Value.FileStorage.TrainedAlgorithms,
+            agentTypeFolder);
 
         // Populate job status with progress metadata
         if (jobStatus is not null)
@@ -263,15 +302,16 @@ public class TrainingRunner
             jobStatus.RunId           = runId;
             jobStatus.TotalTimesteps  = training.BuildTrainingRequest(algoSettings, nEnvs, gymIds,
                 fileSourceConfig.Value.FileStorage.BasePath,
-                fileSourceConfig.Value.FileStorage.TrainedAlgorithms).TotalTimesteps;
+                fileSourceConfig.Value.FileStorage.TrainedAlgorithms,
+                agentTypeFolder).TotalTimesteps;
             jobStatus.NumEnvironments = nEnvs;
         }
 
-        // 7b. Poll Python for training progress while waiting for gyms to close
+        // 8b. Poll Python for training progress while waiting for gyms to close
         using var pollCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var pollTask = PollTrainingProgressAsync(runId, jobStatus, pollCts.Token);
 
-        // 8. Wait until all gyms close (Python training complete) or app is stopped.
+        // 9. Wait until all gyms close (Python training complete) or app is stopped.
         try
         {
             await Task.WhenAll(executorTasks).ConfigureAwait(false);
@@ -296,7 +336,7 @@ public class TrainingRunner
             foreach (var cts in gymCtsList)    cts.Dispose();
         }
 
-        // 9. Verify Python-side training actually succeeded
+        // 10. Verify Python-side training actually succeeded
         try
         {
             var finalStatus = await _policyTrainerClient.GetTrainingStatusAsync(
@@ -330,12 +370,16 @@ public class TrainingRunner
         IReadOnlyDictionary<string, string> parameters,
         SandBoxConfiguration sandboxCfg,
         RewardSettings rewards,
-        FileSourceConfiguration fileSourceCfg)
+        FileSourceConfiguration fileSourceCfg,
+        string agentType,
+        string opponentAiType,
+        string? opponentModelId)
     {
         var folder = Path.Combine(
             fileSourceCfg.FileStorage.BasePath,
             fileSourceCfg.FileStorage.TrainedAlgorithms,
             algorithmType.ToString(),
+            agentType,
             experimentId);
 
         try
@@ -361,7 +405,10 @@ public class TrainingRunner
                 StepPenalty     = rewards.StepPenalty,
                 WinReward       = rewards.WinReward,
                 LossReward      = rewards.LossReward,
-                StartedAt       = DateTime.UtcNow
+                StartedAt       = DateTime.UtcNow,
+                TraineeAgent    = agentType,
+                OpponentAiType  = opponentAiType,
+                OpponentModelId = opponentModelId
             };
 
             var json = JsonSerializer.Serialize(preconditions, new JsonSerializerOptions { WriteIndented = true });
@@ -381,12 +428,14 @@ public class TrainingRunner
         string algorithm,
         string experimentId,
         string errorMessage,
-        FileSourceConfiguration fileSourceCfg)
+        FileSourceConfiguration fileSourceCfg,
+        string agentType = "HERO")
     {
         var folder = Path.Combine(
             fileSourceCfg.FileStorage.BasePath,
             fileSourceCfg.FileStorage.TrainedAlgorithms,
             algorithm,
+            agentType,
             experimentId);
 
         try
@@ -439,5 +488,53 @@ public class TrainingRunner
                 Console.WriteLine($"[Training] Progress poll failed: {ex.Message}");
             }
         }
+    }
+
+    /// <summary>
+    /// Creates the opponent AI for training. Returns RandomActions for Random opponent,
+    /// or InferenceActions for a pre-trained opponent model.
+    /// </summary>
+    private IAiActions CreateOpponentAi(
+        StartPpoTrainingCommand overrides,
+        IMessageBroker broker,
+        IMemoryDataManager<AgentStateForAIDecision> agentStore,
+        ObjectType opponentObjectType)
+    {
+        var opponentConfig = overrides.OpponentAi;
+        if (opponentConfig.ModelType == ModelType.Random)
+            return new RandomActions(broker, agentStore, opponentObjectType);
+
+        // Resolve the opponent model path
+        var fileSourceConfig = _serviceProvider.GetRequiredService<IOptions<FileSourceConfiguration>>();
+        string agentTypeFolder = opponentConfig.AgentType.ToString().ToUpperInvariant();
+        string algoFolder = Path.Combine(
+            fileSourceConfig.Value.FileStorage.BasePath,
+            fileSourceConfig.Value.FileStorage.TrainedAlgorithms,
+            opponentConfig.ModelType.ToString(),
+            agentTypeFolder);
+
+        string modelPath;
+        if (!string.IsNullOrEmpty(opponentConfig.ExperimentId))
+        {
+            modelPath = Path.Combine(algoFolder, opponentConfig.ExperimentId, "model.zip");
+        }
+        else
+        {
+            throw new InvalidOperationException(
+                "ExperimentId is required for a trained opponent AI.");
+        }
+
+        var aiConfiguration = new AiConfiguration
+        {
+            ModelType = opponentConfig.ModelType,
+            Version = "1.0",
+            PolicyType = AiPolicy.MLP
+        };
+
+        var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
+        return new InferenceActions(
+            broker, agentStore, _policyTrainerClient,
+            modelPath, aiConfiguration, opponentObjectType,
+            loggerFactory.CreateLogger<InferenceActions>());
     }
 }

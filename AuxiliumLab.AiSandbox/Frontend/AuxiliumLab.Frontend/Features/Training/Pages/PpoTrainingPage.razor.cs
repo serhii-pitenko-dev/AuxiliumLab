@@ -4,12 +4,28 @@ namespace AuxiliumLab.Frontend.Features.Training.Pages;
 public partial class PpoTrainingPage
 {
     private StartPpoTrainingCommand _cmd = new();
+    private List<TrainedModelInfoDto> _trainedModels = [];
+
+    // ── Opponent AI grid rows ────────────────────────────────────────────────
+
+    internal class OpponentAiRow
+    {
+        public string    Group        { get; init; } = string.Empty;
+        public string    Name         { get; init; } = string.Empty;
+        public DateTime? CreatedDate  { get; init; }
+        public ModelType ModelType    { get; init; }
+        public string?   ExperimentId { get; init; }
+        public string?   AgentType    { get; init; }
+    }
+
+    internal List<OpponentAiRow> _opponentRows = [];
+    private OpponentAiRow? _selectedOpponentRow;
 
     private bool _loading;
     private TrainingJobStartedDto? _started;
     private string? _error;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         var sb = SandboxConfig.Value;
 
@@ -50,6 +66,68 @@ public partial class PpoTrainingPage
                 LossReward  = -50.0f
             }
         };
+
+        try
+        {
+            _trainedModels = await TrainingApi.GetTrainedModelsAsync() ?? [];
+        }
+        catch
+        {
+            _trainedModels = [];
+        }
+
+        BuildOpponentRows();
+    }
+
+    private void BuildOpponentRows()
+    {
+        var rows = new List<OpponentAiRow>
+        {
+            new()
+            {
+                Group     = "Non AI",
+                Name      = "Random AI",
+                ModelType = ModelType.Random
+            }
+        };
+
+        foreach (var model in _trainedModels.OrderByDescending(m => m.TrainedAt))
+        {
+            var group = model.Algorithm.ToUpperInvariant() switch
+            {
+                "PPO" => "PPO",
+                "A2C" => "A2C",
+                "DQN" => "DQN",
+                _     => model.Algorithm
+            };
+            rows.Add(new OpponentAiRow
+            {
+                Group        = group,
+                Name         = model.ExperimentId,
+                CreatedDate  = model.TrainedAt,
+                ModelType    = Enum.TryParse<ModelType>(model.Algorithm, true, out var mt) ? mt : ModelType.PPO,
+                ExperimentId = model.ExperimentId,
+                AgentType    = model.AgentType
+            });
+        }
+
+        _opponentRows = rows;
+        _selectedOpponentRow = rows[0]; // Random AI by default
+    }
+
+    private void OnOpponentRowSelected(OpponentAiRow? row)
+    {
+        _selectedOpponentRow = row;
+        if (row is null) return;
+
+        _cmd.OpponentAi = row.ModelType == ModelType.Random
+            ? new AgentAiConfigDto { ModelType = ModelType.Random }
+            : new AgentAiConfigDto
+            {
+                ModelType    = row.ModelType,
+                ExperimentId = row.ExperimentId,
+                AgentType    = Enum.TryParse<TraineeAgentType>(row.AgentType, true, out var at) ? at : TraineeAgentType.Hero
+            };
     }
 
     private async Task StartTraining()

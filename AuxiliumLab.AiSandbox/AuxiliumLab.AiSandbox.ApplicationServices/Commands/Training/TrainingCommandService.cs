@@ -97,6 +97,7 @@ public sealed class TrainingCommandService : ITrainingCommands
         // The real experiment id is determined inside TrainingRunner.
         string algoName    = algorithmType.ToString().ToUpper();
         string experimentId = $"{algoName}-{startedAt:yyyyMMdd-HHmmss}";
+        string agentTypeFolder = overrides.TraineeAgent.ToString().ToUpperInvariant();
 
         var status = new TrainingJobStatusDto
         {
@@ -132,14 +133,14 @@ public sealed class TrainingCommandService : ITrainingCommands
                 status.State        = TrainingJobState.Failed;
                 status.CompletedAt  = DateTime.UtcNow;
                 status.ErrorMessage = "Stopped by user.";
-                await SaveTrainingErrorAsync(status);
+                await SaveTrainingErrorAsync(status, agentTypeFolder);
             }
             catch (Exception ex)
             {
                 status.State        = TrainingJobState.Failed;
                 status.CompletedAt  = DateTime.UtcNow;
                 status.ErrorMessage = ex.Message;
-                await SaveTrainingErrorAsync(status);
+                await SaveTrainingErrorAsync(status, agentTypeFolder);
             }
             finally
             {
@@ -150,7 +151,7 @@ public sealed class TrainingCommandService : ITrainingCommands
         return Task.FromResult(new TrainingJobStartedDto { JobId = jobId, Algorithm = algoName, ExperimentId = experimentId, StartedAt = startedAt });
     }
 
-    private async Task SaveTrainingErrorAsync(TrainingJobStatusDto status)
+    private async Task SaveTrainingErrorAsync(TrainingJobStatusDto status, string agentType)
     {
         try
         {
@@ -158,7 +159,8 @@ public sealed class TrainingCommandService : ITrainingCommands
                 status.Algorithm,
                 status.ExperimentId,
                 status.ErrorMessage ?? "Unknown error",
-                _fileSourceConfig.Value);
+                _fileSourceConfig.Value,
+                agentType);
         }
         catch (Exception ex)
         {

@@ -1,38 +1,36 @@
+using AuxiliumLab.AiSandbox.Ai;
 using AuxiliumLab.AiSandbox.Ai.Configuration;
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
 using AuxiliumLab.AiSandbox.Infrastructure.Configuration.Preconditions;
 
 namespace AuxiliumLab.AiSandbox.ApplicationServices.Executors;
 
+/// <summary>
+/// Describes how to create an AI for a single agent type.
+/// When <see cref="ModelType"/> is <c>Random</c>, a <see cref="Ai.RandomActions"/> is created.
+/// Otherwise an <see cref="AiTrainingOrchestrator.InferenceActions"/> is created using
+/// <see cref="ModelPath"/> and <see cref="AiConfig"/>.
+/// </summary>
+public class AgentAiSpec
+{
+    public ModelType ModelType { get; init; } = ModelType.Random;
+    public string? ModelPath { get; init; }
+    public AiConfiguration? AiConfig { get; init; }
+
+    public static AgentAiSpec Random() => new();
+}
+
 public interface IExecutorFactory
 {
     IExecutorForPresentation CreateExecutorForPresentation(
         SandBoxConfiguration configuration,
+        AgentAiSpec heroAiSpec,
+        AgentAiSpec enemyAiSpec,
         int actionDelayMs = 0,
         SemaphoreSlim? pauseGate = null);
-    IStandardExecutor CreateStandardExecutor(SandBoxConfiguration configuration);
 
-    /// <summary>
-    /// Creates a standard executor whose AI decisions are driven by a pre-trained model
-    /// via an <c>InferenceActions</c> instance (calls the Python <c>Act</c> RPC).
-    /// Each call creates isolated per-simulation broker, agent-store, and AI instances
-    /// so that parallel simulations do not share mutable state.
-    /// </summary>
-    IStandardExecutor CreateInferenceExecutor(
+    IStandardExecutor CreateStandardExecutor(
         SandBoxConfiguration configuration,
-        IPolicyTrainerClient policyTrainerClient,
-        string modelPath,
-        AiConfiguration aiConfig);
-
-    /// <summary>
-    /// Creates a presentation executor (with action delay and pause gate) whose AI
-    /// decisions are driven by a pre-trained model via <c>InferenceActions</c>.
-    /// </summary>
-    IExecutorForPresentation CreateInferenceExecutorForPresentation(
-        SandBoxConfiguration configuration,
-        IPolicyTrainerClient policyTrainerClient,
-        string modelPath,
-        AiConfiguration aiConfig,
-        int actionDelayMs = 0,
-        SemaphoreSlim? pauseGate = null);
+        AgentAiSpec heroAiSpec,
+        AgentAiSpec enemyAiSpec);
 }

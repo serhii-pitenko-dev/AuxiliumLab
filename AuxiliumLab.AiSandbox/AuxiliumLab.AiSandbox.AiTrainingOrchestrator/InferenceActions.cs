@@ -8,6 +8,7 @@ using AuxiliumLab.AiSandbox.Common.MessageBroker.Contracts.AiContract.Responses;
 using AuxiliumLab.AiSandbox.Common.MessageBroker.Contracts.CoreServicesContract.Events;
 using AuxiliumLab.AiSandbox.Infrastructure.MemoryManager;
 using AuxiliumLab.AiSandbox.SharedBaseTypes.AiContract.Dto;
+using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects;
 using Microsoft.Extensions.Logging;
 
 namespace AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
@@ -27,6 +28,7 @@ namespace AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
 public sealed class InferenceActions : IAiActions, IDisposable
 {
     public ModelType ModelType { get; }
+    public ObjectType TargetAgentType { get; }
 
     private readonly IMessageBroker                            _messageBroker;
     private readonly IMemoryDataManager<AgentStateForAIDecision> _agentStateRepository;
@@ -46,6 +48,7 @@ public sealed class InferenceActions : IAiActions, IDisposable
         IPolicyTrainerClient policyTrainerClient,
         string modelPath,
         AiConfiguration aiConfiguration,
+        ObjectType targetAgentType = ObjectType.Hero,
         ILogger<InferenceActions>? logger = null)
     {
         _messageBroker        = messageBroker;
@@ -55,6 +58,7 @@ public sealed class InferenceActions : IAiActions, IDisposable
         _logger               = logger;
         AiConfiguration       = aiConfiguration;
         ModelType            = aiConfiguration.ModelType;
+        TargetAgentType      = targetAgentType;
 
         _onGameStartedHandler     = OnGameStarted;
         _onDecisionRequestHandler = OnDecisionRequest;
@@ -92,6 +96,7 @@ public sealed class InferenceActions : IAiActions, IDisposable
 
         var agent = _agentStateRepository.LoadObject(cmd.AgentId);
         if (agent is null) return;
+        if (agent.Type != TargetAgentType) return;
 
         var obs     = ObservationBuilder.Build(agent);
         var request = new ActRequest

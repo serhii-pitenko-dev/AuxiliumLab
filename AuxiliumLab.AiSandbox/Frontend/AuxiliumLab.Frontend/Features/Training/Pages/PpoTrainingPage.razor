@@ -89,6 +89,44 @@
             </MudCardContent>
         </MudCard>
 
+        <!-- Agent Setup -->
+        <MudCard Class="mb-4">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.subtitle1">Agent Setup</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudGrid>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="TraineeAgentType" @bind-Value="_cmd.TraineeAgent" Label="Trainee Agent"
+                                   Variant="Variant.Outlined" aria-label="Trainee Agent">
+                            <MudSelectItem Value="TraineeAgentType.Hero">Hero</MudSelectItem>
+                            <MudSelectItem Value="TraineeAgentType.Enemy">Enemy</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.body2" Class="mb-1">Opponent AI</MudText>
+                        <MudDataGrid T="OpponentAiRow" Items="_opponentRows" Dense="true" Hover="true"
+                                     SelectedItem="_selectedOpponentRow" SelectedItemChanged="OnOpponentRowSelected"
+                                     SelectOnRowClick="true" Filterable="false" SortMode="SortMode.None"
+                                     Groupable="true" aria-label="Opponent AI">
+                            <Columns>
+                                <PropertyColumn Property="x => x.Group" Title="AI Type" Groupable="true" Grouping="true" Hidden="true" GroupExpanded="true">
+                                    <GroupTemplate>
+                                        <span style="font-weight:bold">@context.Grouping.Key (@context.Grouping.Count())</span>
+                                    </GroupTemplate>
+                                </PropertyColumn>
+                                <PropertyColumn Property="x => x.Name" Title="Name" />
+                                <PropertyColumn Property="x => x.AgentType" Title="Agent" />
+                                <PropertyColumn Property="x => x.CreatedDate" Title="Created" Format="yyyy-MM-dd HH:mm" />
+                            </Columns>
+                        </MudDataGrid>
+                    </MudItem>
+                </MudGrid>
+            </MudCardContent>
+        </MudCard>
+
         <!-- Sandbox overrides -->
         <MudExpansionPanels Outlined="true">
             <MudExpansionPanel aria-label="Sandbox Overrides Panel">

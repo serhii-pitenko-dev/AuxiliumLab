@@ -20,10 +20,10 @@ public class PpoTraining : BaseTraining, ITraining
     public string BuildExperimentId() => BuildExperimentId(_settings);
 
     public TrainingRequest BuildTrainingRequest(TrainingAlgorithmSettings settings, int nEnvs, IReadOnlyList<Guid> gymIds,
-        string basePath, string trainedAlgorithmsFolder)
+        string basePath, string trainedAlgorithmsFolder, string agentType)
     {
         string experimentId = BuildExperimentId(settings);
-        string modelOutputPath = GetModelOutputPath(experimentId, basePath, trainedAlgorithmsFolder);
+        string modelOutputPath = GetModelOutputPath(experimentId, basePath, trainedAlgorithmsFolder, agentType);
 
         // Ensure the experiment folder exists so Python can save directly into it
         var folderPath = Path.GetDirectoryName(modelOutputPath);
@@ -50,10 +50,10 @@ public class PpoTraining : BaseTraining, ITraining
     }
 
     public async Task<string> Run(IPolicyTrainerClient policyTrainerClient, IReadOnlyList<Guid> gymIds,
-        string basePath, string trainedAlgorithmsFolder)
+        string basePath, string trainedAlgorithmsFolder, string agentType)
     {
         int nEnvs = Math.Max(1, gymIds.Count);
-        var request = BuildTrainingRequest(_settings, nEnvs, gymIds, basePath, trainedAlgorithmsFolder);
+        var request = BuildTrainingRequest(_settings, nEnvs, gymIds, basePath, trainedAlgorithmsFolder, agentType);
         CancellationToken cancellationToken = new CancellationTokenSource(TimeSpan.FromHours(2)).Token;
         var response = await policyTrainerClient.StartTrainingPPOAsync(request, cancellationToken);
         return response.RunId;

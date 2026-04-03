@@ -43,6 +43,10 @@ public class StartPpoTrainingCommand
     public PpoHyperparametersDto     Hyperparameters { get; set; } = new();
     public TrainingSandboxSettingsDto SandboxSettings { get; set; } = new();
     public RewardSettingsDto         RewardSettings  { get; set; } = new();
+    /// <summary>Which agent type to train. Default is Hero.</summary>
+    public TraineeAgentType          TraineeAgent    { get; set; } = TraineeAgentType.Hero;
+    /// <summary>AI configuration for the opponent (non-trainee) agent.</summary>
+    public AgentAiConfigDto          OpponentAi      { get; set; } = new();
 }
 
 public class StartGenericTrainingCommand { }
@@ -75,13 +79,15 @@ public class TrainingJobStatusDto
 
 public class TrainedModelInfoDto
 {
-    public string                   Algorithm     { get; set; } = string.Empty;
-    public string                   ExperimentId  { get; set; } = string.Empty;
-    public string                   ModelFilePath { get; set; } = string.Empty;
-    public DateTime                 TrainedAt     { get; set; }
-    public TrainingPreconditionsDto? Preconditions { get; set; }
-    public bool                     IsFailed      { get; set; }
-    public string?                  ErrorMessage  { get; set; }
+    public string                   Algorithm      { get; set; } = string.Empty;
+    public string                   ExperimentId   { get; set; } = string.Empty;
+    public string                   ModelFilePath  { get; set; } = string.Empty;
+    public DateTime                 TrainedAt      { get; set; }
+    public TrainingPreconditionsDto? Preconditions  { get; set; }
+    public bool                     IsFailed       { get; set; }
+    public string?                  ErrorMessage   { get; set; }
+    /// <summary>Which agent this model was trained for (HERO or ENEMY).</summary>
+    public string                   AgentType      { get; set; } = "HERO";
 }
 
 public class TrainingPreconditionsDto
@@ -104,4 +110,10 @@ public class TrainingPreconditionsDto
     public float                      WinReward       { get; set; }
     public float                      LossReward      { get; set; }
     public DateTime                   StartedAt       { get; set; }
+    /// <summary>Which agent type was trained (HERO or ENEMY).</summary>
+    public string                     TraineeAgent    { get; set; } = "HERO";
+    /// <summary>Opponent AI type during training (Random / PPO / A2C / DQN).</summary>
+    public string                     OpponentAiType  { get; set; } = "Random";
+    /// <summary>Opponent model experiment id (null/empty if Random).</summary>
+    public string?                    OpponentModelId { get; set; }
 }

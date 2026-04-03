@@ -22,6 +22,7 @@ public class RandomActions : IAiActions, IDisposable
         Version = "1.0",
         PolicyType = AiPolicy.MLP
     };
+    public ObjectType TargetAgentType { get; }
 
     private readonly Random _random = new();
     private readonly IMessageBroker _messageBroker;
@@ -31,10 +32,12 @@ public class RandomActions : IAiActions, IDisposable
 
     public RandomActions(
         IMessageBroker messageBroker, 
-        IMemoryDataManager<AgentStateForAIDecision> agentStateMemoryRepository)
+        IMemoryDataManager<AgentStateForAIDecision> agentStateMemoryRepository,
+        ObjectType targetAgentType = ObjectType.Hero)
     {
         _messageBroker = messageBroker;
         _agentStateMemoryRepository = agentStateMemoryRepository;
+        TargetAgentType = targetAgentType;
 
         _onGameStartedHandler = msg =>
         {
@@ -44,6 +47,7 @@ public class RandomActions : IAiActions, IDisposable
         _onDecisionRequestHandler = msg =>
         {
             var agent = _agentStateMemoryRepository.LoadObject(msg.AgentId);
+            if (agent.Type != TargetAgentType) return;
             AgentDecisionBaseResponse response = HandleAgentActionMessage(agent, msg.Id);
             _messageBroker.Publish(response);
         };

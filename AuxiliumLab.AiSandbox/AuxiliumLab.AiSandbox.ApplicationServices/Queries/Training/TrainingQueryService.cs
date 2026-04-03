@@ -38,55 +38,60 @@ public sealed class TrainingQueryService : ITrainingQueries
         foreach (var algoDir in Directory.EnumerateDirectories(root))
         {
             string algorithm = Path.GetFileName(algoDir);
-            foreach (var expDir in Directory.EnumerateDirectories(algoDir))
+            foreach (var agentTypeDir in Directory.EnumerateDirectories(algoDir))
             {
-                string experimentId = Path.GetFileName(expDir);
-                string modelFile    = Path.Combine(expDir, "model.zip");
-                string errorFile    = Path.Combine(expDir, "error.json");
-                bool hasModel       = File.Exists(modelFile);
-                bool hasError       = File.Exists(errorFile);
-
-                // Skip folders that have neither a model nor an error
-                if (!hasModel && !hasError)
-                    continue;
-
-                TrainingPreconditionsDto? preconditions = null;
-                string preconditionsFile = Path.Combine(expDir, "preconditions.json");
-                if (File.Exists(preconditionsFile))
+                string agentType = Path.GetFileName(agentTypeDir);
+                foreach (var expDir in Directory.EnumerateDirectories(agentTypeDir))
                 {
-                    try
+                    string experimentId = Path.GetFileName(expDir);
+                    string modelFile    = Path.Combine(expDir, "model.zip");
+                    string errorFile    = Path.Combine(expDir, "error.json");
+                    bool hasModel       = File.Exists(modelFile);
+                    bool hasError       = File.Exists(errorFile);
+
+                    // Skip folders that have neither a model nor an error
+                    if (!hasModel && !hasError)
+                        continue;
+
+                    TrainingPreconditionsDto? preconditions = null;
+                    string preconditionsFile = Path.Combine(expDir, "preconditions.json");
+                    if (File.Exists(preconditionsFile))
                     {
-                        string json = File.ReadAllText(preconditionsFile);
-                        preconditions = JsonSerializer.Deserialize<TrainingPreconditionsDto>(json,
-                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        try
+                        {
+                            string json = File.ReadAllText(preconditionsFile);
+                            preconditions = JsonSerializer.Deserialize<TrainingPreconditionsDto>(json,
+                                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        }
+                        catch { /* corrupt file — skip */ }
                     }
-                    catch { /* corrupt file — skip */ }
-                }
 
-                string? errorMessage = null;
-                if (hasError)
-                {
-                    try
+                    string? errorMessage = null;
+                    if (hasError)
                     {
-                        string errorJson = File.ReadAllText(errorFile);
-                        var errorData = JsonSerializer.Deserialize<Dictionary<string, string>>(errorJson,
-                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                        errorData?.TryGetValue("ErrorMessage", out errorMessage);
+                        try
+                        {
+                            string errorJson = File.ReadAllText(errorFile);
+                            var errorData = JsonSerializer.Deserialize<Dictionary<string, string>>(errorJson,
+                                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                            errorData?.TryGetValue("ErrorMessage", out errorMessage);
+                        }
+                        catch { /* corrupt file — skip */ }
                     }
-                    catch { /* corrupt file — skip */ }
-                }
 
-                models.Add(new TrainedModelInfoDto
-                {
-                    Algorithm     = algorithm,
-                    ExperimentId  = experimentId,
-                    ModelFilePath = hasModel ? modelFile : string.Empty,
-                    TrainedAt     = hasModel ? File.GetLastWriteTime(modelFile)
-                                  : File.GetLastWriteTime(hasError ? errorFile : preconditionsFile),
-                    Preconditions = preconditions,
-                    IsFailed      = hasError && !hasModel,
-                    ErrorMessage  = errorMessage
-                });
+                    models.Add(new TrainedModelInfoDto
+                    {
+                        Algorithm     = algorithm,
+                        ExperimentId  = experimentId,
+                        ModelFilePath = hasModel ? modelFile : string.Empty,
+                        TrainedAt     = hasModel ? File.GetLastWriteTime(modelFile)
+                                      : File.GetLastWriteTime(hasError ? errorFile : preconditionsFile),
+                        Preconditions = preconditions,
+                        IsFailed      = hasError && !hasModel,
+                        ErrorMessage  = errorMessage,
+                        AgentType     = agentType
+                    });
+                }
             }
         }
 

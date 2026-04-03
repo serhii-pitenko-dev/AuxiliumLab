@@ -20,13 +20,13 @@ public class A2cTraining : BaseTraining, ITraining
     public string BuildExperimentId() => BuildExperimentId(_settings);
 
     public TrainingRequest BuildTrainingRequest(TrainingAlgorithmSettings settings, int nEnvs, IReadOnlyList<Guid> gymIds,
-        string basePath, string trainedAlgorithmsFolder)
+        string basePath, string trainedAlgorithmsFolder, string agentType)
     {
         string experimentId = BuildExperimentId(settings);
         var request = new TrainingRequest
         {
             ExperimentId = experimentId,
-            ModelOutputPath = GetModelOutputPath(experimentId, basePath, trainedAlgorithmsFolder)
+            ModelOutputPath = GetModelOutputPath(experimentId, basePath, trainedAlgorithmsFolder, agentType)
         };
 
         request.Hyperparameters.Add("n_envs", nEnvs.ToString());
@@ -45,10 +45,10 @@ public class A2cTraining : BaseTraining, ITraining
     }
 
     public async Task<string> Run(IPolicyTrainerClient policyTrainerClient, IReadOnlyList<Guid> gymIds,
-        string basePath, string trainedAlgorithmsFolder)
+        string basePath, string trainedAlgorithmsFolder, string agentType)
     {
         int nEnvs = Math.Max(1, gymIds.Count);
-        var request = BuildTrainingRequest(_settings, nEnvs, gymIds, basePath, trainedAlgorithmsFolder);
+        var request = BuildTrainingRequest(_settings, nEnvs, gymIds, basePath, trainedAlgorithmsFolder, agentType);
         CancellationToken cancellationToken = new CancellationTokenSource(TimeSpan.FromHours(2)).Token;
         var response = await policyTrainerClient.StartTrainingA2CAsync(request, cancellationToken);
         return response.RunId;

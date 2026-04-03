@@ -34,7 +34,8 @@ public class ExecutorForPresentation : Executor, IExecutorForPresentation
     public ExecutorForPresentation(
         IPlaygroundCommandsHandleService mapCommands,
         IMemoryDataManager<StandardPlayground> sandboxRepository,
-        IAiActions aiActions,
+        IAiActions heroAiActions,
+        IAiActions enemyAiActions,
         SandBoxConfiguration configuration,
         IFileDataManager<StandardPlaygroundState> playgroundStateFileRepository,
         IMemoryDataManager<AgentStateForAIDecision> agentStateMemoryRepository,
@@ -47,7 +48,7 @@ public class ExecutorForPresentation : Executor, IExecutorForPresentation
         ITestPreconditionData testPreconditionData,
         int actionDelayMs = 0,
         SemaphoreSlim? pauseGate = null) :
-        base(mapCommands, sandboxRepository, aiActions,
+        base(mapCommands, sandboxRepository, heroAiActions, enemyAiActions,
              configuration,
              playgroundStateFileRepository, agentStateMemoryRepository, messageBroker,
              brokerRpcClient, standardPlaygroundMapper, rawDataLogFileRepository,

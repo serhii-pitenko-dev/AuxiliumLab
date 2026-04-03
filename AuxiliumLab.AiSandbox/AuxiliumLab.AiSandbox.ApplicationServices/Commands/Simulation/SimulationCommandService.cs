@@ -85,24 +85,11 @@ public sealed class SimulationCommandService : ISimulationCommands
                     s.EnemySpeed, s.EnemySightRange, s.EnemyStamina);
 
                 IExecutorForPresentation executor;
-                if (command.Kind == SimulationKind.TrainedAI)
-                {
-                    var modelPath = ResolveModelPath(command.Algorithm, command.ExperimentId);
-                    var aiConfig = new AiConfiguration
-                    {
-                        ModelType  = command.Algorithm,
-                        Version    = "1.0",
-                        PolicyType = AiPolicy.MLP
-                    };
-                    executor = executorFactory.CreateInferenceExecutorForPresentation(
-                        sandboxConfig, _policyTrainerClient, modelPath, aiConfig,
-                        command.ActionDelayMs, pauseGate);
-                }
-                else
-                {
-                    executor = executorFactory.CreateExecutorForPresentation(
-                        sandboxConfig, command.ActionDelayMs, pauseGate);
-                }
+                var heroAiSpec = BuildAgentAiSpec(command.HeroAi);
+                var enemyAiSpec = BuildAgentAiSpec(command.EnemyAi);
+                executor = executorFactory.CreateExecutorForPresentation(
+                    sandboxConfig, heroAiSpec, enemyAiSpec,
+                    command.ActionDelayMs, pauseGate);
                 _visualizationBridge?.Attach(jobId, sandboxConfig.MaxTurns.Current);
                 try
                 {
@@ -174,7 +161,7 @@ public sealed class SimulationCommandService : ISimulationCommands
                     ms.HeroSpeed, ms.HeroSightRange, ms.HeroStamina,
                     ms.EnemySpeed, ms.EnemySightRange, ms.EnemyStamina);
 
-                Func<IStandardExecutor> createExecutor = BuildExecutorCreator(command.Kind, command.Algorithm, command.ExperimentId, executorFactory, sandboxConfig);
+                Func<IStandardExecutor> createExecutor = BuildExecutorCreator(command.HeroAi, command.EnemyAi, executorFactory, sandboxConfig);
 
                 var startupSettings = BuildSimulationStartupSettings(command.IncrementalSweep);
                 var massRunner = new MassRunner(batchFileManager, _statisticFileManager, sandboxConfig);
@@ -253,25 +240,31 @@ public sealed class SimulationCommandService : ISimulationCommands
     // ── Private helpers ──────────────────────────────────────────────────────
 
     private Func<IStandardExecutor> BuildExecutorCreator(
-        SimulationKind kind, ModelType algorithm, string? experimentId,
+        AgentAiConfigDto heroAiConfig, AgentAiConfigDto enemyAiConfig,
         IExecutorFactory baseFactory, SandBoxConfiguration configuration)
     {
-        if (kind != SimulationKind.TrainedAI)
-            return () => baseFactory.CreateStandardExecutor(configuration);
+        var heroSpec = BuildAgentAiSpec(heroAiConfig);
+        var enemySpec = BuildAgentAiSpec(enemyAiConfig);
+        return () => baseFactory.CreateStandardExecutor(configuration, heroSpec, enemySpec);
+    }
 
-        if (algorithm != ModelType.PPO)
-            throw new NotImplementedException($"Trained AI simulation for '{algorithm}' is not yet implemented.");
+    private AgentAiSpec BuildAgentAiSpec(AgentAiConfigDto config)
+    {
+        if (config.ModelType == ModelType.Random)
+            return AgentAiSpec.Random();
 
-        var modelPath = ResolveModelPath(algorithm, experimentId);
-
-        var aiConfig = new AiConfiguration
+        var modelPath = ResolveModelPath(config.ModelType, config.AgentType.ToString().ToUpperInvariant(), config.ExperimentId);
+        return new AgentAiSpec
         {
-            ModelType  = algorithm,
-            Version    = "1.0",
-            PolicyType = AiPolicy.MLP
+            ModelType = config.ModelType,
+            ModelPath = modelPath,
+            AiConfig = new AiConfiguration
+            {
+                ModelType  = config.ModelType,
+                Version    = "1.0",
+                PolicyType = AiPolicy.MLP
+            }
         };
-
-        return () => baseFactory.CreateInferenceExecutor(configuration, _policyTrainerClient, modelPath, aiConfig);
     }
 
     private static SimulationStartupSettings BuildSimulationStartupSettings(IncrementalSweeperDto? sweep)
@@ -289,27 +282,28 @@ public sealed class SimulationCommandService : ISimulationCommands
     }
 
     /// <summary>
-    /// Resolves the physical path to <c>model.zip</c> for the given algorithm and optional experiment.
+    /// Resolves the physical path to <c>model.zip</c> for the given algorithm, agent type, and optional experiment.
     /// When <paramref name="experimentId"/> is <c>null</c> the most recent model is used.
     /// </summary>
-    private string ResolveModelPath(ModelType algorithm, string? experimentId)
+    private string ResolveModelPath(ModelType algorithm, string agentType, string? experimentId)
     {
-        string algoFolder = Path.Combine(
+        string agentTypeFolder = Path.Combine(
             _fileSourceConfig.Value.FileStorage.BasePath,
             _fileSourceConfig.Value.FileStorage.TrainedAlgorithms,
-            algorithm.ToString());
+            algorithm.ToString(),
+            agentType);
 
         if (!string.IsNullOrEmpty(experimentId))
         {
-            var path = Path.Combine(algoFolder, experimentId, "model.zip");
+            var path = Path.Combine(agentTypeFolder, experimentId, "model.zip");
             if (!File.Exists(path))
                 throw new InvalidOperationException(
                     $"Trained model not found at '{path}'. The experiment '{experimentId}' may have been deleted.");
             return path;
         }
 
-        var modelPath = Directory.Exists(algoFolder)
-            ? Directory.EnumerateDirectories(algoFolder)
+        var modelPath = Directory.Exists(agentTypeFolder)
+            ? Directory.EnumerateDirectories(agentTypeFolder)
                 .SelectMany(expDir => new[] { Path.Combine(expDir, "model.zip") })
                 .Where(File.Exists)
                 .OrderByDescending(File.GetLastWriteTime)
@@ -318,7 +312,7 @@ public sealed class SimulationCommandService : ISimulationCommands
 
         if (string.IsNullOrEmpty(modelPath))
             throw new InvalidOperationException(
-                $"No trained {algorithm} model found under '{algoFolder}'. Train a model first.");
+                $"No trained {algorithm} model found for {agentType} under '{agentTypeFolder}'. Train a model first.");
 
         return modelPath;
     }

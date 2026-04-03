@@ -68,7 +68,7 @@ infra/       ← infrastructure (config, storage, adapters)
 | Project | Responsibility |
 |---|---|
 | `ApplicationServices` | All use-case orchestration: commands (`ISimulationCommands`, `ITrainingCommands`, `IAggregationRunCommands`), queries (`ISimulationQueries`, `ITrainingQueries`, etc.), command services (`TrainingCommandService`, `SimulationCommandService`, `AggregationRunCommandService`), executors (`Executor`, `StandardExecutor`, `ExecutorForPresentation`), runners (`SingleRunner`, `MassRunner`, `AggregationRunner`, `TrainingRunner`), playground state persistence mapper. |
-| `Ai` | `IAiActions` interface + implementations: `RandomActions` (random baseline), `Sb3Actions` (RL bridge), `ObservationBuilder` (encodes agent state + vision grid into a flat `float[]`). Registered as `IAiActions` in DI. |
+| `Ai` | `IAiActions` interface + implementations: `RandomActions` (random baseline), `Sb3Actions` (RL bridge), `InferenceActions` (inference via gRPC), `ObservationBuilder` (encodes agent state + vision grid into a flat `float[]`). No longer registered as scoped `IAiActions` in DI — instances are created per-executor by `ExecutorFactory`. |
 | `AiTrainingOrchestrator` | `ITraining` / `PpoTraining` / `A2cTraining` / `DqnTraining` (hyperparameters), `IPolicyTrainerClient` / `PolicyTrainerClient` (gRPC to Python :50051), `EnvironmentSpecBuilder` (env spec negotiation), `BaseTraining` (physical-core scaling). |
 
 ### Infrastructure layer
@@ -101,7 +101,8 @@ infra/       ← infrastructure (config, storage, adapters)
 | `AgentAction` | `Move` or `Run` (toggle sprint). Validated by `AgentActionAddValidator` before being added to `AvailableActions`. |
 | `SandboxStatus` | `InProgress`, `HeroWon`, `HeroLost`, `TurnLimitReached`, `Failed`. Determines the terminal condition. |
 | `IMessageBroker` | Singleton pub/sub bus. Decouples executor from all consumers (UI, gRPC, AI). Handlers are invoked **synchronously** on the publisher's thread. |
-| `IAiActions` | Single interface for all agent decision logic. `RandomActions` = baseline; `Sb3Actions` = RL bridge. Registered as scoped per execution context. |
+| `IAiActions` | Interface for agent decision logic. Each instance targets a specific `ObjectType` (Hero or Enemy) via its `TargetAgentType` property and filters incoming `RequestAgentDecisionMakeCommand` by agent type. Implementations: `RandomActions` (baseline), `Sb3Actions` (RL bridge), `InferenceActions` (inference via pre-trained model). Executors hold **two** `IAiActions` instances (hero AI + enemy AI). Created by `ExecutorFactory.CreateAiActions()` per `AgentAiSpec`. |
+| `AgentAiSpec` | Value object specifying which AI to use for a given agent type: `ModelType` (Random/PPO/A2C/DQN), `ModelPath`, `AiConfig`. Factory method `AgentAiSpec.Random()` for random baseline. Used by `IExecutorFactory` methods that take `heroAiSpec` + `enemyAiSpec`. |
 | `ObservationBuilder` | Encodes `AgentStateForAIDecision` into a flat `float[]`: 5 scalar features + `gridSize²` vision grid values. **Must stay in sync with `OBS_DIM` / `obs_dim` in the Python service.** |
 | `EnvironmentSpec` | Sent from .NET to Python before every training run via `NegotiateEnvironment`. Contains `obs_dim`, `action_dim`, and named feature list. Python echoes it back; any mismatch aborts training. |
 
@@ -296,7 +297,7 @@ Before opening a pull request, verify:
 |---|---|---|
 | `PolicyTrainerClient.ServerAddress` | `http://localhost:50051` | Python gRPC service address |
 | `FileSource.FileStorage.BasePath` | `C:\FILE_STORAGE` | Root storage directory for all file output |
-| `FileSource.FileStorage.TrainedAlgorithms` | `TRAINED_ALGORITHMS` | Subdirectory for trained model output |
+| `FileSource.FileStorage.TrainedAlgorithms` | `TRAINED_ALGORITHMS` | Subdirectory for trained model output. Structure: `{Algorithm}/{AgentType}/{ExperimentId}/` (e.g. `PPO/HERO/ppo_100000_4_20250101/`) |
 | `FileSource.PrecreatedMap.IsEnabled` | `false` | Load a saved map instead of random generation |
 | `TrainingSettings.Rewards.StepPenalty` | `-0.1` | Reward per step (encourages speed) |
 | `TrainingSettings.Rewards.WinReward` | `+10.0` | Reward on exit reached |

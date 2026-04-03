@@ -24,7 +24,8 @@ public class StandardExecutor : Executor, IStandardExecutor
     public StandardExecutor(
         IPlaygroundCommandsHandleService mapCommands,
         IMemoryDataManager<StandardPlayground> sandboxRepository,
-        IAiActions aiActions,
+        IAiActions heroAiActions,
+        IAiActions enemyAiActions,
         SandBoxConfiguration configuration,
         IFileDataManager<StandardPlaygroundState> playgroundStateFileRepository,
         IMemoryDataManager<AgentStateForAIDecision> agentStateMemoryRepository,
@@ -35,7 +36,7 @@ public class StandardExecutor : Executor, IStandardExecutor
         IFileDataManager<TurnExecutionPerformance> turnExecutionPerformanceFileRepository,
         IFileDataManager<SandboxExecutionPerformance> sandboxExecutionPerformanceFileRepository,
         ITestPreconditionData testPreconditionData) :
-        base(mapCommands, sandboxRepository, aiActions,
+        base(mapCommands, sandboxRepository, heroAiActions, enemyAiActions,
              configuration, playgroundStateFileRepository, agentStateMemoryRepository, messageBroker,
              brokerRpcClient, standardPlaygroundMapper, rawDataLogFileRepository,
              turnExecutionPerformanceFileRepository, sandboxExecutionPerformanceFileRepository,

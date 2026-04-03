@@ -12,78 +12,117 @@
 {
     @* ═══ Configuration Phase ═══ *@
     <MudGrid>
-        @* Left: Model selection data grid *@
+        @* Left: Per-agent AI selection *@
         <MudItem xs="12" md="6">
-            <MudText Typo="Typo.subtitle1" Class="mb-2">Select Simulation Source</MudText>
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Agent AI Configuration</MudText>
             @if (_loadingModels)
             {
                 <MudProgressLinear Indeterminate="true" Class="mb-2" />
             }
-            <MudDataGrid T="SimulationSourceRow" Items="_rows"
-                         SelectedItem="_selectedRow" SelectedItemChanged="OnRowSelected"
-                         SelectOnRowClick="true" Dense="true" Hover="true"
-                         Groupable="true" ReadOnly="true"
-                         Class="source-grid"
-                         RowClassFunc="@((row, _) => row == _selectedRow ? "source-row-selected" : string.Empty)">
-                <Columns>
-                    <PropertyColumn Property="x => x.Group" Title="Category" Groupable="true" Grouping="true" Hidden="true" />
-                    <PropertyColumn Property="x => x.Name" Title="Name" Groupable="false" />
-                    <TemplateColumn Title="Created Date" Groupable="false">
-                        <CellTemplate>
-                            @(context.Item.CreatedDate?.ToString("yyyy-MM-dd HH:mm") ?? "—")
-                        </CellTemplate>
-                    </TemplateColumn>
-                </Columns>
-            </MudDataGrid>
+
+            @* Hero AI selector *@
+            <MudCard Outlined="true" Class="mb-3">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.subtitle2" Color="Color.Primary">Hero AI</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudDataGrid T="SimulationSourceRow" Items="_rows" Dense="true" Hover="true"
+                                 SelectedItem="_selectedHeroRow" SelectedItemChanged="OnHeroRowSelected"
+                                 SelectOnRowClick="true" Filterable="false" SortMode="SortMode.None"
+                                 Groupable="true" aria-label="Hero AI Selection">
+                        <Columns>
+                            <PropertyColumn Property="x => x.Group" Title="AI Type" Groupable="true" Grouping="true" Hidden="true" GroupExpanded="true">
+                                <GroupTemplate>
+                                    <span style="font-weight:bold">@context.Grouping.Key (@context.Grouping.Count())</span>
+                                </GroupTemplate>
+                            </PropertyColumn>
+                            <PropertyColumn Property="x => x.Name" Title="Name" />
+                            <PropertyColumn Property="x => x.AgentType" Title="Agent" />
+                            <PropertyColumn Property="x => x.CreatedDate" Title="Created" Format="yyyy-MM-dd HH:mm" />
+                        </Columns>
+                    </MudDataGrid>
+                </MudCardContent>
+            </MudCard>
+
+            @* Enemy AI selector *@
+            <MudCard Outlined="true" Class="mb-3">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.subtitle2" Color="Color.Error">Enemy AI</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudDataGrid T="SimulationSourceRow" Items="_rows" Dense="true" Hover="true"
+                                 SelectedItem="_selectedEnemyRow" SelectedItemChanged="OnEnemyRowSelected"
+                                 SelectOnRowClick="true" Filterable="false" SortMode="SortMode.None"
+                                 Groupable="true" aria-label="Enemy AI Selection">
+                        <Columns>
+                            <PropertyColumn Property="x => x.Group" Title="AI Type" Groupable="true" Grouping="true" Hidden="true" GroupExpanded="true">
+                                <GroupTemplate>
+                                    <span style="font-weight:bold">@context.Grouping.Key (@context.Grouping.Count())</span>
+                                </GroupTemplate>
+                            </PropertyColumn>
+                            <PropertyColumn Property="x => x.Name" Title="Name" />
+                            <PropertyColumn Property="x => x.AgentType" Title="Agent" />
+                            <PropertyColumn Property="x => x.CreatedDate" Title="Created" Format="yyyy-MM-dd HH:mm" />
+                        </Columns>
+                    </MudDataGrid>
+                </MudCardContent>
+            </MudCard>
         </MudItem>
 
         @* Right: Start button + Preconditions + Sandbox Settings *@
         <MudItem xs="12" md="6">
             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="StartAsync"
                        FullWidth="true" Class="mb-3" Size="Size.Large"
-                       Disabled="_starting || _selectedRow is null"
+                       Disabled="_starting"
                        StartIcon="@Icons.Material.Filled.PlayArrow">
                 @if (_starting) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" /> }
                 Start Simulation
             </MudButton>
 
-            @* Training Preconditions (readonly) *@
-            @if (_selectedRow?.Preconditions is not null)
+            @* Training Preconditions from selected trained models *@
+            @{ var precondRow = _selectedHeroRow?.Preconditions is not null ? _selectedHeroRow : _selectedEnemyRow; }
+            @if (precondRow?.Preconditions is not null)
             {
                 <MudCard Outlined="true" Class="mb-3">
                     <MudCardHeader>
                         <CardHeaderContent>
-                            <MudText Typo="Typo.subtitle1">Training Preconditions</MudText>
+                            <MudText Typo="Typo.subtitle1">Training Preconditions (@precondRow.Name)</MudText>
                         </CardHeaderContent>
                     </MudCardHeader>
                     <MudCardContent>
                         <MudSimpleTable Dense="true" Bordered="true" Style="font-size:0.85rem">
                             <tbody>
-                                <tr><td><strong>Algorithm</strong></td><td>@_selectedRow.Preconditions.Algorithm</td></tr>
-                                <tr><td><strong>Experiment</strong></td><td>@_selectedRow.Preconditions.ExperimentId</td></tr>
-                                <tr><td><strong>Map</strong></td><td>@_selectedRow.Preconditions.MapWidth x @_selectedRow.Preconditions.MapHeight</td></tr>
-                                <tr><td><strong>Max Turns</strong></td><td>@_selectedRow.Preconditions.MaxTurns</td></tr>
-                                <tr><td><strong>Blocks %</strong></td><td>@_selectedRow.Preconditions.BlocksPercent</td></tr>
-                                <tr><td><strong>Enemies %</strong></td><td>@_selectedRow.Preconditions.EnemiesPercent</td></tr>
-                                <tr><td><strong>Hero</strong></td><td>Speed=@_selectedRow.Preconditions.HeroSpeed, Sight=@_selectedRow.Preconditions.HeroSightRange, Stamina=@_selectedRow.Preconditions.HeroStamina</td></tr>
-                                <tr><td><strong>Enemy</strong></td><td>Speed=@_selectedRow.Preconditions.EnemySpeed, Sight=@_selectedRow.Preconditions.EnemySightRange, Stamina=@_selectedRow.Preconditions.EnemyStamina</td></tr>
-                                <tr><td><strong>Step Penalty</strong></td><td>@_selectedRow.Preconditions.StepPenalty</td></tr>
-                                <tr><td><strong>Win Reward</strong></td><td>@_selectedRow.Preconditions.WinReward</td></tr>
-                                <tr><td><strong>Loss Reward</strong></td><td>@_selectedRow.Preconditions.LossReward</td></tr>
-                                @foreach (var hp in _selectedRow.Preconditions.Hyperparameters)
+                                <tr><td><strong>Algorithm</strong></td><td>@precondRow.Preconditions.Algorithm</td></tr>
+                                <tr><td><strong>Experiment</strong></td><td>@precondRow.Preconditions.ExperimentId</td></tr>
+                                <tr><td><strong>Trainee Agent</strong></td><td>@precondRow.Preconditions.TraineeAgent</td></tr>
+                                <tr><td><strong>Opponent AI</strong></td><td>@precondRow.Preconditions.OpponentAiType @(precondRow.Preconditions.OpponentModelId is not null ? $"({precondRow.Preconditions.OpponentModelId})" : "")</td></tr>
+                                <tr><td><strong>Map</strong></td><td>@precondRow.Preconditions.MapWidth x @precondRow.Preconditions.MapHeight</td></tr>
+                                <tr><td><strong>Max Turns</strong></td><td>@precondRow.Preconditions.MaxTurns</td></tr>
+                                <tr><td><strong>Blocks %</strong></td><td>@precondRow.Preconditions.BlocksPercent</td></tr>
+                                <tr><td><strong>Enemies %</strong></td><td>@precondRow.Preconditions.EnemiesPercent</td></tr>
+                                <tr><td><strong>Hero</strong></td><td>Speed=@precondRow.Preconditions.HeroSpeed, Sight=@precondRow.Preconditions.HeroSightRange, Stamina=@precondRow.Preconditions.HeroStamina</td></tr>
+                                <tr><td><strong>Enemy</strong></td><td>Speed=@precondRow.Preconditions.EnemySpeed, Sight=@precondRow.Preconditions.EnemySightRange, Stamina=@precondRow.Preconditions.EnemyStamina</td></tr>
+                                <tr><td><strong>Step Penalty</strong></td><td>@precondRow.Preconditions.StepPenalty</td></tr>
+                                <tr><td><strong>Win Reward</strong></td><td>@precondRow.Preconditions.WinReward</td></tr>
+                                <tr><td><strong>Loss Reward</strong></td><td>@precondRow.Preconditions.LossReward</td></tr>
+                                @foreach (var hp in precondRow.Preconditions.Hyperparameters)
                                 {
                                     <tr><td><strong>@hp.Key</strong></td><td>@hp.Value</td></tr>
                                 }
-                                <tr><td><strong>Trained At</strong></td><td>@_selectedRow.Preconditions.StartedAt.ToString("yyyy-MM-dd HH:mm")</td></tr>
+                                <tr><td><strong>Trained At</strong></td><td>@precondRow.Preconditions.StartedAt.ToString("yyyy-MM-dd HH:mm")</td></tr>
                             </tbody>
                         </MudSimpleTable>
                     </MudCardContent>
                 </MudCard>
             }
-            else if (_selectedRow?.Kind == SimulationKind.RandomAI)
+            else if (_selectedHeroRow?.Kind == SimulationKind.RandomAI && _selectedEnemyRow?.Kind == SimulationKind.RandomAI)
             {
                 <MudAlert Severity="Severity.Info" Class="mb-3" Dense="true">
-                    Random AI — no training preconditions. Default sandbox settings are used.
+                    Both agents use Random AI — no training preconditions. Default sandbox settings are used.
                 </MudAlert>
             }
 
@@ -230,12 +269,5 @@ else
 }
 
 <style>
-    .source-grid .mud-table-body .mud-table-row {
-        cursor: pointer;
-    }
-
-    .source-grid .mud-table-body .mud-table-row.source-row-selected,
-    .source-grid .mud-table-body .mud-table-row.source-row-selected:hover {
-        background-color: rgba(var(--mud-palette-primary-rgb), 0.15) !important;
-    }
+    /* no grid-specific styles needed */
 </style>

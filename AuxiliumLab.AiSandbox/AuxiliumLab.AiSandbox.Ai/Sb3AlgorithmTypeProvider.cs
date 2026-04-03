@@ -2,6 +2,7 @@ using AuxiliumLab.AiSandbox.Ai.Configuration;
 using AuxiliumLab.AiSandbox.Common.MessageBroker;
 using AuxiliumLab.AiSandbox.Infrastructure.MemoryManager;
 using AuxiliumLab.AiSandbox.SharedBaseTypes.AiContract.Dto;
+using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects;
 
 namespace AuxiliumLab.AiSandbox.Ai;
 
@@ -15,6 +16,7 @@ public class Sb3AlgorithmTypeProvider
         ModelType modelType,
         IMessageBroker messageBroker,
         IMemoryDataManager<AgentStateForAIDecision> agentStateMemoryRepository,
+        ObjectType targetAgentType,
         float stepPenalty = -0.1f,
         float winReward = 10f,
         float lossReward = -10f)
@@ -34,7 +36,8 @@ public class Sb3AlgorithmTypeProvider
             Guid.NewGuid(),
             stepPenalty,
             winReward,
-            lossReward);
+            lossReward,
+            targetAgentType);
     }
 }
 

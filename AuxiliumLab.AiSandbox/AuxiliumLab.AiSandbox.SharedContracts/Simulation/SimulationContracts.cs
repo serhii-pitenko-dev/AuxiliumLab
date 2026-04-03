@@ -6,6 +6,9 @@ public enum AiPolicy { MLP = 0, LSTM }
 
 public enum SimulationKind { RandomAI, TrainedAI }
 
+/// <summary>Which agent type is being trained (or was trained).</summary>
+public enum TraineeAgentType { Hero = 0, Enemy }
+
 public class SimulationSandboxOverrideDto
 {
     public int    MaxTurns       { get; set; }
@@ -30,6 +33,11 @@ public class StartSingleSimulationCommand
     public SimulationSandboxOverrideDto  SandboxSettings { get; set; } = new();
     /// <summary>Delay in milliseconds applied between each agent action during presentation.</summary>
     public int                           ActionDelayMs   { get; set; } = 500;
+
+    /// <summary>AI configuration for the Hero agent.</summary>
+    public AgentAiConfigDto HeroAi  { get; set; } = new();
+    /// <summary>AI configuration for the Enemy agent.</summary>
+    public AgentAiConfigDto EnemyAi { get; set; } = new();
 }
 
 public class StartMassSimulationCommand
@@ -41,6 +49,11 @@ public class StartMassSimulationCommand
     public string?                       ExperimentId     { get; set; }
     public SimulationSandboxOverrideDto  SandboxSettings  { get; set; } = new();
     public IncrementalSweeperDto?        IncrementalSweep { get; set; }
+
+    /// <summary>AI configuration for the Hero agent.</summary>
+    public AgentAiConfigDto HeroAi  { get; set; } = new();
+    /// <summary>AI configuration for the Enemy agent.</summary>
+    public AgentAiConfigDto EnemyAi { get; set; } = new();
 }
 
 public class IncrementalSweeperDto
@@ -82,4 +95,14 @@ public class SandboxDefaultsDto
     public int    EnemySpeed       { get; set; }
     public int    EnemySightRange  { get; set; }
     public int    EnemyStamina     { get; set; }
+}
+
+/// <summary>Per-agent AI configuration. Determines whether an agent uses Random or a pre-trained model.</summary>
+public class AgentAiConfigDto
+{
+    public ModelType  ModelType    { get; set; } = ModelType.Random;
+    /// <summary>Experiment folder name. Required when <see cref="ModelType"/> is not Random.</summary>
+    public string?    ExperimentId { get; set; }
+    /// <summary>Agent type subfolder (HERO or ENEMY) under the algorithm folder.</summary>
+    public TraineeAgentType AgentType { get; set; } = TraineeAgentType.Hero;
 }

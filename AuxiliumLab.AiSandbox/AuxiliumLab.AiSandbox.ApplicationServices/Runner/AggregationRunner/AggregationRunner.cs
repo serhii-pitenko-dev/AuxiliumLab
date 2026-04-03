@@ -154,11 +154,21 @@ public class AggregationRunner
 
                     // Build the executor creator when a model path is available;
                     // fall back to RandomActions when no trained model exists.
+                    // For aggregation, we default to training the Hero agent.
                     Func<IExecutorFactory, IStandardExecutor>? createInferenceExecutor =
                         string.IsNullOrEmpty(modelPath)
                             ? null
-                            : factory => factory.CreateInferenceExecutor(
-                                _sandboxConfig, _policyTrainerClient, modelPath, aiConfig);
+                            : factory =>
+                            {
+                                var heroSpec = new AgentAiSpec
+                                {
+                                    ModelType = algorithmType,
+                                    ModelPath = modelPath,
+                                    AiConfig  = aiConfig
+                                };
+                                return factory.CreateStandardExecutor(
+                                    _sandboxConfig, heroSpec, AgentAiSpec.Random());
+                            };
 
                     var result = await RunMassStepAsync(
                         step,
@@ -209,7 +219,7 @@ public class AggregationRunner
 
         Func<IStandardExecutor> createExecutor = createExecutorOverride is not null
             ? () => createExecutorOverride(executorFactory)
-            : () => executorFactory.CreateStandardExecutor(_sandboxConfig);
+            : () => executorFactory.CreateStandardExecutor(_sandboxConfig, AgentAiSpec.Random(), AgentAiSpec.Random());
 
         var simulationSettings = new SimulationStartupSettings
         {
