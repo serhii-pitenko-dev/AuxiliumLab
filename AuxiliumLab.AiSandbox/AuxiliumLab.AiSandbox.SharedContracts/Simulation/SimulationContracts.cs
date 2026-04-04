@@ -22,6 +22,8 @@ public class SimulationSandboxOverrideDto
     public int    EnemySpeed       { get; set; }
     public int    EnemySightRange  { get; set; }
     public int    EnemyStamina     { get; set; }
+    /// <summary>Delay in milliseconds between each agent action during presentation visualization.</summary>
+    public int    ActionDelayMs    { get; set; } = 500;
 }
 
 public class StartSingleSimulationCommand

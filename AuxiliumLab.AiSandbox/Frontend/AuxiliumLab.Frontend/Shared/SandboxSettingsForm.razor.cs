@@ -67,4 +67,9 @@ public partial class SandboxSettingsForm
         get => Override.EnemyStamina;
         set { Override.EnemyStamina = value; OverrideChanged.InvokeAsync(Override); }
     }
+    private int ActionDelayMs
+    {
+        get => Override.ActionDelayMs;
+        set { Override.ActionDelayMs = value; OverrideChanged.InvokeAsync(Override); }
+    }
 }

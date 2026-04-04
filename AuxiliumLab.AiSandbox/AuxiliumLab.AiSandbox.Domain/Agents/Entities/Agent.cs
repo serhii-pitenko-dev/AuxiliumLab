@@ -9,6 +9,14 @@ public abstract class Agent: SandboxMapBaseObject
 {
     private AgentActionAddValidator _agentActionValidator = new AgentActionAddValidator();
 
+    /// <summary>
+    /// Maximum number of toggle-ability activations/deactivations allowed per turn.
+    /// Prevents degenerate RL policies from toggling Run endlessly.
+    /// </summary>
+    public const int MaxToggleActionsPerTurn = 4;
+
+    private int _toggleActionsThisTurn;
+
     public List<AgentAction> AvailableActions { get; private set; } = new();
 
     public List<AgentAction> ExecutedActions { get; private set; } = new();
@@ -70,6 +78,10 @@ public abstract class Agent: SandboxMapBaseObject
         switch (action)
         {
             case AgentAction.Run:
+                if (_toggleActionsThisTurn >= MaxToggleActionsPerTurn)
+                    return false;
+
+                _toggleActionsThisTurn++;
                 UpdateActionsListOnExecute(AgentAction.Run);
                 if (!isActivated)
                 {
@@ -90,6 +102,7 @@ public abstract class Agent: SandboxMapBaseObject
     public virtual void GetReadyForNewTurn()
     {
         ResetPath();
+        _toggleActionsThisTurn = 0;
         ReCalculateAvailableActions();
         RestoringCharacteristics();
         //add current/started position to path

@@ -72,6 +72,7 @@ public partial class VisualizationPage : IAsyncDisposable
 
         _override = BuildDefaultOverride();
         _cmd.SandboxSettings = _override;
+        _cmd.ActionDelayMs = _override.ActionDelayMs;
 
         await LoadModelsAndBuildRowsAsync();
     }
@@ -212,6 +213,7 @@ public partial class VisualizationPage : IAsyncDisposable
     private void OnOverrideChanged(SimulationSandboxOverrideDto dto)
     {
         _cmd.SandboxSettings = dto;
+        _cmd.ActionDelayMs = dto.ActionDelayMs;
     }
 
     // ── Simulation controls ─────────────────────────────────────────────────

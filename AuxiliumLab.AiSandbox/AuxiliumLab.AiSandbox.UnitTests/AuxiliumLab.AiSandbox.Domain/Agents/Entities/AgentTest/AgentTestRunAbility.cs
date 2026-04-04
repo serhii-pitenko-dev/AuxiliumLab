@@ -231,4 +231,57 @@ public class AgentTestRunAbility
         moveCount.Should().Be(8,
             "When IsRun is true, GetReadyForNewTurn should maintain doubled movements");
     }
+
+    /// <summary>
+    /// Verifies that DoAction returns false once the toggle limit per turn is reached.
+    /// </summary>
+    [TestMethod]
+    public void DoAction_ExceedsToggleLimit_ReturnsFalse()
+    {
+        // Arrange
+        var cell = new Cell(new Coordinates(0, 0));
+        var characters = new InitialAgentCharacters(5, 3, 20, new List<Coordinates>(), new List<AgentAction>(), new List<AgentAction>());
+        var agent = new TestAgent(cell, characters, Guid.NewGuid());
+        agent.GetReadyForNewTurn();
+
+        // Exhaust all 4 toggle actions
+        for (var i = 0; i < Agent.MaxToggleActionsPerTurn; i++)
+        {
+            var activated = i % 2 == 0;
+            agent.DoAction(AgentAction.Run, activated).Should().BeTrue(
+                $"Toggle #{i + 1} should succeed (limit is {Agent.MaxToggleActionsPerTurn})");
+        }
+
+        // Act — 5th toggle
+        var result = agent.DoAction(AgentAction.Run, true);
+
+        // Assert
+        result.Should().BeFalse("Toggle limit per turn should be enforced");
+    }
+
+    /// <summary>
+    /// Verifies that toggle limit resets when a new turn begins.
+    /// </summary>
+    [TestMethod]
+    public void DoAction_AfterNewTurn_ToggleLimitResets()
+    {
+        // Arrange
+        var cell = new Cell(new Coordinates(0, 0));
+        var characters = new InitialAgentCharacters(5, 3, 20, new List<Coordinates>(), new List<AgentAction>(), new List<AgentAction>());
+        var agent = new TestAgent(cell, characters, Guid.NewGuid());
+        agent.GetReadyForNewTurn();
+
+        // Exhaust toggle limit
+        for (var i = 0; i < Agent.MaxToggleActionsPerTurn; i++)
+            agent.DoAction(AgentAction.Run, i % 2 == 0);
+
+        agent.DoAction(AgentAction.Run, true).Should().BeFalse("Limit should be hit");
+
+        // Act — new turn
+        agent.GetReadyForNewTurn();
+        var result = agent.DoAction(AgentAction.Run, true);
+
+        // Assert
+        result.Should().BeTrue("Toggle limit should reset after GetReadyForNewTurn");
+    }
 }

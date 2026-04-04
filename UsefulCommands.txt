@@ -4,7 +4,10 @@ Run Startup Release: dotnet run --project AuxiliumLab.AiSandbox/AuxiliumLab.AiSa
 
 Run Frontend: dotnet run --project AuxiliumLab.AiSandbox\Frontend\AuxiliumLab.Frontend\AuxiliumLab.Frontend.csproj
 Run Frontend Release: dotnet run --project AuxiliumLab.AiSandbox\Frontend\AuxiliumLab.Frontend\AuxiliumLab.Frontend.csproj --configuration Release
-
+Stop Frontend: Get-Process -Id (Get-NetTCPConnection -LocalPort 5001 -ErrorAction SilentlyContinue).OwningProcess | Stop-Process -Force
+Clean Frontend: dotnet clean AuxiliumLab.AiSandbox\Frontend\AuxiliumLab.Frontend\AuxiliumLab.Frontend.csproj
+Build Frontend: dotnet build AuxiliumLab.AiSandbox\Frontend\AuxiliumLab.Frontend\AuxiliumLab.Frontend.csproj
+Rebuild Frontend: dotnet clean AuxiliumLab.AiSandbox\Frontend\AuxiliumLab.Frontend\AuxiliumLab.Frontend.csproj; dotnet build AuxiliumLab.AiSandbox\Frontend\AuxiliumLab.Frontend\AuxiliumLab.Frontend.csproj
 
 
 # From d:\AiProjects\AuxiliumLab

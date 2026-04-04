@@ -346,9 +346,9 @@ public abstract class Executor : IExecutor, IDisposable
 
             case AgentDecisionUseAbilityResponse abilityEvent:
                 // Apply ability activation/deactivation
-                if (abilityEvent.IsSuccess)
-                    agent.DoAction(abilityEvent.ActionType, abilityEvent.IsActivated);
-                else
+                if (abilityEvent.IsSuccess && !agent.DoAction(abilityEvent.ActionType, abilityEvent.IsActivated))
+                    agent.ActionFailed(abilityEvent.ActionType);
+                else if (!abilityEvent.IsSuccess)
                     agent.ActionFailed(abilityEvent.ActionType);
 
                 if (NeedsAgentNotifications)

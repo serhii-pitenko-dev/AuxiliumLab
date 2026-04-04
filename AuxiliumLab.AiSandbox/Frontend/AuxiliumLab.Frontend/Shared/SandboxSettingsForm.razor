@@ -48,6 +48,9 @@
                 <MudItem xs="12" sm="6" md="4">
                     <MudNumericField @bind-Value="EnemyStamina" Label="Enemy Stamina" Variant="Variant.Outlined" />
                 </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField @bind-Value="ActionDelayMs" Label="Action Delay (ms)" Variant="Variant.Outlined" Min="0" />
+                </MudItem>
             </MudGrid>
         </MudCardContent>
     }
