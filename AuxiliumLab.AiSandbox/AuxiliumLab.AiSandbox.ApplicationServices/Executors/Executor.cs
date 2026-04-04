@@ -391,6 +391,12 @@ public abstract class Executor : IExecutor, IDisposable
             return (SandboxStatus.HeroLost, false);
         }
 
+        // Enemy trying to move onto another enemy — treat as blocked
+        if (agent.Type is ObjectType.Enemy && moveToCell.Object.Type == ObjectType.Enemy)
+        {
+            return (SandboxStatus.InProgress, false);
+        }
+
         // Check for Hero is target cell with Exit
         if (agent.Type is ObjectType.Enemy && moveToCell.Object.Type == ObjectType.Exit)
         {
