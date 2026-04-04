@@ -315,6 +315,7 @@ public class Sb3Actions : IAiActions
         _actionTcs?.TrySetResult(cmd.Action);
 
         // Await step result then publish response to SimulationService
+        var capturedCommandId = cmd.Id;
         _ = Task.Run(async () =>
         {
             try
@@ -324,7 +325,15 @@ public class Sb3Actions : IAiActions
             }
             catch
             {
-                // Step faulted — exception already propagated to SimulationService via TCS.
+                // Episode faulted mid-step. The comment "already propagated to SimulationService"
+                // was WRONG: SimulationService.Step uses a direct broker subscription, not the TCS.
+                // Without publishing here, SimulationService would hang until its 180s timeout fires
+                // (or Python's 120s gRPC deadline), causing DEADLINE_EXCEEDED.
+                // Publish a truncated terminal step so Python can call Reset and continue training.
+                _messageBroker.Publish(new SimulationStepResponse(
+                    Guid.NewGuid(), GymId, capturedCommandId, _lastObservation,
+                    _lossReward, true, false,
+                    new Dictionary<string, string>()));
             }
         });
     }

@@ -47,7 +47,7 @@ public class RandomActions : IAiActions, IDisposable
         _onDecisionRequestHandler = msg =>
         {
             var agent = _agentStateMemoryRepository.LoadObject(msg.AgentId);
-            if (agent.Type != TargetAgentType) return;
+            if (agent is null || agent.Type != TargetAgentType) return;
             AgentDecisionBaseResponse response = HandleAgentActionMessage(agent, msg.Id);
             _messageBroker.Publish(response);
         };
@@ -55,6 +55,10 @@ public class RandomActions : IAiActions, IDisposable
 
     public void Initialize()
     {
+        // Unsubscribe first to prevent handler accumulation when the same instance is
+        // reused across multiple episodes (training runner keeps one instance per gym).
+        _messageBroker.Unsubscribe(_onGameStartedHandler);
+        _messageBroker.Unsubscribe(_onDecisionRequestHandler);
         _messageBroker.Subscribe(_onGameStartedHandler);
         _messageBroker.Subscribe(_onDecisionRequestHandler);
     }
