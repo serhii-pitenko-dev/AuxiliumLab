@@ -71,11 +71,12 @@ class TestEnvironmentWrapper:
     
     def test_deterministic_with_seed(self, fake_adapter):
         """Test that environment is deterministic with same seed."""
-        env1 = ExternalSimEnv(fake_adapter, observation_dim=4, action_dim=4)
+        env1 = ExternalSimEnv(fake_adapter, observation_dim=4, action_dim=4, max_steps=100)
         env2 = ExternalSimEnv(
             FakeExternalEnvAdapter(observation_dim=4, action_dim=4),
             observation_dim=4,
-            action_dim=4
+            action_dim=4,
+            max_steps=100,
         )
         
         obs1, _ = env1.reset(seed=123)

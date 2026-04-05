@@ -259,7 +259,10 @@ public class TrainingRunner
         // 7. Negotiate environment contract with Python before starting training.
         //    This replaces the old silent coupling where obs_dim was hard-coded
         //    on both sides. Any mismatch is now a hard error here.
-        var spec = EnvironmentSpecBuilder.Build(effectiveSandboxConfig, experimentId);
+        int traineeSightRange = traineeAgentType == TraineeAgentType.Hero
+            ? effectiveSandboxConfig.Hero.SightRange.Current
+            : effectiveSandboxConfig.Enemy.SightRange.Current;
+        var spec = EnvironmentSpecBuilder.Build(effectiveSandboxConfig, experimentId, traineeSightRange);
         var negotiationCt = new CancellationTokenSource(TimeSpan.FromSeconds(30)).Token;
         NegotiateEnvironmentResponse negotiation;
         try

@@ -1,4 +1,5 @@
 using AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
+using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.PolicyTrainer;
 using AuxiliumLab.AiSandbox.Infrastructure.Configuration.Preconditions;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -36,6 +37,14 @@ public class EnvironmentSpecBuilderTests
             MaxTurns     = new IncrementalRange { Current = 50, Min = 10, Max = 3000, Step = 20 },
         };
 
+    /// <summary>Convenience overload that builds a spec using the given sight range as both config hero value and trainee value.</summary>
+    private static EnvironmentSpec BuildSpec(int sightRange, string experimentId) =>
+        EnvironmentSpecBuilder.Build(MakeSettings(sightRange), experimentId, sightRange);
+
+    /// <summary>Build spec with explicit settings and sight range.</summary>
+    private static EnvironmentSpec BuildSpec(SandBoxConfiguration settings, string experimentId, int traineeSightRange) =>
+        EnvironmentSpecBuilder.Build(settings, experimentId, traineeSightRange);
+
     // -----------------------------------------------------------------------
     // ObservationDim formula
     // -----------------------------------------------------------------------
@@ -47,7 +56,7 @@ public class EnvironmentSpecBuilderTests
     [DataRow(1,   14)]   // 5 + 3^2  = 14
     public void Build_ObservationDim_MatchesFormula(int sightRange, int expectedObsDim)
     {
-        var spec = EnvironmentSpecBuilder.Build(MakeSettings(sightRange), "exp_formula");
+        var spec = BuildSpec(sightRange, "exp_formula");
 
         spec.ObservationDim.Should().Be(expectedObsDim,
             $"obs_dim mismatch for sight_range={sightRange}");
@@ -60,7 +69,7 @@ public class EnvironmentSpecBuilderTests
     [TestMethod]
     public void Build_ActionDim_IsAlwaysFive()
     {
-        var spec = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_action");
+        var spec = BuildSpec(5, "exp_action");
         spec.ActionDim.Should().Be(5);
     }
 
@@ -71,7 +80,7 @@ public class EnvironmentSpecBuilderTests
     [TestMethod]
     public void Build_SightRange_EchoesSettingsCurrent()
     {
-        var spec = EnvironmentSpecBuilder.Build(MakeSettings(7), "exp_sr");
+        var spec = BuildSpec(7, "exp_sr");
         spec.SightRange.Should().Be(7);
     }
 
@@ -82,7 +91,7 @@ public class EnvironmentSpecBuilderTests
     [TestMethod]
     public void Build_FeatureNames_CountMatchesObsDim()
     {
-        var spec = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_names");
+        var spec = BuildSpec(5, "exp_names");
         spec.ObservationFeatureNames.Should().HaveCount(spec.ObservationDim,
             "Length of ObservationFeatureNames must equal ObservationDim.");
     }
@@ -90,7 +99,7 @@ public class EnvironmentSpecBuilderTests
     [TestMethod]
     public void Build_FeatureNames_FirstFiveAreScalars()
     {
-        var spec = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_scalars");
+        var spec = BuildSpec(5, "exp_scalars");
         string[] expectedScalars = ["x", "y", "is_run", "stamina_frac", "speed"];
 
         for (int i = 0; i < expectedScalars.Length; i++)
@@ -102,7 +111,7 @@ public class EnvironmentSpecBuilderTests
     public void Build_FeatureNames_GridCellsFollowScalars()
     {
         int sightRange = 2;           // gridSize = 5
-        var spec = EnvironmentSpecBuilder.Build(MakeSettings(sightRange), "exp_grid");
+        var spec = BuildSpec(sightRange, "exp_grid");
 
         // First grid cell at index 5 must be "grid_0_0"
         spec.ObservationFeatureNames[5].Should().Be("grid_0_0");
@@ -120,7 +129,7 @@ public class EnvironmentSpecBuilderTests
     [TestMethod]
     public void Build_MaxSteps_MatchesMaxTurnsCurrent()
     {
-        var spec = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_maxsteps");
+        var spec = BuildSpec(5, "exp_maxsteps");
         spec.MaxSteps.Should().Be(50, "MaxSteps must equal MaxTurns.Current from settings");
     }
 
@@ -133,7 +142,7 @@ public class EnvironmentSpecBuilderTests
         var settings = MakeSettings(5);
         settings.MaxTurns.Current = maxTurns;
 
-        var spec = EnvironmentSpecBuilder.Build(settings, "exp_maxsteps_vary");
+        var spec = BuildSpec(settings, "exp_maxsteps_vary", 5);
         spec.MaxSteps.Should().Be(maxTurns);
     }
 
@@ -144,9 +153,9 @@ public class EnvironmentSpecBuilderTests
     [TestMethod]
     public void AssertEchoMatches_IdenticalSpecs_DoesNotThrow()
     {
-        var sent = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_echo_ok");
+        var sent = BuildSpec(5, "exp_echo_ok");
         // Build another identical spec as a fake "echo"
-        var echoed = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_echo_ok");
+        var echoed = BuildSpec(5, "exp_echo_ok");
 
         // Must not throw
         EnvironmentSpecBuilder.AssertEchoMatches(sent, echoed, "exp_echo_ok");
@@ -155,8 +164,8 @@ public class EnvironmentSpecBuilderTests
     [TestMethod]
     public void AssertEchoMatches_MismatchedObsDim_Throws()
     {
-        var sent = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_mismatch");
-        var echoed = EnvironmentSpecBuilder.Build(MakeSettings(4), "exp_mismatch"); // different sight_range → different obs_dim
+        var sent = BuildSpec(5, "exp_mismatch");
+        var echoed = BuildSpec(4, "exp_mismatch"); // different sight_range → different obs_dim
 
         FluentActions.Invoking(() => EnvironmentSpecBuilder.AssertEchoMatches(sent, echoed, "exp_mismatch"))
             .Should().ThrowExactly<InvalidOperationException>()
@@ -166,8 +175,8 @@ public class EnvironmentSpecBuilderTests
     [TestMethod]
     public void AssertEchoMatches_MismatchedMaxSteps_Throws()
     {
-        var sent = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_ms_mismatch");
-        var echoed = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp_ms_mismatch");
+        var sent = BuildSpec(5, "exp_ms_mismatch");
+        var echoed = BuildSpec(5, "exp_ms_mismatch");
         echoed.MaxSteps = sent.MaxSteps + 1; // tamper with max_steps
 
         FluentActions.Invoking(() => EnvironmentSpecBuilder.AssertEchoMatches(sent, echoed, "exp_ms_mismatch"))
@@ -178,7 +187,7 @@ public class EnvironmentSpecBuilderTests
     [TestMethod]
     public void AssertEchoMatches_NullSentSpec_Throws()
     {
-        var echoed = EnvironmentSpecBuilder.Build(MakeSettings(5), "exp");
+        var echoed = BuildSpec(5, "exp");
         FluentActions.Invoking(() => EnvironmentSpecBuilder.AssertEchoMatches(null!, echoed, "exp"))
             .Should().ThrowExactly<ArgumentNullException>();
     }
@@ -190,7 +199,7 @@ public class EnvironmentSpecBuilderTests
     [TestMethod]
     public void Build_NullSettings_ThrowsArgumentNullException()
     {
-        FluentActions.Invoking(() => EnvironmentSpecBuilder.Build(null!, "exp"))
+        FluentActions.Invoking(() => EnvironmentSpecBuilder.Build(null!, "exp", 5))
             .Should().ThrowExactly<ArgumentNullException>();
     }
 
@@ -199,7 +208,7 @@ public class EnvironmentSpecBuilderTests
     [DataRow("   ")]
     public void Build_EmptyOrWhiteSpaceExperimentId_ThrowsArgumentException(string experimentId)
     {
-        FluentActions.Invoking(() => EnvironmentSpecBuilder.Build(MakeSettings(5), experimentId))
+        FluentActions.Invoking(() => EnvironmentSpecBuilder.Build(MakeSettings(5), experimentId, 5))
             .Should().ThrowExactly<ArgumentException>();
     }
 }

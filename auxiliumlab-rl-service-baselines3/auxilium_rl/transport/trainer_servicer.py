@@ -15,9 +15,6 @@ logger = logging.getLogger(__name__)
 
 class PolicyTrainerServicer(policy_trainer_pb2_grpc.PolicyTrainerServiceServicer):
     """Implementation of the PolicyTrainerService."""
-    
-    # Scalar features: x, y, is_run, stamina_frac, speed  (must match EnvironmentSpecBuilder.ScalarFeatureCount)
-    _SCALAR_FEATURE_COUNT = 5
 
     def __init__(
         self,
@@ -43,38 +40,43 @@ class PolicyTrainerServicer(policy_trainer_pb2_grpc.PolicyTrainerServiceServicer
         request: policy_trainer_pb2.NegotiateEnvironmentRequest,
         context
     ) -> policy_trainer_pb2.NegotiateEnvironmentResponse:
-        """Validate and store the environment spec sent by .NET before training starts."""
+        """Validate and store the environment spec sent by the caller before training starts.
+
+        Performs only generic validation (positive dimensions). Domain-specific
+        observation formulas are the caller's responsibility.
+        """
         experiment_id = request.experiment_id
         spec = request.spec
 
-        # Validate obs_dim formula: 5 scalars + (2*sight_range+1)^2 grid cells
-        grid_size = 2 * spec.sight_range + 1
-        expected_obs_dim = self._SCALAR_FEATURE_COUNT + grid_size * grid_size
-
-        if spec.observation_dim != expected_obs_dim:
-            msg = (
-                f"obs_dim mismatch for experiment '{experiment_id}': "
-                f"received {spec.observation_dim}, expected {expected_obs_dim} "
-                f"(5 + ({grid_size})^2, sight_range={spec.sight_range})"
-            )
+        # Generic validation — no domain-specific formula checks.
+        if spec.observation_dim <= 0:
+            msg = f"observation_dim must be positive, got {spec.observation_dim}"
             logger.error(msg)
             return policy_trainer_pb2.NegotiateEnvironmentResponse(
-                accepted=False,
-                message=msg,
-                echoed_spec=spec,
-            )
+                accepted=False, message=msg, echoed_spec=spec)
+
+        if spec.action_dim <= 0:
+            msg = f"action_dim must be positive, got {spec.action_dim}"
+            logger.error(msg)
+            return policy_trainer_pb2.NegotiateEnvironmentResponse(
+                accepted=False, message=msg, echoed_spec=spec)
+
+        if spec.max_steps <= 0:
+            msg = f"max_steps must be positive, got {spec.max_steps}"
+            logger.error(msg)
+            return policy_trainer_pb2.NegotiateEnvironmentResponse(
+                accepted=False, message=msg, echoed_spec=spec)
 
         # Store the spec and update the orchestrator's env_config for this experiment.
         self._experiment_specs[experiment_id] = spec
         self.orchestrator.env_config.observation_dim = spec.observation_dim
         self.orchestrator.env_config.action_dim = spec.action_dim
-        if spec.max_steps > 0:
-            self.orchestrator.env_config.max_steps = spec.max_steps
+        self.orchestrator.env_config.max_steps = spec.max_steps
 
         msg = (
             f"Environment spec accepted for experiment '{experiment_id}': "
             f"obs_dim={spec.observation_dim}, action_dim={spec.action_dim}, "
-            f"sight_range={spec.sight_range}, max_steps={spec.max_steps}."
+            f"max_steps={spec.max_steps}."
         )
         logger.info(msg)
 
@@ -129,7 +131,16 @@ class PolicyTrainerServicer(policy_trainer_pb2_grpc.PolicyTrainerServiceServicer
                     message="total_timesteps must be positive",
                     run_id=""
                 )
-            
+
+            # Ensure NegotiateEnvironment was called before training.
+            ec = self.orchestrator.env_config
+            if ec.observation_dim is None or ec.action_dim is None or ec.max_steps is None:
+                return policy_trainer_pb2.TrainingResponse(
+                    status=policy_trainer_pb2.FAILED,
+                    message="NegotiateEnvironment must be called before StartTraining",
+                    run_id=""
+                )
+
             # Create training config
             config = TrainingConfig(
                 algorithm=algorithm,

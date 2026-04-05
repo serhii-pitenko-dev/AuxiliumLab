@@ -26,7 +26,14 @@ if _version_not_supported:
 
 
 class PolicyTrainerServiceStub(object):
-    """Service for training and inference with RL agents
+    """---------------------------------------------------------------------------
+    Domain-agnostic RL training and inference service.
+    This file has no knowledge of the simulation that produces observations.
+    The caller negotiates observation/action dimensions at runtime via
+    NegotiateEnvironment before starting any training run.
+    ---------------------------------------------------------------------------
+
+    Service for training and inference with RL agents
     """
 
     def __init__(self, channel):
@@ -68,7 +75,14 @@ class PolicyTrainerServiceStub(object):
 
 
 class PolicyTrainerServiceServicer(object):
-    """Service for training and inference with RL agents
+    """---------------------------------------------------------------------------
+    Domain-agnostic RL training and inference service.
+    This file has no knowledge of the simulation that produces observations.
+    The caller negotiates observation/action dimensions at runtime via
+    NegotiateEnvironment before starting any training run.
+    ---------------------------------------------------------------------------
+
+    Service for training and inference with RL agents
     """
 
     def NegotiateEnvironment(self, request, context):
@@ -157,7 +171,14 @@ def add_PolicyTrainerServiceServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class PolicyTrainerService(object):
-    """Service for training and inference with RL agents
+    """---------------------------------------------------------------------------
+    Domain-agnostic RL training and inference service.
+    This file has no knowledge of the simulation that produces observations.
+    The caller negotiates observation/action dimensions at runtime via
+    NegotiateEnvironment before starting any training run.
+    ---------------------------------------------------------------------------
+
+    Service for training and inference with RL agents
     """
 
     @staticmethod

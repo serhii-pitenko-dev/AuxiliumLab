@@ -2,6 +2,12 @@ syntax = "proto3";
 
 package simulation;
 
+// ---------------------------------------------------------------------------
+// Domain-agnostic simulation environment contract.
+// Any simulation that implements Reset/Step/Close can be used as a training
+// backend — this file has no knowledge of the RL algorithm or agent type.
+// ---------------------------------------------------------------------------
+
 // Service for external simulation environment control
 service SimulationService {
   // Reset the simulation environment

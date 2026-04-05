@@ -104,7 +104,7 @@ The generated stubs are in the `AuxiliumLab.AiSandbox.GrpcHost` project (or impo
 
 1. **Health check** — verifies the Python RL service is reachable.
 2. **Build experiment ID** — deterministic string from algorithm + params + date.
-3. **Build `EnvironmentSpec`** — `EnvironmentSpecBuilder.Build(sandboxConfig, experimentId)` derives `obs_dim` and feature names from `appsettings.json`.
+3. **Build `EnvironmentSpec`** — `EnvironmentSpecBuilder.Build(sandboxConfig, experimentId, traineeSightRange)` derives `obs_dim` and feature names using the trainee agent's sight range.
 4. **`NegotiateEnvironment`** — sends the spec to Python (30 s timeout). Python validates, stores the spec for this experiment, and echoes it back.
 5. **Echo verification** — `EnvironmentSpecBuilder.AssertEchoMatches(sent, echoed)` ensures the round-trip is lossless.
 6. **`StartTraining*`** — Python pops the stored spec and begins training.

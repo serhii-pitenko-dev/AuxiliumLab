@@ -26,7 +26,13 @@ if _version_not_supported:
 
 
 class SimulationServiceStub(object):
-    """Service for external simulation environment control
+    """---------------------------------------------------------------------------
+    Domain-agnostic simulation environment contract.
+    Any simulation that implements Reset/Step/Close can be used as a training
+    backend — this file has no knowledge of the RL algorithm or agent type.
+    ---------------------------------------------------------------------------
+
+    Service for external simulation environment control
     """
 
     def __init__(self, channel):
@@ -53,7 +59,13 @@ class SimulationServiceStub(object):
 
 
 class SimulationServiceServicer(object):
-    """Service for external simulation environment control
+    """---------------------------------------------------------------------------
+    Domain-agnostic simulation environment contract.
+    Any simulation that implements Reset/Step/Close can be used as a training
+    backend — this file has no knowledge of the RL algorithm or agent type.
+    ---------------------------------------------------------------------------
+
+    Service for external simulation environment control
     """
 
     def Reset(self, request, context):
@@ -104,7 +116,13 @@ def add_SimulationServiceServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class SimulationService(object):
-    """Service for external simulation environment control
+    """---------------------------------------------------------------------------
+    Domain-agnostic simulation environment contract.
+    Any simulation that implements Reset/Step/Close can be used as a training
+    backend — this file has no knowledge of the RL algorithm or agent type.
+    ---------------------------------------------------------------------------
+
+    Service for external simulation environment control
     """
 
     @staticmethod

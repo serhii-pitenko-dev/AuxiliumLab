@@ -9,6 +9,13 @@ from .dto import AlgorithmType
 
 logger = logging.getLogger(__name__)
 
+# Required hyperparameters per algorithm — training will fail if any are missing.
+_REQUIRED_HYPERPARAMS: Dict[AlgorithmType, set] = {
+    AlgorithmType.PPO: {"learning_rate", "n_steps", "batch_size", "n_epochs", "gamma", "gae_lambda", "clip_range", "ent_coef"},
+    AlgorithmType.A2C: {"learning_rate", "n_steps", "gamma", "gae_lambda", "ent_coef", "vf_coef"},
+    AlgorithmType.DQN: {"learning_rate", "buffer_size", "learning_starts", "batch_size", "gamma", "train_freq", "target_update_interval"},
+}
+
 
 def build_model(
     algorithm: AlgorithmType,
@@ -19,25 +26,28 @@ def build_model(
 ) -> BaseAlgorithm:
     """
     Build a Stable Baselines3 model.
-    
+
+    All hyperparameters must be provided by the caller (.NET side).
+    Raises ValueError if any required hyperparameter is missing.
+
     Args:
         algorithm: Type of algorithm to build
         env: Gymnasium environment
-        hyperparameters: Optional hyperparameter overrides
+        hyperparameters: Hyperparameters — must contain all required keys
         seed: Random seed
         verbose: Verbosity level
-        
+
     Returns:
         Initialized SB3 model
     """
-    hyperparameters = hyperparameters or {}
-    
-    # Default hyperparameters for each algorithm
-    defaults = _get_default_hyperparams(algorithm)
-    
-    # Merge with provided hyperparameters
-    params = {**defaults, **hyperparameters}
-    
+    if hyperparameters is None:
+        raise ValueError(
+            f"hyperparameters must be provided for {algorithm.value.upper()}. "
+            f"Required keys: {_REQUIRED_HYPERPARAMS.get(algorithm, set())}"
+        )
+
+    params = dict(hyperparameters)
+
     # n_envs is sent by the .NET orchestrator to let Python know how many parallel
     # gym environments are running on the .NET side. It is NOT a SB3 model
     # constructor argument — parallel envs are managed by .NET (one Sb3Actions per
@@ -49,9 +59,18 @@ def build_model(
     # gym_ids is a semicolon-separated list of UUID strings identifying the .NET gym
     # instances. It is routing metadata — not an SB3 constructor argument.
     params.pop("gym_ids", None)
-    
+
+    # Validate required hyperparameters after stripping non-SB3 keys.
+    required = _REQUIRED_HYPERPARAMS.get(algorithm, set())
+    missing = required - params.keys()
+    if missing:
+        raise ValueError(
+            f"Missing required hyperparameters for {algorithm.value.upper()}: {sorted(missing)}. "
+            f"The .NET caller must provide all of: {sorted(required)}"
+        )
+
     logger.info(f"Building {algorithm.value.upper()} model with params: {params}")
-    
+
     if algorithm == AlgorithmType.PPO:
         return PPO(
             policy="MlpPolicy",
@@ -78,43 +97,6 @@ def build_model(
         )
     else:
         raise ValueError(f"Unsupported algorithm: {algorithm}")
-
-
-def _get_default_hyperparams(algorithm: AlgorithmType) -> Dict[str, Any]:
-    """Get default hyperparameters for an algorithm."""
-    
-    if algorithm == AlgorithmType.PPO:
-        return {
-            "learning_rate": 3e-4,
-            "n_steps": 2048,
-            "batch_size": 64,
-            "n_epochs": 10,
-            "gamma": 0.99,
-            "gae_lambda": 0.95,
-            "clip_range": 0.2,
-            "ent_coef": 0.0,
-        }
-    elif algorithm == AlgorithmType.A2C:
-        return {
-            "learning_rate": 7e-4,
-            "n_steps": 5,
-            "gamma": 0.99,
-            "gae_lambda": 1.0,
-            "ent_coef": 0.0,
-            "vf_coef": 0.5,
-        }
-    elif algorithm == AlgorithmType.DQN:
-        return {
-            "learning_rate": 1e-4,
-            "buffer_size": 50000,
-            "learning_starts": 1000,
-            "batch_size": 32,
-            "gamma": 0.99,
-            "train_freq": 4,
-            "target_update_interval": 1000,
-        }
-    else:
-        return {}
 
 
 def get_model_class(algorithm: AlgorithmType) -> type:

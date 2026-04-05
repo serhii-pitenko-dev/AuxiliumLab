@@ -10,6 +10,7 @@ switch ($Target) {
     "generate" {
         Write-Host "Generating gRPC code..." -ForegroundColor Cyan
         python -m grpc_tools.protoc -I./proto --python_out=./generated --grpc_python_out=./generated proto/policy_trainer.proto
+        python -m grpc_tools.protoc -I./proto --python_out=./generated --grpc_python_out=./generated proto/simulation.proto
     }
     
     "test" {
@@ -24,10 +25,8 @@ switch ($Target) {
     
     "serve" {
         Write-Host "Starting server..." -ForegroundColor Cyan
-        # OBS_DIM = 5 scalar features + (2*SightRange+1)^2 vision cells = 5 + 121 = 126 (SightRange=5)
-        # ACTION_DIM = 5: up, down, left, right, toggle-run
-        $env:OBS_DIM = "126"
-        $env:ACTION_DIM = "5"
+        # OBS_DIM and ACTION_DIM are negotiated dynamically per training run via NegotiateEnvironment RPC.
+        # No need to set them here — the server accepts whatever spec .NET sends.
         python server.py
     }
     

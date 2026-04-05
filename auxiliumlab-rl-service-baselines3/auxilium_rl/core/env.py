@@ -23,9 +23,9 @@ class ExternalSimEnv(gym.Env):
     def __init__(
         self,
         adapter: ExternalEnvAdapter,
-        observation_dim: int = 4,
-        action_dim: int = 4,
-        max_steps: int = 500,
+        observation_dim: int,
+        action_dim: int,
+        max_steps: int,
     ):
         """
         Initialize the environment.

@@ -49,7 +49,7 @@ class FakeExternalEnvAdapter(ExternalEnvAdapter):
     Implements a deterministic cartpole-like environment.
     """
     
-    def __init__(self, observation_dim: int = 4, action_dim: int = 4):
+    def __init__(self, observation_dim: int, action_dim: int):
         """
         Initialize the fake adapter.
         

@@ -1,4 +1,4 @@
-"""Unit tests for the NegotiateEnvironment gRPC handler – max_steps synchronisation."""
+"""Unit tests for the NegotiateEnvironment gRPC handler."""
 import pytest
 from unittest.mock import MagicMock
 
@@ -12,13 +12,16 @@ from auxilium_rl.transport.trainer_servicer import PolicyTrainerServicer
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_spec(sight_range: int = 5, max_steps: int = 0) -> policy_trainer_pb2.EnvironmentSpec:
-    """Build a valid EnvironmentSpec with the correct obs_dim formula."""
-    grid = 2 * sight_range + 1
-    obs_dim = 5 + grid * grid  # 5 scalar features + grid²
+def _make_spec(
+    observation_dim: int = 10,
+    action_dim: int = 4,
+    sight_range: int = 3,
+    max_steps: int = 500,
+) -> policy_trainer_pb2.EnvironmentSpec:
+    """Build an EnvironmentSpec with the given dimensions."""
     return policy_trainer_pb2.EnvironmentSpec(
-        observation_dim=obs_dim,
-        action_dim=5,
+        observation_dim=observation_dim,
+        action_dim=action_dim,
         sight_range=sight_range,
         max_steps=max_steps,
     )
@@ -26,19 +29,26 @@ def _make_spec(sight_range: int = 5, max_steps: int = 0) -> policy_trainer_pb2.E
 
 def _make_request(
     experiment_id: str = "exp_test",
-    sight_range: int = 5,
-    max_steps: int = 0,
+    observation_dim: int = 10,
+    action_dim: int = 4,
+    sight_range: int = 3,
+    max_steps: int = 500,
 ) -> policy_trainer_pb2.NegotiateEnvironmentRequest:
     return policy_trainer_pb2.NegotiateEnvironmentRequest(
         experiment_id=experiment_id,
-        spec=_make_spec(sight_range=sight_range, max_steps=max_steps),
+        spec=_make_spec(
+            observation_dim=observation_dim,
+            action_dim=action_dim,
+            sight_range=sight_range,
+            max_steps=max_steps,
+        ),
     )
 
 
 @pytest.fixture
 def servicer() -> PolicyTrainerServicer:
-    """Create a servicer backed by a real EnvConfig (default max_steps=500)."""
-    env_config = EnvConfig(observation_dim=126, action_dim=5, max_steps=500)
+    """Create a servicer backed by a bare EnvConfig (all fields None)."""
+    env_config = EnvConfig()
     orchestrator = MagicMock(spec=TrainingOrchestrator)
     orchestrator.env_config = env_config
     return PolicyTrainerServicer(orchestrator=orchestrator)
@@ -61,14 +71,14 @@ class TestNegotiateEnvironmentMaxSteps:
         assert response.accepted
         assert servicer.orchestrator.env_config.max_steps == 1200
 
-    def test_max_steps_default_preserved_when_zero(self, servicer: PolicyTrainerServicer):
-        """max_steps == 0 (proto default) must keep the existing env_config value."""
+    def test_max_steps_zero_rejected(self, servicer: PolicyTrainerServicer):
+        """max_steps == 0 must be rejected (no implicit defaults)."""
         response = servicer.NegotiateEnvironment(
             _make_request(max_steps=0), context=None
         )
 
-        assert response.accepted
-        assert servicer.orchestrator.env_config.max_steps == 500  # unchanged default
+        assert not response.accepted
+        assert "max_steps must be positive" in response.message
 
     def test_max_steps_echoed_in_response(self, servicer: PolicyTrainerServicer):
         """The echoed spec must contain the max_steps value from the request."""
@@ -101,12 +111,53 @@ class TestNegotiateEnvironmentMaxSteps:
     def test_obs_dim_and_action_dim_still_applied(self, servicer: PolicyTrainerServicer):
         """max_steps logic must not break existing obs_dim / action_dim propagation."""
         response = servicer.NegotiateEnvironment(
-            _make_request(sight_range=3, max_steps=600), context=None
+            _make_request(observation_dim=54, action_dim=6, max_steps=600), context=None
         )
 
         assert response.accepted
-        grid = 2 * 3 + 1
-        expected_obs = 5 + grid * grid  # 54
-        assert servicer.orchestrator.env_config.observation_dim == expected_obs
-        assert servicer.orchestrator.env_config.action_dim == 5
+        assert servicer.orchestrator.env_config.observation_dim == 54
+        assert servicer.orchestrator.env_config.action_dim == 6
         assert servicer.orchestrator.env_config.max_steps == 600
+
+
+class TestNegotiateEnvironmentValidation:
+    """Verify generic validation rejects invalid specs."""
+
+    def test_zero_observation_dim_rejected(self, servicer: PolicyTrainerServicer):
+        response = servicer.NegotiateEnvironment(
+            _make_request(observation_dim=0), context=None
+        )
+        assert not response.accepted
+        assert "observation_dim must be positive" in response.message
+
+    def test_negative_observation_dim_rejected(self, servicer: PolicyTrainerServicer):
+        response = servicer.NegotiateEnvironment(
+            _make_request(observation_dim=-1), context=None
+        )
+        assert not response.accepted
+
+    def test_zero_action_dim_rejected(self, servicer: PolicyTrainerServicer):
+        response = servicer.NegotiateEnvironment(
+            _make_request(action_dim=0), context=None
+        )
+        assert not response.accepted
+        assert "action_dim must be positive" in response.message
+
+    def test_negative_action_dim_rejected(self, servicer: PolicyTrainerServicer):
+        response = servicer.NegotiateEnvironment(
+            _make_request(action_dim=-5), context=None
+        )
+        assert not response.accepted
+
+    def test_zero_max_steps_rejected(self, servicer: PolicyTrainerServicer):
+        response = servicer.NegotiateEnvironment(
+            _make_request(max_steps=0), context=None
+        )
+        assert not response.accepted
+        assert "max_steps must be positive" in response.message
+
+    def test_negative_max_steps_rejected(self, servicer: PolicyTrainerServicer):
+        response = servicer.NegotiateEnvironment(
+            _make_request(max_steps=-10), context=None
+        )
+        assert not response.accepted

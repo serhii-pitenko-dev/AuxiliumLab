@@ -32,12 +32,14 @@ public static class EnvironmentSpecBuilder
     /// </summary>
     /// <param name="settings">The sandbox configuration (read from appsettings.json → SandBox).</param>
     /// <param name="experimentId">Experiment ID that will be used in the subsequent TrainingRequest.</param>
-    public static EnvironmentSpec Build(SandBoxConfiguration settings, string experimentId)
+    /// <param name="traineeSightRange">Sight range of the trainee agent (hero or enemy). The observation
+    /// dimension depends on the trainee's sight range, not the hero's.</param>
+    public static EnvironmentSpec Build(SandBoxConfiguration settings, string experimentId, int traineeSightRange)
     {
         ArgumentNullException.ThrowIfNull(settings, nameof(settings));
         ArgumentException.ThrowIfNullOrWhiteSpace(experimentId, nameof(experimentId));
 
-        int sightRange = settings.Hero.SightRange.Current;
+        int sightRange = traineeSightRange;
         int gridSize   = 2 * sightRange + 1;
         int obsDim     = ScalarFeatureCount + gridSize * gridSize;
 

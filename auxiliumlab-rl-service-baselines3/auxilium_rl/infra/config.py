@@ -34,24 +34,24 @@ class ServiceConfig:
 
 @dataclass
 class EnvConfig:
-    """Configuration for the Gymnasium environment."""
-    
-    # observation_dim = 5 scalar features + (2*SightRange+1)^2 vision grid cells.
-    # With the default SightRange=5: 5 + (2*5+1)^2 = 5 + 121 = 126.
-    # Must stay in sync with BuildObservation in Sb3Actions.cs.
-    observation_dim: int = 126
+    """Configuration for the Gymnasium environment.
 
-    # action_dim = 5: 0=up, 1=down, 2=left, 3=right, 4=toggle run.
-    # Must stay in sync with BuildDecisionResponse in Sb3Actions.cs.
-    action_dim: int = 5
+    All fields are set at runtime by NegotiateEnvironment before each training
+    run.  There are no defaults — the caller must negotiate before training.
+    """
 
-    max_steps: int = 500
-    
+    observation_dim: Optional[int] = None
+    action_dim: Optional[int] = None
+    max_steps: Optional[int] = None
+
     @classmethod
     def from_env(cls) -> "EnvConfig":
-        """Load environment configuration from environment variables."""
+        """Load environment configuration from environment variables (if set)."""
+        obs = os.getenv("OBS_DIM")
+        act = os.getenv("ACTION_DIM")
+        steps = os.getenv("MAX_STEPS")
         return cls(
-            observation_dim=int(os.getenv("OBS_DIM", "126")),
-            action_dim=int(os.getenv("ACTION_DIM", "5")),
-            max_steps=int(os.getenv("MAX_STEPS", "500")),
+            observation_dim=int(obs) if obs else None,
+            action_dim=int(act) if act else None,
+            max_steps=int(steps) if steps else None,
         )

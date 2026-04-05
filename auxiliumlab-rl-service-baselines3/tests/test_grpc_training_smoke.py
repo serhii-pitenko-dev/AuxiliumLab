@@ -89,7 +89,12 @@ class TestGrpcTrainingSmoke:
             hyperparameters={
                 "learning_rate": "3e-4",
                 "n_steps": "64",
-                "batch_size": "32"
+                "batch_size": "32",
+                "n_epochs": "5",
+                "gamma": "0.99",
+                "gae_lambda": "0.95",
+                "clip_range": "0.2",
+                "ent_coef": "0.0",
             },
             model_output_path=""
         )
@@ -126,7 +131,14 @@ class TestGrpcTrainingSmoke:
             experiment_id="test_a2c_smoke",
             total_timesteps=256,
             seed=42,
-            hyperparameters={},
+            hyperparameters={
+                "learning_rate": "7e-4",
+                "n_steps": "5",
+                "gamma": "0.99",
+                "gae_lambda": "1.0",
+                "ent_coef": "0.0",
+                "vf_coef": "0.5",
+            },
             model_output_path=""
         )
         
@@ -141,7 +153,15 @@ class TestGrpcTrainingSmoke:
             experiment_id="test_dqn_smoke",
             total_timesteps=256,
             seed=42,
-            hyperparameters={},
+            hyperparameters={
+                "learning_rate": "1e-4",
+                "buffer_size": "5000",
+                "learning_starts": "100",
+                "batch_size": "32",
+                "gamma": "0.99",
+                "train_freq": "4",
+                "target_update_interval": "100",
+            },
             model_output_path=""
         )
         
@@ -157,7 +177,16 @@ class TestGrpcTrainingSmoke:
             experiment_id="test_inference",
             total_timesteps=256,
             seed=42,
-            hyperparameters={},
+            hyperparameters={
+                "learning_rate": "3e-4",
+                "n_steps": "64",
+                "batch_size": "32",
+                "n_epochs": "5",
+                "gamma": "0.99",
+                "gae_lambda": "0.95",
+                "clip_range": "0.2",
+                "ent_coef": "0.0",
+            },
             model_output_path=""
         )
         
