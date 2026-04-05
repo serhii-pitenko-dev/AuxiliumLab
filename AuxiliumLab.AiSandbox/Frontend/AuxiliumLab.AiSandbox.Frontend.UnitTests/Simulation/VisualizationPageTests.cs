@@ -34,7 +34,39 @@ public class VisualizationPageTests
         public void FireTurnCompleted(TurnCompletedDto dto)         => OnTurnCompleted?.Invoke(dto);
     }
 
-    private static (TestContext ctx, FakeHubClient hub, Mock<ITrainingApiClient> trainingMock, Mock<ISimulationApiClient> simMock) BuildCtx()
+    private static SandboxSettings MakeSandboxSettings() => new()
+    {
+        MaxTurns = new RangedValue { Min = 10, Current = 100, Max = 3000, Step = 20 },
+        MapSettings = new MapSettingsConfig
+        {
+            Size = new MapSizeConfig
+            {
+                Width  = new RangedValue { Min = 5, Current = 20, Max = 30, Step = 5 },
+                Height = new RangedValue { Min = 5, Current = 20, Max = 30, Step = 5 }
+            },
+            ElementsPercentages = new ElementsPercentagesConfig
+            {
+                BlocksPercent    = new RangedValue { Min = 0, Current = 5, Max = 40, Step = 5 },
+                PercentOfEnemies = new RangedValue { Min = 0, Current = 1, Max = 30, Step = 5 }
+            }
+        },
+        Hero = new AgentConfig
+        {
+            Speed      = new RangedValue { Min = 1, Current = 2, Max = 5, Step = 1 },
+            SightRange = new RangedValue { Min = 2, Current = 5, Max = 10, Step = 1 },
+            Stamina    = new RangedValue { Min = 5, Current = 15, Max = 30, Step = 5 }
+        },
+        Enemy = new AgentConfig
+        {
+            Speed      = new RangedValue { Min = 1, Current = 1, Max = 4, Step = 1 },
+            SightRange = new RangedValue { Min = 1, Current = 4, Max = 8, Step = 1 },
+            Stamina    = new RangedValue { Min = 1, Current = 3, Max = 10, Step = 2 }
+        },
+        ActionDelayMs = new RangedValue { Min = 0, Current = 200, Max = 5000, Step = 50 }
+    };
+
+    private static (TestContext ctx, FakeHubClient hub, Mock<ITrainingApiClient> trainingMock, Mock<ISimulationApiClient> simMock) BuildCtx(
+        SandboxSettings? settings = null)
     {
         var ctx = new TestContext();
         ctx.SetupWithMudServices();
@@ -52,7 +84,8 @@ public class VisualizationPageTests
         ctx.Services.AddSingleton<ISimulationApiClient>(simMock.Object);
         ctx.Services.AddSingleton<ITrainingApiClient>(trainingMock.Object);
         ctx.Services.AddSingleton(new Mock<INotificationService>().Object);
-        ctx.Services.AddSingleton<IOptions<SandboxSettings>>(Options.Create(new SandboxSettings()));
+        ctx.Services.AddSingleton<IOptions<SandboxSettings>>(
+            Options.Create(settings ?? new SandboxSettings()));
 
         return (ctx, hub, trainingMock, simMock);
     }
@@ -669,6 +702,71 @@ public class VisualizationPageTests
                 cut.Instance._rows.Should().Contain(r => r.Group == "PPO");
                 cut.Instance._rows.Should().Contain(r => r.Group == "A2C");
             });
+        }
+    }
+
+    // ── BuildDefaultOverride tests ───────────────────────────────────────────
+
+    [TestMethod]
+    public void BuildDefaultOverride_MapsAllSandboxSettingsCurrentValues()
+    {
+        var settings = MakeSandboxSettings();
+        var (ctx, _, _, _) = BuildCtx(settings);
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            var ov = cut.Instance.BuildDefaultOverride();
+
+            ov.MaxTurns.Should().Be(100);
+            ov.MapWidth.Should().Be(20);
+            ov.MapHeight.Should().Be(20);
+            ov.BlocksPercent.Should().Be(5);
+            ov.EnemiesPercent.Should().Be(1);
+            ov.HeroSpeed.Should().Be(2);
+            ov.HeroSightRange.Should().Be(5);
+            ov.HeroStamina.Should().Be(15);
+            ov.EnemySpeed.Should().Be(1);
+            ov.EnemySightRange.Should().Be(4);
+            ov.EnemyStamina.Should().Be(3);
+            ov.ActionDelayMs.Should().Be(200);
+        }
+    }
+
+    [TestMethod]
+    public void BuildDefaultOverride_WithEmptySettings_ReturnsZeroDefaults()
+    {
+        var (ctx, _, _, _) = BuildCtx();
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            var ov = cut.Instance.BuildDefaultOverride();
+
+            ov.MaxTurns.Should().Be(0);
+            ov.MapWidth.Should().Be(0);
+            ov.MapHeight.Should().Be(0);
+            ov.BlocksPercent.Should().Be(0);
+            ov.EnemiesPercent.Should().Be(0);
+            ov.HeroSpeed.Should().Be(0);
+            ov.HeroSightRange.Should().Be(0);
+            ov.HeroStamina.Should().Be(0);
+            ov.EnemySpeed.Should().Be(0);
+            ov.EnemySightRange.Should().Be(0);
+            ov.EnemyStamina.Should().Be(0);
+            ov.ActionDelayMs.Should().Be(0);
+        }
+    }
+
+    [TestMethod]
+    public void BuildDefaultOverride_ActionDelayMs_IsPopulatedFromSettings()
+    {
+        var settings = MakeSandboxSettings();
+        var (ctx, _, _, _) = BuildCtx(settings);
+        using (ctx)
+        {
+            var cut = ctx.RenderComponent<VisualizationPage>();
+            var ov = cut.Instance.BuildDefaultOverride();
+
+            ov.ActionDelayMs.Should().Be(200);
         }
     }
 }

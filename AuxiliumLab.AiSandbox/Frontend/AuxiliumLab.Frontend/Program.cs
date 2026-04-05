@@ -14,10 +14,14 @@ builder.RootComponents.Add<AuxiliumLab.Frontend.App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // ── Configuration ─────────────────────────────────────────────────────────
+var http = new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
+var defaultsBytes = await http.GetByteArrayAsync("default-values.json");
+builder.Configuration.AddJsonStream(new MemoryStream(defaultsBytes));
+
 builder.Services.Configure<ApiSettings>(
     builder.Configuration.GetSection("ApiSettings"));
 builder.Services.Configure<SandboxSettings>(
-    builder.Configuration.GetSection("SandBox"));
+    builder.Configuration.GetSection("SandboxParameters"));
 
 // ── MudBlazor ─────────────────────────────────────────────────────────────
 builder.Services.AddMudServices(config =>

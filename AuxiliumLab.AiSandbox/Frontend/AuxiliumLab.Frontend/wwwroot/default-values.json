@@ -1,0 +1,86 @@
+{
+  "SandboxParameters": {
+    "MaxTurns": {
+      "Min": 10,
+      "Current": 100,
+      "Max": 3000,
+      "Step": 20
+    },
+    "MapSettings": {
+      "Size": {
+        "Width": {
+          "Min": 5,
+          "Current": 20,
+          "Max": 30,
+          "Step": 5
+        },
+        "Height": {
+          "Min": 5,
+          "Current": 20,
+          "Max": 30,
+          "Step": 5
+        }
+      },
+      "ElementsPercentages": {
+        "BlocksPercent": {
+          "Min": 0,
+          "Current": 5,
+          "Max": 40,
+          "Step": 5
+        },
+        "PercentOfEnemies": {
+          "Min": 0,
+          "Current": 1,
+          "Max": 30,
+          "Step": 5
+        }
+      }
+    },
+    "Hero": {
+      "Speed": {
+        "Min": 1,
+        "Current": 2,
+        "Max": 5,
+        "Step": 1
+      },
+      "SightRange": {
+        "Min": 2,
+        "Current": 5,
+        "Max": 10,
+        "Step": 1
+      },
+      "Stamina": {
+        "Min": 5,
+        "Current": 15,
+        "Max": 30,
+        "Step": 5
+      }
+    },
+    "Enemy": {
+      "Speed": {
+        "Min": 1,
+        "Current": 1,
+        "Max": 4,
+        "Step": 1
+      },
+      "SightRange": {
+        "Min": 1,
+        "Current": 4,
+        "Max": 8,
+        "Step": 1
+      },
+      "Stamina": {
+        "Min": 1,
+        "Current": 3,
+        "Max": 10,
+        "Step": 2
+      }
+    },
+    "ActionDelayMs": {
+      "Min": 0,
+      "Current": 200,
+      "Max": 5000,
+      "Step": 50
+    }
+  }
+}

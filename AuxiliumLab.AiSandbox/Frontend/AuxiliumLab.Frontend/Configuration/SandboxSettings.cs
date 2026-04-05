@@ -3,10 +3,11 @@ namespace AuxiliumLab.Frontend.Configuration;
 /// <summary>Mirrors the "SandBox" section in wwwroot/appsettings.json.</summary>
 public class SandboxSettings
 {
-    public RangedValue    MaxTurns    { get; set; } = new();
+    public RangedValue    MaxTurns      { get; set; } = new();
     public MapSettingsConfig MapSettings { get; set; } = new();
-    public AgentConfig    Hero        { get; set; } = new();
-    public AgentConfig    Enemy       { get; set; } = new();
+    public AgentConfig    Hero          { get; set; } = new();
+    public AgentConfig    Enemy         { get; set; } = new();
+    public RangedValue    ActionDelayMs { get; set; } = new();
 }
 
 public class RangedValue

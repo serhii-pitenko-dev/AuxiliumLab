@@ -92,7 +92,8 @@ public partial class VisualizationPage : IAsyncDisposable
             HeroStamina    = sb.Hero.Stamina.Current,
             EnemySpeed       = sb.Enemy.Speed.Current,
             EnemySightRange  = sb.Enemy.SightRange.Current,
-            EnemyStamina     = sb.Enemy.Stamina.Current
+            EnemyStamina     = sb.Enemy.Stamina.Current,
+            ActionDelayMs    = sb.ActionDelayMs.Current
         };
     }
 
