@@ -158,7 +158,6 @@ def test_grpc_server_health_check_integration():
         orchestrator=orchestrator,
         model_store=model_store,
         config=service_config,
-        adapter_factory=None
     )
     
     # Start server in background thread

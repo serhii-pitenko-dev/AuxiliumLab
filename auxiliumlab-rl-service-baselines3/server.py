@@ -45,7 +45,10 @@ def main():
         model_store=model_store,
         env_config=env_config,
         checkpoint_freq=10000,
-        simulation_grpc_host=service_config.simulation_grpc_host
+        simulation_grpc_host=service_config.simulation_grpc_host,
+        adapter_factory=lambda gym_id: GrpcExternalEnvAdapter(
+            service_config.simulation_grpc_host, gym_id=gym_id
+        ),
     )
     
     # Create and start gRPC server
@@ -53,7 +56,6 @@ def main():
         orchestrator=orchestrator,
         model_store=model_store,
         config=service_config,
-        adapter_factory=lambda gym_id: GrpcExternalEnvAdapter(service_config.simulation_grpc_host, gym_id=gym_id)  # Connect to C# SimulationService
     )
     
     # Setup signal handlers for graceful shutdown

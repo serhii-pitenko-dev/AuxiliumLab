@@ -1,7 +1,6 @@
 """gRPC server setup and lifecycle management."""
 import logging
 from concurrent import futures
-from typing import Callable, Optional
 import grpc
 from grpc_health.v1 import health_pb2_grpc
 
@@ -85,20 +84,18 @@ def create_server(
     orchestrator: TrainingOrchestrator,
     model_store: ModelStore,
     config: ServiceConfig,
-    adapter_factory: Optional[Callable] = None
 ) -> GrpcServer:
     """
     Factory function to create a configured gRPC server.
     
     Args:
-        orchestrator: Training orchestrator
+        orchestrator: Training orchestrator (already has adapter_factory)
         model_store: Model store for health checks
         config: Service configuration
-        adapter_factory: Optional factory for creating external adapters
         
     Returns:
         Configured gRPC server
     """
-    servicer = PolicyTrainerServicer(orchestrator, adapter_factory)
+    servicer = PolicyTrainerServicer(orchestrator)
     health_servicer = HealthServicer(orchestrator, model_store)
     return GrpcServer(servicer, health_servicer, config)

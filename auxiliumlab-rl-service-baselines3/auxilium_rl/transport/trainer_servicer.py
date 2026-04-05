@@ -8,7 +8,6 @@ from generated import policy_trainer_pb2, policy_trainer_pb2_grpc
 
 from ..core.dto import TrainingConfig, AlgorithmType, RunStatus
 from ..core.training import TrainingOrchestrator
-from ..infra.external_env_adapter import ExternalEnvAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -16,22 +15,14 @@ logger = logging.getLogger(__name__)
 class PolicyTrainerServicer(policy_trainer_pb2_grpc.PolicyTrainerServiceServicer):
     """Implementation of the PolicyTrainerService."""
 
-    def __init__(
-        self,
-        orchestrator: TrainingOrchestrator,
-        adapter_factory: Optional[Callable[[str], ExternalEnvAdapter]] = None
-    ):
+    def __init__(self, orchestrator: TrainingOrchestrator):
         """
         Initialize the servicer.
         
         Args:
-            orchestrator: Training orchestrator
-            adapter_factory: Optional factory function (gym_id: str) -> ExternalEnvAdapter.
-                             Receives the gym UUID string from the .NET side so gRPC
-                             requests are routed to the correct Sb3Actions instance.
+            orchestrator: Training orchestrator (owns adapter creation)
         """
         self.orchestrator = orchestrator
-        self.adapter_factory = adapter_factory
         # Per-experiment specs stored by NegotiateEnvironment, keyed by experiment_id.
         self._experiment_specs: dict = {}
 
@@ -116,77 +107,95 @@ class PolicyTrainerServicer(policy_trainer_pb2_grpc.PolicyTrainerServiceServicer
         algorithm: AlgorithmType
     ) -> policy_trainer_pb2.TrainingResponse:
         """Common training start logic."""
+        experiment_id = request.experiment_id
+        algo_name = algorithm.value.upper()
+
         try:
-            # Validate request
-            if not request.experiment_id:
+            # ── Validate request ─────────────────────────────────────────
+            if not experiment_id:
                 return policy_trainer_pb2.TrainingResponse(
                     status=policy_trainer_pb2.FAILED,
-                    message="experiment_id is required",
+                    message=(
+                        f"[{algo_name}] experiment_id is required. "
+                        "The .NET caller must set experiment_id on the TrainingRequest."
+                    ),
                     run_id=""
                 )
             
             if request.total_timesteps <= 0:
                 return policy_trainer_pb2.TrainingResponse(
                     status=policy_trainer_pb2.FAILED,
-                    message="total_timesteps must be positive",
+                    message=(
+                        f"[{algo_name}] total_timesteps must be positive, "
+                        f"got {request.total_timesteps} for experiment '{experiment_id}'."
+                    ),
                     run_id=""
                 )
 
-            # Ensure NegotiateEnvironment was called before training.
-            ec = self.orchestrator.env_config
-            if ec.observation_dim is None or ec.action_dim is None or ec.max_steps is None:
-                return policy_trainer_pb2.TrainingResponse(
-                    status=policy_trainer_pb2.FAILED,
-                    message="NegotiateEnvironment must be called before StartTraining",
-                    run_id=""
-                )
+            # ── Resolve environment dimensions ───────────────────────────
+            # Per-experiment spec takes priority (set by NegotiateEnvironment).
+            # Falls back to shared env_config for backward compat / testing.
+            spec = self._experiment_specs.get(experiment_id)
+            if spec:
+                obs_dim = spec.observation_dim
+                act_dim = spec.action_dim
+                max_steps = spec.max_steps
+            else:
+                ec = self.orchestrator.env_config
+                if ec.observation_dim is None or ec.action_dim is None or ec.max_steps is None:
+                    return policy_trainer_pb2.TrainingResponse(
+                        status=policy_trainer_pb2.FAILED,
+                        message=(
+                            f"[{algo_name}] NegotiateEnvironment must be called before "
+                            f"StartTraining for experiment '{experiment_id}'. "
+                            f"No environment spec found and env_config is unset."
+                        ),
+                        run_id=""
+                    )
+                obs_dim = ec.observation_dim
+                act_dim = ec.action_dim
+                max_steps = ec.max_steps
 
-            # Create training config
+            # ── Build training config ────────────────────────────────────
             config = TrainingConfig(
                 algorithm=algorithm,
-                experiment_id=request.experiment_id,
+                experiment_id=experiment_id,
                 total_timesteps=request.total_timesteps,
                 seed=request.seed,
                 hyperparameters=dict(request.hyperparameters),
-                model_output_path=request.model_output_path
+                model_output_path=request.model_output_path,
+                observation_dim=obs_dim,
+                action_dim=act_dim,
+                max_steps=max_steps,
             )
             
-            # Create adapter if factory is provided.
-            # Extract the first gym_id from hyperparameters and pass it to the factory
-            # so gRPC Reset/Step/Close calls carry the correct GymId recognised by .NET.
-            adapter = None
-            if self.adapter_factory:
-                gym_ids_str = config.hyperparameters.get("gym_ids", "")
-                gym_ids = [g for g in gym_ids_str.split(";") if g]
-                gym_id = gym_ids[0] if gym_ids else ""
-                if not gym_id:
-                    logger.warning(
-                        "No gym_ids found in hyperparameters. "
-                        "gRPC calls will use an empty gym_id and .NET will ignore them. "
-                        "Ensure the .NET orchestrator sends 'gym_ids' in hyperparameters."
-                    )
-                adapter = self.adapter_factory(gym_id)
-                logger.info(f"Created adapter for gym_id={gym_id}")
-            
-            # Start training
-            run_id = self.orchestrator.start_training(config, adapter)
+            # Start training (orchestrator creates adapters from its factory)
+            run_id = self.orchestrator.start_training(config)
             
             logger.info(
-                f"Training started: run_id={run_id}, algorithm={algorithm.value}, "
-                f"experiment={request.experiment_id}, timesteps={request.total_timesteps}"
+                f"Training started: run_id={run_id}, algorithm={algo_name}, "
+                f"experiment={experiment_id}, timesteps={request.total_timesteps}, "
+                f"obs_dim={obs_dim}, act_dim={act_dim}, max_steps={max_steps}"
             )
             
             return policy_trainer_pb2.TrainingResponse(
                 status=policy_trainer_pb2.STARTED,
-                message=f"Training started successfully for {algorithm.value.upper()}",
+                message=f"Training started successfully for {algo_name}",
                 run_id=run_id
             )
             
         except Exception as e:
-            logger.error(f"Failed to start training: {e}", exc_info=True)
+            logger.error(
+                f"[{algo_name}] Failed to start training for experiment "
+                f"'{experiment_id}': {e}",
+                exc_info=True
+            )
             return policy_trainer_pb2.TrainingResponse(
                 status=policy_trainer_pb2.FAILED,
-                message=f"Failed to start training: {str(e)}",
+                message=(
+                    f"[{algo_name}] Failed to start training for experiment "
+                    f"'{experiment_id}': {e}"
+                ),
                 run_id=""
             )
     

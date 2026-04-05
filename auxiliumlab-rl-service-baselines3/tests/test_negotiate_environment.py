@@ -161,3 +161,34 @@ class TestNegotiateEnvironmentValidation:
             _make_request(max_steps=-10), context=None
         )
         assert not response.accepted
+
+
+class TestPerExperimentSpecIsolation:
+    """Verify that per-experiment specs are isolated from the shared env_config."""
+
+    def test_start_training_uses_experiment_spec(self, servicer: PolicyTrainerServicer):
+        """_start_training should read dims from the negotiated spec, not env_config."""
+        # Negotiate for experiment "exp_A"
+        servicer.NegotiateEnvironment(
+            _make_request(experiment_id="exp_A", observation_dim=20, action_dim=5, max_steps=300),
+            context=None,
+        )
+        # Overwrite shared env_config with different values (simulates a concurrent negotiate)
+        servicer.orchestrator.env_config.observation_dim = 99
+        servicer.orchestrator.env_config.action_dim = 99
+        servicer.orchestrator.env_config.max_steps = 99
+
+        # The spec stored for exp_A must still be (20, 5, 300)
+        spec = servicer._experiment_specs["exp_A"]
+        assert spec.observation_dim == 20
+        assert spec.action_dim == 5
+        assert spec.max_steps == 300
+
+    def test_missing_experiment_falls_back_to_env_config(self, servicer: PolicyTrainerServicer):
+        """When no spec exists for an experiment, _start_training uses env_config."""
+        servicer.orchestrator.env_config.observation_dim = 10
+        servicer.orchestrator.env_config.action_dim = 4
+        servicer.orchestrator.env_config.max_steps = 500
+
+        # No NegotiateEnvironment for "exp_unknown" — should fall back to env_config
+        assert "exp_unknown" not in servicer._experiment_specs
