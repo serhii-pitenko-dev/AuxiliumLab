@@ -159,6 +159,9 @@ class GrpcExternalEnvAdapter(ExternalEnvAdapter):
         """
         Send reset request to .NET simulation via gRPC.
         
+        Retries automatically when the episode ends before the trainee agent
+        receives its first decision request (e.g. opponent wins/loses instantly).
+        
         Args:
             seed: Random seed for reproducibility
             
@@ -167,18 +170,26 @@ class GrpcExternalEnvAdapter(ExternalEnvAdapter):
         """
         from generated import simulation_pb2
         
-        try:
-            request = simulation_pb2.ResetRequest(gym_id=self.gym_id, seed=seed if seed is not None else 0)
-            response = self._stub.Reset(request, timeout=60)  # 60s: first episode startup can be slow
-            
-            observation = np.array(response.observation, dtype=np.float32)
-            logger.debug(f"Reset completed. Observation shape: {observation.shape}")
-            
-            return observation
-            
-        except grpc.RpcError as e:
-            logger.error(f"gRPC error during reset: {e}")
-            raise RuntimeError(f"Failed to reset .NET simulation: {e}") from e
+        max_retries = 5
+        for attempt in range(max_retries):
+            try:
+                request = simulation_pb2.ResetRequest(gym_id=self.gym_id, seed=seed if seed is not None else 0)
+                response = self._stub.Reset(request, timeout=60)  # 60s: first episode startup can be slow
+                
+                observation = np.array(response.observation, dtype=np.float32)
+                logger.debug(f"Reset completed. Observation shape: {observation.shape}")
+                
+                return observation
+                
+            except grpc.RpcError as e:
+                if attempt < max_retries - 1:
+                    logger.warning(
+                        f"Reset attempt {attempt + 1}/{max_retries} failed for gym {self.gym_id}: "
+                        f"{e.code().name}. Episode may have ended before trainee agent acted. Retrying..."
+                    )
+                    continue
+                logger.error(f"gRPC error during reset after {max_retries} attempts: {e}")
+                raise RuntimeError(f"Failed to reset .NET simulation: {e}") from e
     
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict[str, Any]]:
         """

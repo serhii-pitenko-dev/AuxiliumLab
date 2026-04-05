@@ -235,6 +235,15 @@ public class Sb3Actions : IAiActions
             {
                 if (_episodeCallback != null)
                     await _episodeCallback().ConfigureAwait(false);
+
+                // Episode finished normally but the reset observation was never delivered.
+                // This happens when the game ends before the trainee agent's first turn
+                // (e.g. opponent randomly walks into an enemy or reaches the exit).
+                // Signal an error so SimulationService returns immediately instead of
+                // waiting for the 120 s server-side timeout (or Python's 60 s client timeout).
+                capturedTcs.TrySetException(new InvalidOperationException(
+                    "Episode ended before the trainee agent received its first decision request. " +
+                    "The opponent may have won or lost instantly."));
             }
             catch (Exception ex)
             {
