@@ -42,3 +42,7 @@ global using AggregationJobStatusDto          = AuxiliumLab.AiSandbox.SharedCont
 global using CompletedSimulationRunDto  = AuxiliumLab.AiSandbox.SharedContracts.CompletedSimulationRunDto;
 global using CompletedAggregationRunDto = AuxiliumLab.AiSandbox.SharedContracts.CompletedAggregationRunDto;
 global using AggregationStepResultDto   = AuxiliumLab.AiSandbox.SharedContracts.AggregationStepResultDto;
+
+// Map entities
+global using EEffect        = AuxiliumLab.AiSandbox.SharedContracts.EEffect;
+global using AgentEffectDto  = AuxiliumLab.AiSandbox.SharedContracts.AgentEffectDto;

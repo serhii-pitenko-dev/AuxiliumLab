@@ -24,7 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Commands\Statistics\" />
     <Folder Include="Trainer\" />
     <Folder Include="Runner\MassRunner\" />
     <Folder Include="Runner\SingleRunner\" />

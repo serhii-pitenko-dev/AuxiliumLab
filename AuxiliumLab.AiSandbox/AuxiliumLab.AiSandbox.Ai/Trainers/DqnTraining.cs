@@ -33,9 +33,9 @@ public class DqnTraining : BaseTraining, ITraining
         foreach (var p in settings.Parameters)
         {
             if (p.Name == "total_timesteps")
-                request.TotalTimesteps = int.TryParse(p.Value, out int ts) ? ts : 5000;
+                request.TotalTimesteps = int.TryParse(p.Value, out int ts) ? ts : throw new ArgumentException($"Invalid total_timesteps value: '{p.Value}'");
             else if (p.Name == "seed")
-                request.Seed = int.TryParse(p.Value, out int s) ? s : 42;
+                request.Seed = int.TryParse(p.Value, out int s) ? s : throw new ArgumentException($"Invalid seed value: '{p.Value}'");
             else
                 request.Hyperparameters.TryAdd(p.Name, p.Value);
         }
