@@ -1,7 +1,7 @@
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.PolicyTrainer;
+using AuxiliumLab.AiSandbox.Ai.PolicyTrainer;
 using AuxiliumLab.AiSandbox.Infrastructure.Configuration.Preconditions;
 
-namespace AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
+namespace AuxiliumLab.AiSandbox.Ai;
 
 /// <summary>
 /// Single source of truth for the environment contract sent to the Python RL service.

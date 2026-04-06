@@ -2,7 +2,7 @@
 
 **Onion layer: Presentation / Host**  
 ASP.NET Core REST API that runs alongside the simulation engine.  
-Depends on: `SharedContracts`, `ApplicationServices`, `AiTrainingOrchestrator`, `Ai`, `Infrastructure`, `Statistics`.
+Depends on: `SharedContracts`, `ApplicationServices`, `Ai`, `Ai`, `Infrastructure`, `Statistics`.
 
 ## Purpose
 Provides an HTTP REST API entry point for the Blazor Frontend to trigger training runs, simulations, aggregation pipelines, and query results.

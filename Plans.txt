@@ -1,0 +1,5 @@
+1. redirect page in the training
+2. last perfomance
+3. In the status add agent
+4. Status ordered by time
+5. Change PPO training UI

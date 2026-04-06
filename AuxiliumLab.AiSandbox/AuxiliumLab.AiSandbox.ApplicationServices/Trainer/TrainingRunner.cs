@@ -1,10 +1,8 @@
 using AuxiliumLab.AiSandbox.Ai;
 using AuxiliumLab.AiSandbox.Ai.Configuration;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Configuration;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.PolicyTrainer;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Trainers;
+using AuxiliumLab.AiSandbox.Ai.GrpcClients;
+using AuxiliumLab.AiSandbox.Ai.PolicyTrainer;
+using AuxiliumLab.AiSandbox.Ai.Trainers;
 using AuxiliumLab.AiSandbox.ApplicationServices.Executors;
 using AuxiliumLab.AiSandbox.ApplicationServices.Runner.LogsDto;
 using AuxiliumLab.AiSandbox.ApplicationServices.Runner.LogsDto.Performance;

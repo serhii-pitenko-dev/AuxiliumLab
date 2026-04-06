@@ -1,10 +1,10 @@
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.PolicyTrainer;
+using AuxiliumLab.AiSandbox.Ai;
+using AuxiliumLab.AiSandbox.Ai.PolicyTrainer;
 using AuxiliumLab.AiSandbox.Infrastructure.Configuration.Preconditions;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace AuxiliumLab.AiSandbox.UnitTests.AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
+namespace AuxiliumLab.AiSandbox.UnitTests.AuxiliumLab.AiSandbox.Ai;
 
 /// <summary>
 /// Tests for <see cref="EnvironmentSpecBuilder"/>.

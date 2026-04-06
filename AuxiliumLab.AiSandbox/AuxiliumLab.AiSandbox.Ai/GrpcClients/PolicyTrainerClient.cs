@@ -1,7 +1,7 @@
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.PolicyTrainer;
+using AuxiliumLab.AiSandbox.Ai.PolicyTrainer;
 using Grpc.Net.Client;
 
-namespace AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
+namespace AuxiliumLab.AiSandbox.Ai.GrpcClients;
 
 /// <summary>
 /// gRPC client wrapper for the Python RL Training Service.

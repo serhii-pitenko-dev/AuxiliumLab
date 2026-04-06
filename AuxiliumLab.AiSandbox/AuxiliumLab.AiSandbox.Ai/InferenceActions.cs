@@ -1,7 +1,6 @@
-using AuxiliumLab.AiSandbox.Ai;
 using AuxiliumLab.AiSandbox.Ai.Configuration;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.PolicyTrainer;
+using AuxiliumLab.AiSandbox.Ai.GrpcClients;
+using AuxiliumLab.AiSandbox.Ai.PolicyTrainer;
 using AuxiliumLab.AiSandbox.Common.MessageBroker;
 using AuxiliumLab.AiSandbox.Common.MessageBroker.Contracts.AiContract.Commands;
 using AuxiliumLab.AiSandbox.Common.MessageBroker.Contracts.AiContract.Responses;
@@ -11,7 +10,7 @@ using AuxiliumLab.AiSandbox.SharedBaseTypes.AiContract.Dto;
 using AuxiliumLab.AiSandbox.SharedBaseTypes.ValueObjects;
 using Microsoft.Extensions.Logging;
 
-namespace AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
+namespace AuxiliumLab.AiSandbox.Ai;
 
 /// <summary>
 /// <see cref="IAiActions"/> implementation that drives a pre-trained SB3 model via the

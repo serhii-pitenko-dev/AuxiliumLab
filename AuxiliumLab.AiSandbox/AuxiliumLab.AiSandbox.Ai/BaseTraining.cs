@@ -1,8 +1,7 @@
 using AuxiliumLab.AiSandbox.Ai.Configuration;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Configuration;
 using AuxiliumLab.AiSandbox.Common.Helpers;
 
-namespace AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
+namespace AuxiliumLab.AiSandbox.Ai;
 
 public abstract class BaseTraining
 {

@@ -39,7 +39,7 @@ Or run from VS Code via the Test Explorer panel.
 
 ```
 AuxiliumLab.AiSandbox.UnitTests/
-├── AuxiliumLab.AiSandbox.AiTrainingOrchestrator/
+├── AuxiliumLab.AiSandbox.Ai/
 │   ├── EnvironmentSpecBuilderTests.cs
 │   └── InferenceActionsAlgorithmTypeTests.cs
 ├── AuxiliumLab.AiSandbox.ApplicationServices/

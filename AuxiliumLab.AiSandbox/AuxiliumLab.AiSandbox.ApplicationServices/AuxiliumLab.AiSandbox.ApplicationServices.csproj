@@ -17,7 +17,6 @@
   <ItemGroup>
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.SharedContracts\AuxiliumLab.AiSandbox.SharedContracts.csproj" />
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.Ai\AuxiliumLab.AiSandbox.Ai.csproj" />
-    <ProjectReference Include="..\AuxiliumLab.AiSandbox.AiTrainingOrchestrator\AuxiliumLab.AiSandbox.AiTrainingOrchestrator.csproj" />
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.Common\AuxiliumLab.AiSandbox.Common.csproj" />
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.Domain\AuxiliumLab.AiSandbox.Domain.csproj" />
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.Infrastructure\AuxiliumLab.AiSandbox.Infrastructure.csproj" />

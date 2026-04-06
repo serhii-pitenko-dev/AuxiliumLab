@@ -1,6 +1,6 @@
 using AuxiliumLab.AiSandbox.Ai;
 using AuxiliumLab.AiSandbox.Ai.Configuration;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
+using AuxiliumLab.AiSandbox.Ai.GrpcClients;
 using AuxiliumLab.AiSandbox.Infrastructure.Configuration.Preconditions;
 
 namespace AuxiliumLab.AiSandbox.ApplicationServices.Executors;

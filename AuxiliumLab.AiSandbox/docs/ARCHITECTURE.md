@@ -37,19 +37,19 @@ Startup
 │   ├── Common
 │   ├── Infrastructure
 │   └── SharedBaseTypes
-├── AiTrainingOrchestrator
+├── Ai
 │   ├── Ai
 │   └── Infrastructure
 ├── ApplicationServices
 │   ├── SharedContracts
 │   ├── Ai
-│   ├── AiTrainingOrchestrator
+│   ├── Ai
 │   ├── Common
 │   ├── Domain
 │   ├── Infrastructure
 │   └── Statistics
 ├── GrpcHost
-│   ├── AiTrainingOrchestrator
+│   ├── Ai
 │   ├── Infrastructure
 │   └── Common
 ├── Infrastructure
@@ -59,7 +59,7 @@ Startup
 └── WebApi
     ├── SharedContracts
     ├── ApplicationServices
-    ├── AiTrainingOrchestrator
+    ├── Ai
     ├── Ai
     ├── Infrastructure
     └── Statistics

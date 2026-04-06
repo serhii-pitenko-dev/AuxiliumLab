@@ -35,8 +35,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuxiliumLab.AiSandbox.Integ
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuxiliumLab.AiSandbox.Common", "AuxiliumLab.AiSandbox.Common\AuxiliumLab.AiSandbox.Common.csproj", "{ACB14A41-9DA5-485B-8047-56024CC75830}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuxiliumLab.AiSandbox.AiTrainingOrchestrator", "AuxiliumLab.AiSandbox.AiTrainingOrchestrator\AuxiliumLab.AiSandbox.AiTrainingOrchestrator.csproj", "{8B3D727A-02E6-4230-823E-388DECE35719}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Frontend", "Frontend", "{E1F2A3B4-C5D6-7E8F-9A0B-1C2D3E4F5A6B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuxiliumLab.Frontend", "Frontend\AuxiliumLab.Frontend\AuxiliumLab.Frontend.csproj", "{F1E2D3C4-B5A6-7890-ABCD-EF1234567890}"
@@ -99,10 +97,6 @@ Global
 		{ACB14A41-9DA5-485B-8047-56024CC75830}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ACB14A41-9DA5-485B-8047-56024CC75830}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ACB14A41-9DA5-485B-8047-56024CC75830}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8B3D727A-02E6-4230-823E-388DECE35719}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8B3D727A-02E6-4230-823E-388DECE35719}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8B3D727A-02E6-4230-823E-388DECE35719}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8B3D727A-02E6-4230-823E-388DECE35719}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F1E2D3C4-B5A6-7890-ABCD-EF1234567890}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F1E2D3C4-B5A6-7890-ABCD-EF1234567890}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F1E2D3C4-B5A6-7890-ABCD-EF1234567890}.Release|Any CPU.ActiveCfg = Release|Any CPU

@@ -2,7 +2,7 @@
 
 **Onion layer: Presentation / Host**  
 ASP.NET Core gRPC server that exposes the C# simulation as a **Gymnasium-compatible environment** for the Python SB3 training service.  
-Depends on: `AiTrainingOrchestrator`, `Infrastructure`, `Common`.
+Depends on: `Ai`, `Infrastructure`, `Common`.
 
 ## Purpose
 During AI training, the Python `ExternalSimEnv` needs to call `reset()` and `step()` on a live simulation. This project hosts those calls as gRPC endpoints.

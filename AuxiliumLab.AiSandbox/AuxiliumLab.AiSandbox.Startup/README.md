@@ -51,9 +51,9 @@ See [AuxiliumLab.AiSandbox.WebApi/README.md](../AuxiliumLab.AiSandbox.WebApi/REA
 ```csharp
 services.AddEventAggregator();        // Common: IMessageBroker, IBrokerRpcClient
 services.AddInfrastructureServices(); // Infrastructure: file & memory managers, AggregationSettings
-services.AddPolicyTrainerClient();    // AiTrainingOrchestrator: gRPC client to Python
+services.AddPolicyTrainerClient();    // Ai: gRPC client to Python
 services.AddDomainServices();         // Domain: IVisibilityService
-services.AddAiSandboxServices(mode);  // AiTrainingOrchestrator: IAiActions
+services.AddAiSandboxServices(mode);  // Ai: IAiActions
 services.AddApplicationServices();    // ApplicationServices: executors, commands, queries, jobs
 services.AddWebApiPresentationServices(); // WebApi: controllers
 ```

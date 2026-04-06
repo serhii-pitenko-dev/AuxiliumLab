@@ -7,10 +7,22 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.29.1" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.70.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.70.0" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.SharedContracts\AuxiliumLab.AiSandbox.SharedContracts.csproj" />
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.Common\AuxiliumLab.AiSandbox.Common.csproj" />
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.Infrastructure\AuxiliumLab.AiSandbox.Infrastructure.csproj" />
     <ProjectReference Include="..\AuxiliumLab.AiSandbox.SharedBaseTypes\AuxiliumLab.AiSandbox.SharedBaseTypes.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="Protos\policy_trainer.proto" GrpcServices="Client" />
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,5 @@
 using AuxiliumLab.AiSandbox.Ai.Configuration;
 using AuxiliumLab.AiSandbox.ApplicationServices.Configuration;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Configuration;
 using AuxiliumLab.AiSandbox.Common.Extensions;
 using AuxiliumLab.AiSandbox.Domain.Configuration;
 using AuxiliumLab.AiSandbox.GrpcHost.Configuration;
@@ -80,4 +79,3 @@ static void EnsureStorageFolders(FileSourceConfiguration fileSourceCfg)
         }
     }
 }
-

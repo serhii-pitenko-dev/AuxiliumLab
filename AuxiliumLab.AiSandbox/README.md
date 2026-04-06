@@ -20,7 +20,7 @@ The solution follows **Onion Architecture** (also known as Clean / Hexagonal Arc
 │  GrpcHost · WebApi · SharedContracts · Startup                   │
 ├─────────────────────────────────────────────────────────────────┤
 │  Application Services                                           │
-│  ApplicationServices · AiTrainingOrchestrator                  │
+│  ApplicationServices · Ai                  │
 ├─────────────────────────────────────────────────────────────────┤
 │  Infrastructure (implements domain ports)                       │
 │  Infrastructure · Statistics                                    │
@@ -42,9 +42,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full dependency graph.
 | `AuxiliumLab.AiSandbox.Domain` | Domain | Map, agents, game rules, vision |
 | `AuxiliumLab.AiSandbox.SharedBaseTypes` | Domain | Value objects, enums, message contracts |
 | `AuxiliumLab.AiSandbox.Common` | Domain/Cross-cutting | In-process pub/sub message broker |
-| `AuxiliumLab.AiSandbox.Ai` | Application | AI decision layer: `IAiActions`, `RandomActions`, `Sb3Actions`, observation builder |
+| `AuxiliumLab.AiSandbox.Ai` | Application | AI decision layer, training orchestration, gRPC client to Python |
 | `AuxiliumLab.AiSandbox.ApplicationServices` | Application | Use-cases, executors, runners, jobs, commands, queries, persistence mappers |
-| `AuxiliumLab.AiSandbox.AiTrainingOrchestrator` | Application | Training settings, gRPC client to Python |
 | `AuxiliumLab.AiSandbox.Infrastructure` | Infrastructure | File & in-memory data managers |
 | `AuxiliumLab.AiSandbox.Statistics` | Infrastructure | Batch run statistics, CSV export |
 | `AuxiliumLab.AiSandbox.SharedContracts` | Presentation | Cross-cutting DTOs shared between backend and frontend |

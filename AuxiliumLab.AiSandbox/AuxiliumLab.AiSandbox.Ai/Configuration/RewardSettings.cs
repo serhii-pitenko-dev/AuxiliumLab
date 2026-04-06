@@ -1,4 +1,4 @@
-namespace AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Configuration;
+namespace AuxiliumLab.AiSandbox.Ai.Configuration;
 
 public class RewardSettings
 {

@@ -7,7 +7,7 @@ namespace AuxiliumLab.AiSandbox.Ai;
 /// <summary>
 /// Shared helpers for building agent observation vectors and decoding RL action integers.
 /// Used by both <see cref="Sb3Actions"/> (training) and
-/// <see cref="AuxiliumLab.AiSandbox.AiTrainingOrchestrator.InferenceActions"/>
+/// <see cref="AuxiliumLab.AiSandbox.Ai.InferenceActions"/>
 /// (inference-only simulation) so the format is guaranteed to be identical.
 /// </summary>
 public static class ObservationBuilder

@@ -1,7 +1,6 @@
-﻿using AuxiliumLab.AiSandbox.Ai;
+using AuxiliumLab.AiSandbox.Ai;
 using AuxiliumLab.AiSandbox.Ai.Configuration;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
+using AuxiliumLab.AiSandbox.Ai.GrpcClients;
 using AuxiliumLab.AiSandbox.ApplicationServices.Commands.Simulation.Playground;
 using AuxiliumLab.AiSandbox.ApplicationServices.Runner.LogsDto;
 using AuxiliumLab.AiSandbox.ApplicationServices.Runner.LogsDto.Performance;
@@ -127,7 +126,7 @@ public class ExecutorFactory : IExecutorFactory
 
     /// <summary>
     /// Creates an <see cref="IAiActions"/> from the given spec.
-    /// Random → <see cref="RandomActions"/>; otherwise → <see cref="InferenceActions"/>.
+    /// Random ? <see cref="RandomActions"/>; otherwise ? <see cref="InferenceActions"/>.
     /// </summary>
     private IAiActions CreateAiActions(AgentAiSpec spec, ObjectType targetAgentType, IMessageBroker broker, IMemoryDataManager<AgentStateForAIDecision> agentStore)
     {

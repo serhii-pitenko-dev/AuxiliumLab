@@ -167,7 +167,7 @@ Model discovery uses `Directory.GetFiles(algorithmFolder, "*", SearchOption.AllD
 
 #### `TrainingRunner`
 Coordinates the full RL training loop:
-1. Selects the correct `ITraining` implementation (PPO / A2C / DQN) from `AiTrainingOrchestrator`.
+1. Selects the correct `ITraining` implementation (PPO / A2C / DQN) from `Ai`.
 2. Resolves scoped executor pairs (one per physical CPU core).
 3. Starts all executor tasks — each loops an `Sb3Actions`-driven simulation episode.
 4. Calls `IPolicyTrainerClient.StartTrainingXxx()` to kick off the Python SB3 training.

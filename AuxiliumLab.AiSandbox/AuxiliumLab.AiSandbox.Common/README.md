@@ -69,7 +69,7 @@ Contracts/
 ```csharp
 SystemInfo.GetPhysicalCoreCount()   // Returns the number of physical CPU cores
 ```
-Used by `BaseTraining` in `AiTrainingOrchestrator` to scale the number of parallel training environments to the machine's physical core count.
+Used by `BaseTraining` in `Ai` to scale the number of parallel training environments to the machine's physical core count.
 
 ## How to Add a New Message Type
 1. Decide on the contract folder: `AiContract`, `CoreServicesContract`, `GlobalMessagesContract`, or `Sb3Contract`. Create a new folder if the contract belongs to a different subsystem.

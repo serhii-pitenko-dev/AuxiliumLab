@@ -1,17 +1,16 @@
 using AuxiliumLab.AiSandbox.Ai.Configuration;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Configuration;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.PolicyTrainer;
+using AuxiliumLab.AiSandbox.Ai.GrpcClients;
+using AuxiliumLab.AiSandbox.Ai.PolicyTrainer;
 
-namespace AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Trainers;
+namespace AuxiliumLab.AiSandbox.Ai.Trainers;
 
-public class A2cTraining : BaseTraining, ITraining
+public class PpoTraining : BaseTraining, ITraining
 {
     private readonly TrainingAlgorithmSettings _settings;
 
-    public override ModelType AlgorithmType => ModelType.A2C;
+    public override ModelType AlgorithmType => ModelType.PPO;
 
-    public A2cTraining(bool isSameMachine, TrainingAlgorithmSettings settings)
+    public PpoTraining(bool isSameMachine, TrainingAlgorithmSettings settings)
         : base(isSameMachine)
     {
         _settings = settings;
@@ -23,12 +22,18 @@ public class A2cTraining : BaseTraining, ITraining
         string basePath, string trainedAlgorithmsFolder, string agentType)
     {
         string experimentId = BuildExperimentId(settings);
+        string modelOutputPath = GetModelOutputPath(experimentId, basePath, trainedAlgorithmsFolder, agentType);
+
+        // Ensure the experiment folder exists so Python can save directly into it
+        var folderPath = Path.GetDirectoryName(modelOutputPath);
+        if (!string.IsNullOrEmpty(folderPath))
+            Directory.CreateDirectory(folderPath);
+
         var request = new TrainingRequest
         {
             ExperimentId = experimentId,
-            ModelOutputPath = GetModelOutputPath(experimentId, basePath, trainedAlgorithmsFolder, agentType)
+            ModelOutputPath = modelOutputPath
         };
-
         request.Hyperparameters.Add("n_envs", nEnvs.ToString());
         request.Hyperparameters.Add("gym_ids", string.Join(";", gymIds));
         foreach (var p in settings.Parameters)
@@ -40,7 +45,6 @@ public class A2cTraining : BaseTraining, ITraining
             else
                 request.Hyperparameters.TryAdd(p.Name, p.Value);
         }
-
         return request;
     }
 
@@ -50,7 +54,7 @@ public class A2cTraining : BaseTraining, ITraining
         int nEnvs = Math.Max(1, gymIds.Count);
         var request = BuildTrainingRequest(_settings, nEnvs, gymIds, basePath, trainedAlgorithmsFolder, agentType);
         CancellationToken cancellationToken = new CancellationTokenSource(TimeSpan.FromHours(2)).Token;
-        var response = await policyTrainerClient.StartTrainingA2CAsync(request, cancellationToken);
+        var response = await policyTrainerClient.StartTrainingPPOAsync(request, cancellationToken);
         return response.RunId;
     }
 }

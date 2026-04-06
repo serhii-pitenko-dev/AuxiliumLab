@@ -29,7 +29,7 @@ This repository contains two top-level sub-solutions:
 │  GrpcHost · WebApi · Startup                                │
 ├──────────────────────────────────────────────────────────────┤
 │  Application                                                 │
-│  ApplicationServices · Ai · AiTrainingOrchestrator          │
+│  ApplicationServices · Ai                                   │
 ├──────────────────────────────────────────────────────────────┤
 │  Infrastructure                                              │
 │  Infrastructure · Statistics                                 │
@@ -68,8 +68,7 @@ infra/       ← infrastructure (config, storage, adapters)
 | Project | Responsibility |
 |---|---|
 | `ApplicationServices` | All use-case orchestration: commands (`ISimulationCommands`, `ITrainingCommands`, `IAggregationRunCommands`), queries (`ISimulationQueries`, `ITrainingQueries`, etc.), command services (`TrainingCommandService`, `SimulationCommandService`, `AggregationRunCommandService`), executors (`Executor`, `StandardExecutor`, `ExecutorForPresentation`), runners (`SingleRunner`, `MassRunner`, `AggregationRunner`, `TrainingRunner`), playground state persistence mapper. |
-| `Ai` | `IAiActions` interface + implementations: `RandomActions` (random baseline), `Sb3Actions` (RL bridge), `InferenceActions` (inference via gRPC), `ObservationBuilder` (encodes agent state + vision grid into a flat `float[]`). No longer registered as scoped `IAiActions` in DI — instances are created per-executor by `ExecutorFactory`. |
-| `AiTrainingOrchestrator` | `ITraining` / `PpoTraining` / `A2cTraining` / `DqnTraining` (hyperparameters), `IPolicyTrainerClient` / `PolicyTrainerClient` (gRPC to Python :50051), `EnvironmentSpecBuilder` (env spec negotiation), `BaseTraining` (physical-core scaling). |
+| `Ai` | `IAiActions` interface + implementations: `RandomActions` (random baseline), `Sb3Actions` (RL bridge), `InferenceActions` (inference via gRPC), `ObservationBuilder` (encodes agent state + vision grid into a flat `float[]`). `ITraining` / `PpoTraining` / `A2cTraining` / `DqnTraining` (hyperparameters), `IPolicyTrainerClient` / `PolicyTrainerClient` (gRPC to Python :50051), `EnvironmentSpecBuilder` (env spec negotiation), `BaseTraining` (physical-core scaling). No longer registered as scoped `IAiActions` in DI — instances are created per-executor by `ExecutorFactory`. |
 
 ### Infrastructure layer
 
@@ -136,7 +135,7 @@ These boundaries must not be crossed when adding new functionality:
 | `Ai` project contains **only** decision logic and observation encoding — no game rules | Game rules belong in Domain |
 | `ApplicationServices` contains **no game rules** — orchestration only | Game rules belong in Domain |
 | `Infrastructure` only implements interfaces defined in Application or Domain | Dependency inversion: swap storage backend without touching AppSvc |
-| `GrpcHost` references `AiTrainingOrchestrator`, `Infrastructure`, and `Common` — no direct domain or `ApplicationServices` imports | Keeps the gRPC surface thin; business logic and use-case orchestration stay in inner layers |
+| `GrpcHost` references `Ai`, `Infrastructure`, and `Common` — no direct domain or `ApplicationServices` imports | Keeps the gRPC surface thin; business logic and use-case orchestration stay in inner layers |
 | `Statistics` only depends on `SharedBaseTypes` and `Common` | Result DTOs and CSV output are infrastructure-level concerns |
 | `Startup` is the **only** project that wires all DI registrations and knows the full dependency graph | Everything else is wired by its own `XxxServiceCollectionExtensions` and composed here |
 | `Frontend` communicates with the backend **only** through the REST API and the `/hubs/simulation` SignalR hub | No direct coupling to backend internals |
@@ -195,7 +194,7 @@ These boundaries must not be crossed when adding new functionality:
 
 When the observation vector length or action count changes:
 1. Update `ObservationBuilder` in `AuxiliumLab.AiSandbox.Ai`.
-2. Update `EnvironmentSpecBuilder.ScalarFeatureCount` / `ActionDim` / feature names in `AiTrainingOrchestrator`.
+2. Update `EnvironmentSpecBuilder.ScalarFeatureCount` / `ActionDim` / feature names in `Ai`.
 3. Update `OBSERVATION_DIM` / `ACTION_DIM` env vars or defaults in the Python service (`infra/config.py`).
 4. Update `ExternalSimEnv` `observation_space` / `action_space` in `core/env.py`.
 5. Retrain — existing models are incompatible with a changed observation shape.
@@ -203,7 +202,7 @@ When the observation vector length or action count changes:
 ### Adding a new RL algorithm
 
 1. Add value to `ModelType` enum in `SharedContracts`.
-2. Create `XxxTraining : BaseTraining, ITraining` in `AiTrainingOrchestrator`.
+2. Create `XxxTraining : BaseTraining, ITraining` in `Ai`.
 3. Add `StartTrainingXxx` RPC to `proto/policy_trainer.proto`, regenerate.
 4. Add `StartTrainingXxxAsync` to `IPolicyTrainerClient` + implement in `PolicyTrainerClient`.
 5. Add `AlgorithmType.XXX` to `core/dto.py` and a branch in `build_model()` in `core/algorithms.py`.
@@ -237,7 +236,7 @@ Before opening a pull request, verify:
 | `Common` project has no reference to `ApplicationServices`, `Infrastructure`, or Domain projects (only `SharedBaseTypes`) | true |
 | `Ai` project references only `SharedContracts`, `Common`, `Infrastructure`, `SharedBaseTypes` | true |
 | `Statistics` project references only `SharedBaseTypes`, `Common` | true |
-| `GrpcHost` project references only `AiTrainingOrchestrator`, `Infrastructure`, `Common` | true |
+| `GrpcHost` project references only `Ai`, `Infrastructure`, `Common` | true |
 | `ApplicationServices` does not reference `WebApi`, `GrpcHost`, or `Startup` | true |
 | `WebApi` does not reference `GrpcHost` or `Startup` | true |
 | No project except `Startup` references `Startup` | true |
@@ -355,9 +354,8 @@ All Markdown files in this repository, grouped by area.
 
 | File | Contents |
 |---|---|
-| [`AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.Ai/README.md`](AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.Ai/README.md) | `IAiActions`, `RandomActions`, `Sb3Actions` lifecycle, observation encoding, reward scheme, action space |
+| [`AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.Ai/README.md`](AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.Ai/README.md) | `IAiActions`, `RandomActions`, `Sb3Actions`, observation encoding, `ITraining` implementations, `PolicyTrainerClient`, `EnvironmentSpecBuilder`, training workflow |
 | [`AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.ApplicationServices/README.md`](AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.ApplicationServices/README.md) | Commands, queries, job services, executors, runners, persistence mapper, execution flow |
-| [`AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.AiTrainingOrchestrator/README.md`](AuxiliumLab.AiSandbox/AuxiliumLab.AiSandbox.AiTrainingOrchestrator/README.md) | `ITraining` implementations, `PolicyTrainerClient`, `EnvironmentSpecBuilder`, training workflow |
 
 ### .NET Solution — Infrastructure Layer
 

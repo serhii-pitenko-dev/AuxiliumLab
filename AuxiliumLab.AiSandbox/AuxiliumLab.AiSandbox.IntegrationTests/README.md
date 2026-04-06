@@ -2,7 +2,7 @@
 
 **Onion layer: Tests**  
 MSTest end-to-end integration tests that spin up the full ASP.NET Core application in-process and exercise the REST API over real HTTP.  
-Depends on: `WebApi` (via `WebApplicationFactory<Program>`), `ApplicationServices`, `AiTrainingOrchestrator`.
+Depends on: `WebApi` (via `WebApplicationFactory<Program>`), `ApplicationServices`, `Ai`.
 
 ## Prerequisites
 

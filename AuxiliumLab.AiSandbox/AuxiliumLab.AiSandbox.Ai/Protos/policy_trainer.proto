@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option csharp_namespace = "AuxiliumLab.AiSandbox.AiTrainingOrchestrator.PolicyTrainer";
+option csharp_namespace = "AuxiliumLab.AiSandbox.Ai.PolicyTrainer";
 
 package policy_trainer;
 

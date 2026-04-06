@@ -1,5 +1,5 @@
 using AuxiliumLab.AiSandbox.Ai.Configuration;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
+using AuxiliumLab.AiSandbox.Ai.GrpcClients;
 using AuxiliumLab.AiSandbox.ApplicationServices.Executors;
 using AuxiliumLab.AiSandbox.ApplicationServices.Queries.Simulation;
 using AuxiliumLab.AiSandbox.Common.SimulationVisualizationBridge;

@@ -1,9 +1,9 @@
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
+using AuxiliumLab.AiSandbox.Ai.GrpcClients;
 using AuxiliumLab.AiSandbox.Infrastructure.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Configuration;
+namespace AuxiliumLab.AiSandbox.Ai.Configuration;
 
 public static class PolicyTrainerClientServiceCollectionExtensions
 {

@@ -10,7 +10,6 @@ COPY Directory.Build.props ./
 
 # Production projects
 COPY AuxiliumLab.AiSandbox.Ai/AuxiliumLab.AiSandbox.Ai.csproj                                                     AuxiliumLab.AiSandbox.Ai/
-COPY AuxiliumLab.AiSandbox.AiTrainingOrchestrator/AuxiliumLab.AiSandbox.AiTrainingOrchestrator.csproj             AuxiliumLab.AiSandbox.AiTrainingOrchestrator/
 COPY AuxiliumLab.AiSandbox.ApplicationServices/AuxiliumLab.AiSandbox.ApplicationServices.csproj                   AuxiliumLab.AiSandbox.ApplicationServices/
 COPY AuxiliumLab.AiSandbox.Common/AuxiliumLab.AiSandbox.Common.csproj                                             AuxiliumLab.AiSandbox.Common/
 COPY AuxiliumLab.AiSandbox.Domain/AuxiliumLab.AiSandbox.Domain.csproj                                             AuxiliumLab.AiSandbox.Domain/

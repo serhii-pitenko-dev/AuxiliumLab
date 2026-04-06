@@ -1,6 +1,6 @@
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.PolicyTrainer;
+using AuxiliumLab.AiSandbox.Ai.PolicyTrainer;
 
-namespace AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
+namespace AuxiliumLab.AiSandbox.Ai.GrpcClients;
 
 /// <summary>
 /// Interface for communicating with the Python RL Training Service.

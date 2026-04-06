@@ -1,9 +1,8 @@
 using AuxiliumLab.AiSandbox.Ai.Configuration;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Configuration;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.GrpcClients;
-using AuxiliumLab.AiSandbox.AiTrainingOrchestrator.PolicyTrainer;
+using AuxiliumLab.AiSandbox.Ai.GrpcClients;
+using AuxiliumLab.AiSandbox.Ai.PolicyTrainer;
 
-namespace AuxiliumLab.AiSandbox.AiTrainingOrchestrator.Trainers;
+namespace AuxiliumLab.AiSandbox.Ai.Trainers;
 
 public interface ITraining
 {
