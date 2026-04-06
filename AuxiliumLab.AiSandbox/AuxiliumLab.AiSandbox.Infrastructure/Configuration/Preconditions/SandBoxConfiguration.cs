@@ -28,7 +28,7 @@ public class SandBoxConfiguration
             MapSettings = new MapConfiguration
             {
                 Type = MapType.Standard,
-                Size = new Size
+                Size = new IncrementalSize
                 {
                     Width = new IncrementalRange { Min = mapWidth, Current = mapWidth, Max = mapWidth, Step = 1 },
                     Height = new IncrementalRange { Min = mapHeight, Current = mapHeight, Max = mapHeight, Step = 1 },

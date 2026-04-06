@@ -1,6 +1,6 @@
 namespace AuxiliumLab.AiSandbox.Infrastructure.Configuration.Preconditions;
 
-public struct Size
+public struct IncrementalSize
 {
     public IncrementalRange Width { get; set; }
     public IncrementalRange Height { get; set; }
